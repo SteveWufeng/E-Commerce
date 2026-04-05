@@ -7,6 +7,8 @@
  * PUT  /api/orders/[id]  — Update order status (admin only)
  */
 
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { processPayment } from "@/lib/payments";
@@ -115,7 +117,7 @@ export async function POST(request: NextRequest) {
     const emailTemplate = orderConfirmationEmail({
       customerName: validated.firstName,
       orderNumber,
-      items: order.items.map((item) => ({
+      items: order.items.map((item: (typeof order.items)[number]) => ({
         name: item.productName,
         quantity: item.quantity,
         price: `$${Number(item.productPrice).toFixed(2)}`,

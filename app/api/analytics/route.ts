@@ -7,6 +7,8 @@
  *   - to: ISO date string (end of range)
  */
 
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { getDashboardMetrics } from "@/lib/analytics";
 

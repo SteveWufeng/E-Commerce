@@ -57,15 +57,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = (user as { role: string }).role;
-        token.id = user.id;
+        token.role = ((user as unknown) as { role?: string }).role as string | undefined;
+        token.id = user.id as string;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as { role: string }).role = token.role as string;
-        (session.user as { id: string }).id = token.id as string;
+        ((session.user as unknown) as { role?: string }).role = token.role as string;
+        ((session.user as unknown) as { id?: string }).id = token.id as string;
       }
       return session;
     },
@@ -74,5 +74,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  // Trust the host header when behind proxies/containers (prevents UntrustedHost errors)
+  trustHost: true,
   secret: process.env.NEXTAUTH_SECRET,
 });

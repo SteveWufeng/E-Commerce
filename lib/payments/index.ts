@@ -16,7 +16,7 @@
  * 3. Implement Stripe webhook handler in /api/payments/webhook
  */
 
-import { PaymentMethod } from "@prisma/client";
+import type { PaymentMethod } from "@/types";
 
 export interface PaymentRequest {
   amount: number; // in cents

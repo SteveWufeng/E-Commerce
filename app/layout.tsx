@@ -9,6 +9,8 @@ const inter = Inter({
   display: "swap",
 });
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: {
     default: process.env.NEXT_PUBLIC_STORE_NAME || "E-Commerce Store",

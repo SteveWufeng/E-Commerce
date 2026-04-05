@@ -93,7 +93,7 @@ export default function CheckoutPage() {
     lastName: string;
     email: string;
     phone: string;
-    notes: string;
+    notes?: string;
   }) {
     if (!selectedSlot) {
       setError("Please select a pickup time slot.");

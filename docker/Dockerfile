@@ -1,11 +1,10 @@
 # E-Commerce MVP — Docker Configuration
 # Portable, production-ready deployment
 
-FROM node:20-alpine AS base
+FROM node:20-bullseye-slim AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
@@ -17,8 +16,14 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Ensure `public` exists so final COPY in runner stage doesn't fail
+RUN mkdir -p /app/public
+
 # Disable telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Ensure Prisma client is generated before building (required for runtime)
+RUN npm run db:generate
 
 RUN npm run build
 

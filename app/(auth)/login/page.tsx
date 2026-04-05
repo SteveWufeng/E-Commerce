@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -19,16 +19,25 @@ import { Footer } from "@/components/layout/footer";
  */
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+
+  const [urlError, setUrlError] = useState<string | null>(null);
+  const [callbackUrl, setCallbackUrl] = useState("/");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Handle error from middleware redirect
-  const urlError = searchParams.get("error");
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  // Handle error from middleware redirect (read from location on client)
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      setUrlError(sp.get("error"));
+      setCallbackUrl(sp.get("callbackUrl") || "/");
+    } catch {
+      // ignore (window not available during SSR)
+    }
+  }, []);
 
   const errorMessageMap: Record<string, string> = {
     auth_required: "Please sign in to access that page.",

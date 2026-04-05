@@ -7,8 +7,16 @@
  * DELETE /api/pickup-slots/[id]      — Delete a slot (admin only)
  */
 
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+
+type PickupSlotRecord = {
+  isActive: boolean;
+  currentOrders: number;
+  maxOrders: number;
+} & Record<string, unknown>;
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,13 +38,13 @@ export async function GET(request: NextRequest) {
       if (dateTo) (where.date as Record<string, unknown>).lte = new Date(dateTo);
     }
 
-    const slots = await db.pickupSlot.findMany({
+    const slots: PickupSlotRecord[] = await db.pickupSlot.findMany({
       where,
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
     });
 
     // Add computed isAvailable field
-    const slotsWithAvailability = slots.map((slot) => ({
+    const slotsWithAvailability = slots.map((slot: PickupSlotRecord) => ({
       ...slot,
       isAvailable: slot.isActive && slot.currentOrders < slot.maxOrders,
     }));

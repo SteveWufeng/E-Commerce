@@ -7,6 +7,8 @@
  * Requires a valid session — returns 401 if not authenticated.
  * Never returns the password hash.
  */
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";

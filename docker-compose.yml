@@ -1,31 +1,25 @@
-version: "3.8"
-
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
-    container_name: ecommerce-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-ecommerce}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
       POSTGRES_DB: ${DB_NAME:-ecommerce_mvp}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ecommerce}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ecommerce} -d ${DB_NAME:-ecommerce_mvp}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Next.js Application
   app:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    container_name: ecommerce-app
     restart: unless-stopped
     ports:
       - "3000:3000"

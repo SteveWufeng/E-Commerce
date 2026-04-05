@@ -54,7 +54,7 @@ export async function getDashboardMetrics(
   });
 
   const totalRevenue = orders.reduce(
-    (sum, o) => sum + Number(o.total),
+    (sum: number, o: { total: Decimal | number }) => sum + Number(o.total),
     0
   );
   const totalOrders = orders.length;
@@ -80,7 +80,8 @@ export async function getDashboardMetrics(
 
   const topProducts = Object.values(productSales)
     .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 10);
+    .slice(0, 10)
+    .map((p) => ({ name: p.name, revenue: p.revenue, unitsSold: p.units }));
 
   // Orders by status
   const ordersByStatus: Record<string, number> = {};
@@ -89,7 +90,7 @@ export async function getDashboardMetrics(
   }
 
   // Recent orders (last 10)
-  const recentOrders = orders.slice(0, 10).map((o) => ({
+  const recentOrders = orders.slice(0, 10).map((o: (typeof orders)[number]) => ({
     id: o.id,
     orderNumber: o.orderNumber,
     total: Number(o.total),
