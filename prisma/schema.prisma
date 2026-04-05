@@ -28,6 +28,7 @@ model User {
 
   orders        Order[]
   pickupSlots   PickupSlot[]  // slots booked by this user
+  cart          Cart?         // authenticated user's cart
 
   @@index([email])
   @@index([role])
@@ -162,6 +163,7 @@ model OrderItem {
   orderId   String
   order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId String
+  product   Product  @relation(fields: [productId], references: [id])
   // Snapshot of product at time of purchase
   productName   String
   productPrice  Decimal @db.Decimal(10, 2)
