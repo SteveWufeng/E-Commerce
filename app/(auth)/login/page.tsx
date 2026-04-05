@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 
@@ -10,43 +11,54 @@ import { Footer } from "@/components/layout/footer";
  * Login page — customer and admin authentication.
  *
  * Features:
- * - Email + password form
- * - Redirect to home after login
+ * - Email + password form using NextAuth signIn
+ * - Redirect to callback URL or home after login
  * - Link to signup for new users
  * - Guest checkout option (no login required)
+ * - Error messages from URL params (e.g., after middleware redirect)
  */
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Handle error from middleware redirect
+  const urlError = searchParams.get("error");
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
+
+  const errorMessageMap: Record<string, string> = {
+    auth_required: "Please sign in to access that page.",
+    unauthorized: "You do not have permission to access that page.",
+    CredentialsSignin: "Invalid email or password.",
+  };
+
+  const displayError = error || (urlError ? errorMessageMap[urlError] || "An error occurred" : null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setIsLoading(true);
     setError(null);
 
-    try {
-      // TODO: Replace with actual NextAuth signIn call
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+    startTransition(async () => {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Login failed");
+      if (result?.error) {
+        setError("Invalid email or password");
+        return;
       }
 
-      router.push("/");
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setIsLoading(false);
-    }
+      if (result?.ok) {
+        router.push(callbackUrl);
+        router.refresh();
+      }
+    });
   }
 
   return (
@@ -62,9 +74,12 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-              {error}
+          {displayError && (
+            <div
+              className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm"
+              role="alert"
+            >
+              {displayError}
             </div>
           )}
 
@@ -81,6 +96,7 @@ export default function LoginPage() {
                 className="input"
                 required
                 autoComplete="email"
+                placeholder="you@example.com"
               />
             </div>
 
@@ -96,15 +112,16 @@ export default function LoginPage() {
                 className="input"
                 required
                 autoComplete="current-password"
+                placeholder="••••••••"
               />
             </div>
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isPending}
               className="btn-primary w-full py-3"
             >
-              {isLoading ? "Signing in..." : "Sign In"}
+              {isPending ? "Signing in..." : "Sign In"}
             </button>
           </form>
 

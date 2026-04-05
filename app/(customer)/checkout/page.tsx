@@ -16,12 +16,13 @@ import type { PickupSlot, PaymentMethod } from "@/types";
  *
  * Flow:
  * 1. Customer fills in their info (name, email, phone)
+ *    - Authenticated users have their info pre-filled
+ *    - Guest users enter info manually
  * 2. Selects a pickup slot
  * 3. Chooses a payment method
  * 4. Reviews order and confirms
  *
- * Guest checkout is supported — no login required.
- * Authenticated users have their info pre-filled.
+ * Guest checkout is fully supported — no login required.
  */
 export default function CheckoutPage() {
   const router = useRouter();
@@ -32,6 +33,12 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CREDIT_CARD");
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [prefillData, setPrefillData] = useState<{
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+  } | null>(null);
 
   const taxRate = 0.08;
   const tax = subtotal * taxRate;
@@ -44,18 +51,41 @@ export default function CheckoutPage() {
     }
   }, [items.length, router]);
 
-  // Load available pickup slots
+  // Load available pickup slots and check for authenticated user
   useEffect(() => {
-    async function loadSlots() {
+    async function loadData() {
+      // Load pickup slots
       try {
-        const res = await fetch("/api/pickup-slots?available=true");
-        const data = await res.json();
-        setPickupSlots(data.data || []);
+        const slotsRes = await fetch("/api/pickup-slots?available=true");
+        const slotsData = await slotsRes.json();
+        setPickupSlots(slotsData.data || []);
       } catch {
         setError("Failed to load pickup slots. Please try again.");
       }
+
+      // Try to pre-fill from authenticated session
+      try {
+        const sessionRes = await fetch("/api/auth/session");
+        const sessionData = await sessionRes.json();
+        if (sessionData?.user) {
+          // Fetch full profile for phone number
+          const profileRes = await fetch("/api/auth/me");
+          if (profileRes.ok) {
+            const profileData = await profileRes.json();
+            const profile = profileData.data;
+            setPrefillData({
+              firstName: profile.firstName,
+              lastName: profile.lastName,
+              email: profile.email,
+              phone: profile.phone || "",
+            });
+          }
+        }
+      } catch {
+        // Not authenticated — guest checkout
+      }
     }
-    loadSlots();
+    loadData();
   }, []);
 
   async function handleSubmit(formData: {
@@ -126,7 +156,11 @@ export default function CheckoutPage() {
           {/* Left: Forms */}
           <div className="lg:col-span-2 space-y-8">
             {/* Customer Info */}
-            <CheckoutForm onSubmit={handleSubmit} isProcessing={isProcessing} />
+            <CheckoutForm
+              onSubmit={handleSubmit}
+              isProcessing={isProcessing}
+              prefillData={prefillData}
+            />
 
             {/* Pickup Scheduler */}
             <PickupScheduler
