@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 
@@ -10,13 +11,15 @@ import { Footer } from "@/components/layout/footer";
  * Signup page — new customer registration.
  *
  * Features:
- * - Name, email, phone, password form
- * - Client-side validation
- * - Redirect to home after signup
+ * - Name, email, phone, password form with validation
+ * - Auto-sign-in after successful registration
  * - Link to login for existing users
+ * - Guest checkout option
  */
 export default function SignupPage() {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -26,7 +29,6 @@ export default function SignupPage() {
     confirmPassword: "",
   });
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
   function updateField(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -34,47 +36,60 @@ export default function SignupPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setIsLoading(true);
     setError(null);
 
     // Client-side validation
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match");
-      setIsLoading(false);
       return;
     }
 
     if (form.password.length < 6) {
       setError("Password must be at least 6 characters");
-      setIsLoading(false);
       return;
     }
 
-    try {
-      const res = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: form.firstName,
-          lastName: form.lastName,
-          email: form.email,
-          phone: form.phone,
-          password: form.password,
-        }),
-      });
+    startTransition(async () => {
+      try {
+        // Create the account first
+        const res = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            firstName: form.firstName.trim(),
+            lastName: form.lastName.trim(),
+            email: form.email.trim().toLowerCase(),
+            phone: form.phone.trim() || undefined,
+            password: form.password,
+          }),
+        });
 
-      if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Signup failed");
-      }
 
-      router.push("/");
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setIsLoading(false);
-    }
+        if (!res.ok) {
+          setError(data.error || "Signup failed");
+          return;
+        }
+
+        // Auto sign-in after successful registration
+        const result = await signIn("credentials", {
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          redirect: false,
+        });
+
+        if (result?.error) {
+          // Account created but sign-in failed — redirect to login
+          router.push("/login?error=account_created");
+          return;
+        }
+
+        router.push("/");
+        router.refresh();
+      } catch {
+        setError("An unexpected error occurred");
+      }
+    });
   }
 
   return (
@@ -91,7 +106,10 @@ export default function SignupPage() {
           </div>
 
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+            <div
+              className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm"
+              role="alert"
+            >
               {error}
             </div>
           )}
@@ -109,6 +127,7 @@ export default function SignupPage() {
                   onChange={(e) => updateField("firstName", e.target.value)}
                   className="input"
                   required
+                  autoComplete="given-name"
                 />
               </div>
               <div>
@@ -122,6 +141,7 @@ export default function SignupPage() {
                   onChange={(e) => updateField("lastName", e.target.value)}
                   className="input"
                   required
+                  autoComplete="family-name"
                 />
               </div>
             </div>
@@ -137,6 +157,7 @@ export default function SignupPage() {
                 onChange={(e) => updateField("email", e.target.value)}
                 className="input"
                 required
+                autoComplete="email"
               />
             </div>
 
@@ -150,6 +171,7 @@ export default function SignupPage() {
                 value={form.phone}
                 onChange={(e) => updateField("phone", e.target.value)}
                 className="input"
+                autoComplete="tel"
               />
             </div>
 
@@ -165,6 +187,7 @@ export default function SignupPage() {
                 className="input"
                 required
                 minLength={6}
+                autoComplete="new-password"
               />
             </div>
 
@@ -180,15 +203,16 @@ export default function SignupPage() {
                 className="input"
                 required
                 minLength={6}
+                autoComplete="new-password"
               />
             </div>
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isPending}
               className="btn-primary w-full py-3"
             >
-              {isLoading ? "Creating account..." : "Create Account"}
+              {isPending ? "Creating account..." : "Create Account"}
             </button>
           </form>
 

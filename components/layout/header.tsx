@@ -2,22 +2,57 @@
 
 import Link from "next/link";
 import { ShoppingBag, User, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCartStore } from "@/hooks/use-cart";
+import { signOut } from "next-auth/react";
 
 /**
- * Site header — responsive navigation bar.
+ * Site header — responsive navigation bar with auth state.
  *
  * Features:
  * - Store logo/name
  * - Navigation links
  * - Cart badge with item count
  * - Mobile hamburger menu
- * - User account link
+ * - User account link with dropdown (sign in / profile / sign out)
+ * - Admin panel link for admin users
  */
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const itemCount = useCartStore((state) => state.itemCount);
+
+  const [user, setUser] = useState<{
+    name: string | null;
+    email: string | null;
+    role: string;
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadSession() {
+      try {
+        const res = await fetch("/api/auth/session");
+        const data = await res.json();
+        if (data?.user) {
+          setUser({
+            name: data.user.name,
+            email: data.user.email,
+            role: data.user.role || "CUSTOMER",
+          });
+        }
+      } catch {
+        // Session fetch failed — user is not logged in
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadSession();
+  }, []);
+
+  async function handleSignOut() {
+    await signOut({ callbackUrl: "/" });
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-200 safe-top">
@@ -38,21 +73,93 @@ export function Header() {
             <Link href="/" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
               Shop
             </Link>
-            <Link href="/orders" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
-              My Orders
-            </Link>
+            {user && (
+              <Link href="/orders" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+                My Orders
+              </Link>
+            )}
+            {user?.role === "ADMIN" && (
+              <Link href="/admin/dashboard" className="text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors">
+                Admin
+              </Link>
+            )}
           </nav>
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
-              aria-label="Account"
-            >
-              <User className="w-5 h-5" />
-            </Link>
+            {/* User Menu */}
+            <div className="relative">
+              {isLoading ? (
+                <div className="w-9 h-9 rounded-lg bg-gray-100 animate-pulse" />
+              ) : user ? (
+                <>
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1"
+                    aria-label="Account menu"
+                    aria-expanded={userMenuOpen}
+                  >
+                    <User className="w-5 h-5" />
+                  </button>
 
+                  {userMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white border border-gray-200 shadow-lg py-2 z-50 animate-fade-in">
+                      <div className="px-4 py-2 border-b border-gray-100">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {user.name || user.email}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {user.email}
+                        </p>
+                      </div>
+
+                      <Link
+                        href="/profile"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        My Profile
+                      </Link>
+
+                      <Link
+                        href="/orders"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        My Orders
+                      </Link>
+
+                      {user.role === "ADMIN" && (
+                        <Link
+                          href="/admin/dashboard"
+                          className="block px-4 py-2 text-sm text-purple-600 hover:bg-purple-50"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          Admin Panel
+                        </Link>
+                      )}
+
+                      <button
+                        onClick={handleSignOut}
+                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <Link
+                  href="/login"
+                  className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+                  aria-label="Sign in"
+                >
+                  <User className="w-5 h-5" />
+                </Link>
+              )}
+            </div>
+
+            {/* Cart */}
             <Link
               href="/cart"
               className="relative p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
@@ -92,24 +199,67 @@ export function Header() {
               >
                 Shop
               </Link>
-              <Link
-                href="/orders"
-                className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 font-medium"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                My Orders
-              </Link>
-              <Link
-                href="/login"
-                className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 font-medium"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Sign In
-              </Link>
+
+              {user && (
+                <>
+                  <Link
+                    href="/orders"
+                    className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 font-medium"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    My Orders
+                  </Link>
+                  <Link
+                    href="/profile"
+                    className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 font-medium"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    My Profile
+                  </Link>
+                </>
+              )}
+
+              {user?.role === "ADMIN" && (
+                <Link
+                  href="/admin/dashboard"
+                  className="px-4 py-2 rounded-lg text-purple-600 hover:bg-purple-50 font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Admin Panel
+                </Link>
+              )}
+
+              {user ? (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleSignOut();
+                  }}
+                  className="px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 font-medium text-left"
+                >
+                  Sign Out
+                </button>
+              ) : (
+                <Link
+                  href="/login"
+                  className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Sign In
+                </Link>
+              )}
             </div>
           </nav>
         )}
       </div>
+
+      {/* Close dropdown when clicking outside */}
+      {userMenuOpen && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setUserMenuOpen(false)}
+        />
+      )}
     </header>
   );
 }

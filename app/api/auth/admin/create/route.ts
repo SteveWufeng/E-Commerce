@@ -1,31 +1,47 @@
 /**
- * User signup API route — registers a new customer.
+ * Admin user creation API route.
  *
- * POST /api/auth/signup
- * Body: { firstName, lastName, email, phone?, password }
+ * POST /api/auth/admin/create
+ * Body: { email, password, firstName, lastName }
  *
- * Creates a new user with CUSTOMER role.
- * Passwords are bcrypt-hashed (cost factor 12) before storage.
- * Rejects duplicate emails with 409 Conflict.
+ * Creates a user with ADMIN role.
+ * This route is protected — only existing admins can create new admins.
+ * Used during initial setup and for admin management.
  */
-
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
-const signupSchema = z.object({
-  firstName: z.string().min(1, "First name is required").max(100),
-  lastName: z.string().min(1, "Last name is required").max(100),
-  email: z.string().email("Invalid email address"),
-  phone: z.string().optional().or(z.literal("")),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+const adminCreateSchema = z.object({
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  email: z.string().email(),
+  password: z.string().min(8, "Admin password must be at least 8 characters"),
 });
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify the requesting user is an admin
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const requesterRole = (session.user as { role?: string })?.role;
+    if (requesterRole !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Forbidden — admin access required" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
-    const validated = signupSchema.parse(body);
+    const validated = adminCreateSchema.parse(body);
 
     // Check if user already exists
     const existing = await db.user.findUnique({
@@ -42,15 +58,15 @@ export async function POST(request: NextRequest) {
     // Hash password with cost factor 12
     const passwordHash = await bcrypt.hash(validated.password, 12);
 
-    // Create user
+    // Create admin user
     const user = await db.user.create({
       data: {
         firstName: validated.firstName.trim(),
         lastName: validated.lastName.trim(),
         email: validated.email.toLowerCase(),
-        phone: validated.phone || null,
         passwordHash,
-        role: "CUSTOMER",
+        role: "ADMIN",
+        isVerified: true,
       },
       select: {
         id: true,
@@ -70,9 +86,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error("Signup API error:", error);
+    console.error("Admin creation API error:", error);
     return NextResponse.json(
-      { error: "Failed to create account" },
+      { error: "Failed to create admin user" },
       { status: 500 }
     );
   }

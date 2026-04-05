@@ -2,13 +2,15 @@
  * Authentication configuration for NextAuth.js v5.
  *
  * Supports:
- * - Credentials-based login (email + password) for customers and admin
- * - Guest checkout via session-based cart (no auth required)
+ * - Credentials-based login (email + password) with bcrypt hashing
+ * - JWT-based sessions with role and ID embedded in token
+ * - Admin role enforced server-side on protected routes
  *
  * Security:
- * - Passwords are bcrypt-hashed before storage
+ * - Passwords are bcrypt-hashed (cost factor 12) before storage
  * - Sessions use secure, httpOnly cookies
- * - Admin role is enforced server-side on protected routes
+ * - Token includes user ID and role for server-side authorization
+ * - Secret loaded from environment variable — never hardcoded
  */
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
@@ -25,8 +27,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       authorize: async (credentials) => {
         const parsed = z.object({
-          email: z.string().email(),
-          password: z.string().min(6),
+          email: z.string().email("Invalid email address"),
+          password: z.string().min(6, "Password must be at least 6 characters"),
         }).safeParse(credentials);
 
         if (!parsed.success) return null;
