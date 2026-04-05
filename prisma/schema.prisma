@@ -1,0 +1,273 @@
+// Prisma Schema — E-Commerce MVP
+// Database: PostgreSQL (security-focused, ACID-compliant)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================
+// User & Authentication
+// ========================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String    // bcrypt hashed — never store plaintext
+  firstName     String
+  lastName      String
+  phone         String?
+  role          Role      @default(CUSTOMER)
+  isVerified    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  orders        Order[]
+  pickupSlots   PickupSlot[]  // slots booked by this user
+
+  @@index([email])
+  @@index([role])
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+// ========================
+// Products & Categories
+// ========================
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  image       String?
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  products    Product[]
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model Product {
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  description   String?
+  price         Decimal   @db.Decimal(10, 2)
+  comparePrice  Decimal?  @db.Decimal(10, 2) // original price for sales
+  cost          Decimal?  @db.Decimal(10, 2) // admin cost for profit calc
+  sku           String?   @unique
+  barcode       String?   @unique
+  stock         Int       @default(0)
+  lowStockThreshold Int   @default(5)
+  isActive      Boolean   @default(true)
+  isFeatured    Boolean   @default(false)
+  images        String[]  // array of image URLs
+  tags          String[]  // search tags
+  weight        Decimal?  @db.Decimal(8, 2)
+
+  categoryId    String
+  category      Category  @relation(fields: [categoryId], references: [id])
+
+  orderItems    OrderItem[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([isFeatured])
+  @@index([name])
+}
+
+// ========================
+// Orders & Cart
+// ========================
+
+model Cart {
+  id        String   @id @default(cuid())
+  sessionId String   @unique // for guest carts
+  userId    String?  @unique // for authenticated carts
+  user      User?    @relation(fields: [userId], references: [id])
+  items     CartItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sessionId])
+  @@index([userId])
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  quantity  Int     @default(1)
+
+  @@unique([cartId, productId])
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique // human-readable: ORD-20260404-0001
+  status          OrderStatus   @default(PENDING)
+  subtotal        Decimal       @db.Decimal(10, 2)
+  tax             Decimal       @db.Decimal(10, 2)
+  total           Decimal       @db.Decimal(10, 2)
+
+  // Payment info (mock for now)
+  paymentMethod   PaymentMethod
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentIntentId String?       // Stripe intent ID for future integration
+
+  // Customer info (snapshot at checkout — not FK to allow guest checkout)
+  customerEmail   String
+  customerFirstName String
+  customerLastName  String
+  customerPhone   String?
+
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id])
+
+  items           OrderItem[]
+  pickupSlot      PickupSlot?
+
+  notes           String?       // customer notes
+  adminNotes      String?       // internal admin notes
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([orderNumber])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([customerEmail])
+  @@index([createdAt(sort: Desc)])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  // Snapshot of product at time of purchase
+  productName   String
+  productPrice  Decimal @db.Decimal(10, 2)
+  quantity      Int
+  productCost   Decimal? @db.Decimal(10, 2) // for profit calc
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  READY_FOR_PICKUP
+  PICKED_UP
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  GOOGLE_PAY
+  PAYPAL
+  CASH_ON_PICKUP
+}
+
+// ========================
+// Pickup Scheduling
+// ========================
+
+model PickupSlot {
+  id          String    @id @default(cuid())
+  date        DateTime  @db.Date
+  startTime   String    // "09:00"
+  endTime     String    // "10:00"
+  maxOrders   Int       @default(10)
+  currentOrders Int     @default(0)
+  isActive    Boolean   @default(true)
+
+  orderId     String?   @unique
+  order       Order?    @relation(fields: [orderId], references: [id])
+
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id])
+
+  createdAt   DateTime  @default(now())
+
+  @@index([date])
+  @@index([isActive])
+  @@index([orderId])
+}
+
+// ========================
+// Notifications
+// ========================
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  recipient String           // email or phone
+  subject   String?
+  body      String
+  status    NotificationStatus @default(PENDING)
+  sentAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([status])
+  @@index([type])
+  @@index([createdAt(sort: Desc)])
+}
+
+enum NotificationType {
+  ORDER_CONFIRMATION
+  PICKUP_REMINDER
+  ORDER_READY
+  ORDER_CANCELLED
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// ========================
+// Audit Log (security)
+// ========================
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // "LOGIN", "ORDER_CREATE", "PRODUCT_UPDATE", etc.
+  entity    String?  // "Order", "Product", "User"
+  entityId  String?
+  userId    String?
+  details   String?  @db.Text
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([action])
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+}

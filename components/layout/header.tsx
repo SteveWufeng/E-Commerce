@@ -1,0 +1,115 @@
+"use client";
+
+import Link from "next/link";
+import { ShoppingBag, User, Menu, X } from "lucide-react";
+import { useState } from "react";
+import { useCartStore } from "@/hooks/use-cart";
+
+/**
+ * Site header — responsive navigation bar.
+ *
+ * Features:
+ * - Store logo/name
+ * - Navigation links
+ * - Cart badge with item count
+ * - Mobile hamburger menu
+ * - User account link
+ */
+export function Header() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const itemCount = useCartStore((state) => state.itemCount);
+
+  return (
+    <header className="sticky top-0 z-50 bg-white border-b border-gray-200 safe-top">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
+              <ShoppingBag className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-lg font-bold text-gray-900 hidden sm:block">
+              {process.env.NEXT_PUBLIC_STORE_NAME || "Store"}
+            </span>
+          </Link>
+
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-6">
+            <Link href="/" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+              Shop
+            </Link>
+            <Link href="/orders" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+              My Orders
+            </Link>
+          </nav>
+
+          {/* Actions */}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/login"
+              className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+              aria-label="Account"
+            >
+              <User className="w-5 h-5" />
+            </Link>
+
+            <Link
+              href="/cart"
+              className="relative p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+              aria-label={`Cart (${itemCount} items)`}
+            >
+              <ShoppingBag className="w-5 h-5" />
+              {itemCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary-600 text-white text-xs font-bold flex items-center justify-center">
+                  {itemCount > 9 ? "9+" : itemCount}
+                </span>
+              )}
+            </Link>
+
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <nav className="md:hidden py-4 border-t border-gray-100 animate-slide-down">
+            <div className="flex flex-col gap-2">
+              <Link
+                href="/"
+                className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Shop
+              </Link>
+              <Link
+                href="/orders"
+                className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                My Orders
+              </Link>
+              <Link
+                href="/login"
+                className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Sign In
+              </Link>
+            </div>
+          </nav>
+        )}
+      </div>
+    </header>
+  );
+}

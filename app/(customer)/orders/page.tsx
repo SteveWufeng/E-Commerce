@@ -1,0 +1,102 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
+import { formatCurrency, formatDateTime } from "@/lib/utils";
+import type { Order } from "@/types";
+
+/**
+ * Customer orders page — view order history and status.
+ *
+ * Features:
+ * - List of all orders
+ * - Order status badges
+ * - Pickup details
+ * - Order detail link
+ */
+export default function OrdersPage() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadOrders() {
+      try {
+        const res = await fetch("/api/orders");
+        const data = await res.json();
+        setOrders(data.data || []);
+      } catch (error) {
+        console.error("Failed to load orders:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadOrders();
+  }, []);
+
+  const statusColors: Record<string, string> = {
+    PENDING: "badge-warning",
+    CONFIRMED: "badge-info",
+    READY_FOR_PICKUP: "badge-success",
+    PICKED_UP: "badge-success",
+    CANCELLED: "badge-danger",
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header />
+
+      <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">My Orders</h1>
+
+        {isLoading ? (
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="animate-pulse rounded-xl bg-gray-200 h-24" />
+            ))}
+          </div>
+        ) : orders.length > 0 ? (
+          <div className="space-y-4">
+            {orders.map((order) => (
+              <div
+                key={order.id}
+                className="card flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+              >
+                <div>
+                  <p className="font-semibold text-gray-900">
+                    {order.orderNumber}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {formatDateTime(order.createdAt)}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <span className="font-semibold text-gray-900">
+                    {formatCurrency(order.total)}
+                  </span>
+                  <span className={`badge ${statusColors[order.status] || "badge-info"}`}>
+                    {order.status.toLowerCase().replace(/_/g, " ")}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16">
+            <p className="text-gray-500 text-lg mb-4">No orders yet.</p>
+            <Link href="/" className="btn-primary">
+              Start Shopping
+            </Link>
+          </div>
+        )}
+      </main>
+
+      <Footer />
+    </div>
+  );
+}
