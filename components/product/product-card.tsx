@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import type { Product } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/hooks/use-cart";
+import { useCurrency } from "@/hooks/use-currency";
 
 /**
  * Product card component for the storefront grid.
@@ -21,6 +24,7 @@ export function ProductCard({ product }: { product: Product }) {
   const isLowStock = product.stock > 0 && product.stock <= 5;
   const isOutOfStock = product.stock <= 0;
   const onSale = product.comparePrice && product.comparePrice > product.price;
+  const { currency } = useCurrency();
 
   return (
     <div className="group relative flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
@@ -68,11 +72,11 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="mt-auto pt-2">
           <div className="flex items-baseline gap-2">
             <span className="text-lg font-bold text-gray-900">
-              {formatCurrency(product.price)}
+              {formatCurrency(product.price, currency)}
             </span>
             {onSale && (
               <span className="text-sm text-gray-400 line-through">
-                {formatCurrency(product.comparePrice!)}
+                {formatCurrency(product.comparePrice!, currency)}
               </span>
             )}
           </div>

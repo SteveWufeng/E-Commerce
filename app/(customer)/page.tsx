@@ -28,13 +28,27 @@ export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load initial data
+  // Load initial data (explicitly request JSON and handle non-JSON responses)
   useEffect(() => {
+    async function fetchJson(path: string) {
+      const res = await fetch(path, { headers: { Accept: "application/json" } });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`Request failed ${path}: ${res.status} ${res.statusText} - ${txt.slice(0, 200)}`);
+      }
+      const ct = res.headers.get("content-type") || "";
+      if (!ct.includes("application/json")) {
+        const txt = await res.text();
+        throw new Error(`Invalid JSON response from ${path}: ${txt.slice(0, 200)}`);
+      }
+      return res.json();
+    }
+
     async function loadData() {
       try {
         const [productsRes, categoriesRes] = await Promise.all([
-          fetch("/api/products").then((r) => r.json()),
-          fetch("/api/products/categories").then((r) => r.json()),
+          fetchJson("/api/products"),
+          fetchJson("/api/products/categories"),
         ]);
 
         setProducts(productsRes.data || []);

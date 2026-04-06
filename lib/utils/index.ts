@@ -12,12 +12,34 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * Format a number as currency (USD).
  */
-export function formatCurrency(amount: number | string): string {
+export type CurrencyCode = "USD" | "GOLD" | "BOLIVAR" | string;
+
+export function formatCurrency(amount: number | string, currency: CurrencyCode = "USD"): string {
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(num);
+
+  const rates: Record<string, number> = {
+    USD: 1,
+    // Placeholder conversion rates — update with real rates as needed
+    GOLD: 0.00007, // 1 USD = 0.00007 troy ounces (approx placeholder)
+    BOLIVAR: 5000000, // 1 USD = 5,000,000 Bs (placeholder)
+  };
+
+  const rate = rates[currency] ?? 1;
+  const converted = num * rate;
+
+  if (currency === "USD") {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(converted);
+  }
+
+  if (currency === "GOLD") {
+    return `${converted.toFixed(6)} oz`;
+  }
+
+  if (currency === "BOLIVAR") {
+    return `${Math.round(converted).toLocaleString("en-US")} Bs`;
+  }
+
+  return `${converted.toFixed(2)} ${currency}`;
 }
 
 /**

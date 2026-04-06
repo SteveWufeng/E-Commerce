@@ -5,6 +5,23 @@ import { ShoppingBag, User, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useCartStore } from "@/hooks/use-cart";
 import { signOut } from "next-auth/react";
+import { useCurrency } from "@/hooks/use-currency";
+
+function CurrencySelector() {
+  const { currency, setCurrency } = useCurrency();
+  return (
+    <select
+      value={currency}
+      onChange={(e) => setCurrency(e.target.value)}
+      className="text-sm border rounded px-2 py-1"
+      aria-label="Currency selector"
+    >
+      <option value="USD">USD</option>
+      <option value="GOLD">GOLD</option>
+      <option value="BOLIVAR">BOLIVAR</option>
+    </select>
+  );
+}
 
 /**
  * Site header — responsive navigation bar with auth state.
@@ -87,6 +104,10 @@ export function Header() {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
+            {/* Currency selector */}
+            <div className="hidden sm:block">
+              <CurrencySelector />
+            </div>
             {/* User Menu */}
             <div className="relative">
               {isLoading ? (
