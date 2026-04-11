@@ -7,6 +7,7 @@
  * - Clear cart
  * - Persistent storage via localStorage
  * - Computed subtotal and item count
+ * - Hydration state tracking for SSR compatibility
  *
  * Works for both guest and authenticated users.
  * On login, guest cart should be merged with user's persisted cart.
@@ -19,11 +20,15 @@ import type { CartItem } from "@/types";
 interface CartState {
   items: CartItem[];
 
+  // Hydration tracking - set to true after client-side hydration
+  hydrated: boolean;
+
   // Computed values
   subtotal: number;
   itemCount: number;
 
   // Actions
+  setHydrated: (hydrated: boolean) => void;
   addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -42,12 +47,16 @@ export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      hydrated: false,
+
       get subtotal() {
         return calculateSubtotal(get().items);
       },
       get itemCount() {
         return calculateItemCount(get().items);
       },
+
+      setHydrated: (hydrated) => set({ hydrated }),
 
       addItem: (newItem) =>
         set((state) => {
@@ -105,6 +114,21 @@ export const useCartStore = create<CartState>()(
       name: "ecommerce-cart",
       // Only persist items, computed values are derived
       partialize: (state) => ({ items: state.items }),
+      onRehydrateStorage: () => (state, error) => {
+        if (!error) {
+          state?.setHydrated(true);
+        }
+      },
     }
   )
 );
+
+/**
+ * Hook to ensure cart is hydrated before using.
+ * Use this in components that depend on cart items.
+ */
+export function useHydratedCart() {
+  const hydrated = useCartStore((state) => state.hydrated);
+  const items = useCartStore((state) => state.items);
+  return { hydrated, items };
+}
