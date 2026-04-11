@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { formatDateTime } from "@/lib/utils";
-import { Clock, Package, CheckCircle } from "lucide-react";
+import { Clock, Package, CheckCircle, Lock } from "lucide-react";
 import type { Order } from "@/types";
 
 /**
@@ -16,20 +16,46 @@ import type { Order } from "@/types";
  * - Readiness status
  * - Pickup time slots
  * - Directions/location
+ *
+ * Requires authentication - unauthenticated users see a login prompt.
  */
 export default function PickupPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
     async function loadOrders() {
       try {
+        // First check authentication status
+        const sessionRes = await fetch("/api/auth/session", {
+          credentials: "include",
+        });
+        const sessionData = await sessionRes.json();
+
+        if (!sessionData?.user) {
+          setIsAuthenticated(false);
+          setIsLoading(false);
+          return;
+        }
+
+        setIsAuthenticated(true);
+
+        // Now fetch orders - the API will only return the user's own orders
         const res = await fetch("/api/orders", {
+          credentials: "include",
           headers: { Accept: "application/json" },
         });
+        
         if (!res.ok) {
+          if (res.status === 401) {
+            setIsAuthenticated(false);
+            setIsLoading(false);
+            return;
+          }
           throw new Error(`Failed to load orders: ${res.status}`);
         }
+        
         const data = await res.json();
         // Filter to orders with pickup that are not picked up
         const allOrders: Order[] = data.data || [];
@@ -75,7 +101,24 @@ export default function PickupPage() {
           </p>
         </div>
 
-        {isLoading ? (
+        {/* Authentication check - show login prompt if not authenticated */}
+        {isAuthenticated === false && (
+          <div className="text-center py-16">
+            <Lock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Sign in to view your pickups
+            </h2>
+            <p className="text-gray-500 mb-6">
+              Please sign in to view your order pickup status.
+            </p>
+            <Link href="/login" className="btn-primary">
+              Sign In
+            </Link>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {isLoading && isAuthenticated !== false && (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="animate-pulse rounded-xl bg-gray-200 h-32" />

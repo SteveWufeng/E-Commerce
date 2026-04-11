@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { Lock } from "lucide-react";
 import type { Order } from "@/types";
 
 /**
@@ -15,15 +16,45 @@ import type { Order } from "@/types";
  * - Order status badges
  * - Pickup details
  * - Order detail link
+ *
+ * Requires authentication - unauthenticated users see a login prompt.
  */
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
     async function loadOrders() {
       try {
-        const res = await fetch("/api/orders");
+        // First check authentication status
+        const sessionRes = await fetch("/api/auth/session", {
+          credentials: "include",
+        });
+        const sessionData = await sessionRes.json();
+
+        if (!sessionData?.user) {
+          setIsAuthenticated(false);
+          setIsLoading(false);
+          return;
+        }
+
+        setIsAuthenticated(true);
+
+        // Now fetch orders - the API will only return the user's own orders
+        const res = await fetch("/api/orders", {
+          credentials: "include",
+        });
+        
+        if (!res.ok) {
+          if (res.status === 401) {
+            setIsAuthenticated(false);
+            setIsLoading(false);
+            return;
+          }
+          throw new Error(`Failed to load orders: ${res.status}`);
+        }
+        
         const data = await res.json();
         setOrders(data.data || []);
       } catch (error) {
@@ -50,7 +81,24 @@ export default function OrdersPage() {
       <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">My Orders</h1>
 
-        {isLoading ? (
+        {/* Authentication check - show login prompt if not authenticated */}
+        {isAuthenticated === false && (
+          <div className="text-center py-16">
+            <Lock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Sign in to view your orders
+            </h2>
+            <p className="text-gray-500 mb-6">
+              Please sign in to view your order history.
+            </p>
+            <Link href="/login" className="btn-primary">
+              Sign In
+            </Link>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {isLoading && isAuthenticated !== false && (
           <div className="space-y-4">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="animate-pulse rounded-xl bg-gray-200 h-24" />

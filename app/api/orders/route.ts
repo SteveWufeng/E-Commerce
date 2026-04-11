@@ -2,7 +2,7 @@
  * Orders API — Create and manage orders.
  *
  * POST /api/orders       — Create a new order (public, with payment)
- * GET  /api/orders       — List orders (admin only)
+ * GET  /api/orders       — List user's orders (authenticated users only)
  * GET  /api/orders/[id]  — Get single order (authenticated user or admin)
  * PUT  /api/orders/[id]  — Update order status (admin only)
  */
@@ -14,6 +14,7 @@ import { db } from "@/lib/db";
 import { processPayment } from "@/lib/payments";
 import { sendEmail, orderConfirmationEmail } from "@/lib/email";
 import { sendSms, orderConfirmationSms } from "@/lib/sms";
+import { auth } from "@/lib/auth";
 import { z } from "zod";
 
 const createOrderSchema = z.object({
@@ -174,6 +175,55 @@ export async function POST(request: NextRequest) {
         success: false,
         error: error instanceof Error ? error.message : "Failed to create order",
       },
+      { status: 500 }
+    );
+  }
+}
+
+// GET handler - returns user's own orders when authenticated
+export async function GET(request: NextRequest) {
+  try {
+    const session = await auth();
+    
+    // Require authentication - unauthenticated users cannot see any orders
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const userEmail = session.user.email;
+    
+    if (!userEmail) {
+      return NextResponse.json(
+        { success: false, error: "User email not found in session" },
+        { status: 400 }
+      );
+    }
+
+    // Fetch only orders belonging to the authenticated user
+    const orders = await db.order.findMany({
+      where: {
+        customerEmail: userEmail,
+      },
+      include: {
+        items: true,
+        pickupSlot: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: orders,
+    });
+  } catch (error) {
+    console.error("Orders API GET error:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch orders" },
       { status: 500 }
     );
   }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ShoppingBag, User, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useCartStore } from "@/hooks/use-cart";
+import { useHydratedCart } from "@/hooks/use-cart";
 import { signOut } from "next-auth/react";
 import { useCurrency } from "@/hooks/use-currency";
 
@@ -33,11 +33,15 @@ function CurrencySelector() {
  * - Mobile hamburger menu
  * - User account link with dropdown (sign in / profile / sign out)
  * - Admin panel link for admin users
+ *
+ * Uses useHydratedCart to prevent SSR hydration mismatches.
  */
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const itemCount = useCartStore((state) => state.itemCount);
+  
+  // Use hydration hook to prevent SSR mismatches
+  const { hydrated, itemCount } = useHydratedCart();
 
   const [user, setUser] = useState<{
     name: string | null;

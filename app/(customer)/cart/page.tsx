@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useCartStore } from "@/hooks/use-cart";
+import { useCartStore, useHydratedCart } from "@/hooks/use-cart";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { CartItem } from "@/components/cart/cart-item";
@@ -19,11 +19,35 @@ import Link from "next/link";
  * - See subtotal, tax, and total
  * - Proceed to checkout
  * - Empty cart state with CTA
+ *
+ * Uses useHydratedCart to prevent SSR hydration mismatches.
  */
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, clearCart, subtotal } =
-    useCartStore();
+  const { removeItem, updateQuantity, clearCart } = useCartStore();
+  
+  // Use hydration hook to prevent SSR mismatches
+  const { hydrated, items } = useHydratedCart();
 
+  // Show loading state until hydrated on client
+  if (!hydrated) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div className="space-y-4 w-full max-w-md">
+            <div className="animate-pulse rounded-xl bg-gray-200 h-24" />
+            <div className="animate-pulse rounded-xl bg-gray-200 h-24" />
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
   const taxRate = 0.08; // 8% tax — configurable
   const tax = subtotal * taxRate;
   const total = subtotal + tax;
