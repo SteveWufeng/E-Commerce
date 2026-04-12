@@ -24,6 +24,14 @@ export default function AdminProductsPage() {
   const [editPrice, setEditPrice] = useState("");
   const [editStock, setEditStock] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [addProduct, setAddProduct] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: "",
+    price: "",
+    stock: "",
+    categoryId: "",
+    description: "",
+  });
 
   useEffect(() => {
     async function loadProducts() {
@@ -83,11 +91,62 @@ export default function AdminProductsPage() {
     }
   }
 
+  async function handleAddProduct() {
+    if (!newProduct.name || !newProduct.price || !newProduct.categoryId) return;
+
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newProduct.name,
+          description: newProduct.description,
+          price: parseFloat(newProduct.price),
+          stock: parseInt(newProduct.stock) || 0,
+          categoryId: newProduct.categoryId,
+          isActive: true,
+        }),
+      });
+
+      if (res.ok) {
+        const created = await res.json();
+        setProducts((prev) => [...prev, created.data]);
+        setAddProduct(false);
+        setNewProduct({ name: "", price: "", stock: "", categoryId: "", description: "" });
+      } else {
+        console.error("Failed to create product");
+      }
+    } catch (error) {
+      console.error("Failed to create product:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleDelete(productId: string) {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+
+    try {
+      const res = await fetch(`/api/products/${productId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        setProducts((prev) => prev.filter((p) => p.id !== productId));
+      } else {
+        console.error("Failed to delete product");
+      }
+    } catch (error) {
+      console.error("Failed to delete product:", error);
+    }
+  }
+
   return (
     <AdminLayout>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-        <button className="btn-primary">
+        <button onClick={() => setAddProduct(true)} className="btn-primary">
           <Plus className="w-4 h-4 mr-2" />
           Add Product
         </button>
@@ -159,7 +218,10 @@ export default function AdminProductsPage() {
                         >
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                        <button
+                          onClick={() => handleDelete(product.id)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -176,7 +238,6 @@ export default function AdminProductsPage() {
           )}
         </div>
       )}
-    </AdminLayout>
 
       {/* Edit Product Modal */}
       {editProduct && (
@@ -237,6 +298,108 @@ export default function AdminProductsPage() {
                 className="flex-1 btn-primary"
               >
                 {isSaving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Product Modal */}
+      {addProduct && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Add New Product</h2>
+              <button
+                onClick={() => setAddProduct(false)}
+                className="p-1 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Product Name *
+                </label>
+                <input
+                  type="text"
+                  value={newProduct.name}
+                  onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                  className="input w-full"
+                  placeholder="Enter product name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={newProduct.description}
+                  onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                  className="input w-full"
+                  rows={3}
+                  placeholder="Enter product description"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Price ($) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={newProduct.price}
+                    onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                    className="input w-full"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Stock
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={newProduct.stock}
+                    onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
+                    className="input w-full"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category *
+                </label>
+                <select
+                  value={newProduct.categoryId}
+                  onChange={(e) => setNewProduct({ ...newProduct, categoryId: e.target.value })}
+                  className="input w-full"
+                >
+                  <option value="">Select category</option>
+                  <option value="cln1p3m4g0001pkv4h1aabcde">Groceries</option>
+                  <option value="cln1p3m4g0002pkv4h1aabcdx">Beverages</option>
+                  <option value="cln1p3m4g0003pkv4h1aabcdy">Snacks</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setAddProduct(false)}
+                className="flex-1 btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddProduct}
+                disabled={isSaving || !newProduct.name || !newProduct.price || !newProduct.categoryId}
+                className="flex-1 btn-primary"
+              >
+                {isSaving ? "Creating..." : "Create Product"}
               </button>
             </div>
           </div>
