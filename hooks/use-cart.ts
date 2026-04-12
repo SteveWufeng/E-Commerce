@@ -1,21 +1,11 @@
-/**
- * Cart state management using Zustand.
- *
- * Features:
- * - Add/remove items
- * - Update quantities
- * - Clear cart
- * - Persistent storage via localStorage
- * - Computed subtotal and item count
- * - Hydration state tracking for SSR compatibility
- *
- * Works for both guest and authenticated users.
- * On login, guest cart should be merged with user's persisted cart.
- */
-
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CartItem } from "@/types";
+
+/**
+ * Cart store with localStorage persistence.
+ * Uses hydration flag to prevent SSR mismatch issues.
+ */
 
 interface CartState {
   items: CartItem[];
@@ -112,11 +102,13 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: "ecommerce-cart",
-      // Only persist items, computed values are derived
       partialize: (state) => ({ items: state.items }),
       onRehydrateStorage: () => (state, error) => {
         if (!error) {
-          state?.setHydrated(true);
+          // Use setTimeout to ensure this runs after hydration completes
+          setTimeout(() => {
+            state?.setHydrated(true);
+          }, 0);
         }
       },
     }
@@ -125,10 +117,20 @@ export const useCartStore = create<CartState>()(
 
 /**
  * Hook to ensure cart is hydrated before using.
- * Use this in components that depend on cart items.
+ * Returns both hydrated state and items - use hydrated to prevent flash of empty cart.
  */
 export function useHydratedCart() {
   const hydrated = useCartStore((state) => state.hydrated);
   const items = useCartStore((state) => state.items);
   return { hydrated, items };
+}
+
+/**
+ * Hook to get cart item count only - optimized for header badge updates.
+ * Returns 0 until hydrated to prevent showing wrong count.
+ */
+export function useCartCount() {
+  const hydrated = useCartStore((state) => state.hydrated);
+  const itemCount = useCartStore((state) => state.itemCount);
+  return hydrated ? itemCount : 0;
 }

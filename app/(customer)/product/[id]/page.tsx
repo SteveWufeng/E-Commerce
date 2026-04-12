@@ -8,6 +8,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { useCartStore } from "@/hooks/use-cart";
 import { formatCurrency } from "@/lib/utils";
+import { useToast } from "@/components/ui/toast";
 import type { Product } from "@/types";
 import { Minus, Plus, ShoppingBag } from "lucide-react";
 
@@ -20,7 +21,7 @@ import { Minus, Plus, ShoppingBag } from "lucide-react";
  * - Price with sale indicator
  * - Stock status
  * - Quantity selector
- * - Add to cart
+ * - Add to cart with toast notification
  * - Related products (future)
  */
 export default function ProductPage() {
@@ -31,6 +32,7 @@ export default function ProductPage() {
   const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const addItem = useCartStore((state) => state.addItem);
+  const { showToast } = useToast();
 
   useEffect(() => {
     async function loadProduct() {
@@ -46,6 +48,19 @@ export default function ProductPage() {
     }
     loadProduct();
   }, [slug]);
+
+  const handleAddToCart = () => {
+    if (!product) return;
+    addItem({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.images?.[0] || "",
+      quantity,
+      maxStock: product.stock,
+    });
+    showToast(`${product.name} added to cart!`, "success");
+  };
 
   if (isLoading) {
     return (
@@ -192,16 +207,7 @@ export default function ProductPage() {
                 </div>
 
                 <button
-                  onClick={() =>
-                    addItem({
-                      productId: product.id,
-                      name: product.name,
-                      price: product.price,
-                      image: product.images?.[0] || "",
-                      quantity,
-                      maxStock: product.stock,
-                    })
-                  }
+                  onClick={handleAddToCart}
                   className="btn-primary flex-1 py-3 text-base"
                 >
                   <ShoppingBag className="w-5 h-5 mr-2" />

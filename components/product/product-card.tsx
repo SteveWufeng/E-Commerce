@@ -6,6 +6,7 @@ import type { Product } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/hooks/use-cart";
 import { useCurrency } from "@/hooks/use-currency";
+import { useToast } from "@/components/ui/toast";
 
 /**
  * Product card component for the storefront grid.
@@ -15,7 +16,7 @@ import { useCurrency } from "@/hooks/use-currency";
  * - Product name
  * - Price (with sale price if applicable)
  * - Stock status indicator
- * - Add to cart button
+ * - Add to cart button with animation feedback
  *
  * Responsive: adapts to grid column sizes.
  */
@@ -25,6 +26,18 @@ export function ProductCard({ product }: { product: Product }) {
   const isOutOfStock = product.stock <= 0;
   const onSale = product.comparePrice && product.comparePrice > product.price;
   const { currency } = useCurrency();
+  const { showToast } = useToast();
+
+  const handleAddToCart = () => {
+    addItem({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.images?.[0] || "",
+      maxStock: product.stock,
+    });
+    showToast(`${product.name} added to cart!`, "success");
+  };
 
   return (
     <div className="group relative flex flex-col rounded-xl border border-gray-200 bg-white overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5">
@@ -91,15 +104,7 @@ export function ProductCard({ product }: { product: Product }) {
           {/* Add to cart */}
           {!isOutOfStock && (
             <button
-              onClick={() =>
-                addItem({
-                  productId: product.id,
-                  name: product.name,
-                  price: product.price,
-                  image: product.images?.[0] || "",
-                  maxStock: product.stock,
-                })
-              }
+              onClick={handleAddToCart}
               className="mt-2 w-full btn-primary text-xs py-2"
             >
               Add to Cart

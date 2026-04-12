@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { ShoppingBag, User, Menu, X } from "lucide-react";
-import { useState, useEffect } from "react";
-import { useHydratedCart } from "@/hooks/use-cart";
+import { useState, useEffect, useRef } from "react";
+import { useCartCount } from "@/hooks/use-cart";
 import { signOut } from "next-auth/react";
 import { useCurrency } from "@/hooks/use-currency";
 
@@ -29,19 +29,31 @@ function CurrencySelector() {
  * Features:
  * - Store logo/name
  * - Navigation links
- * - Cart badge with item count
+ * - Cart badge with item count and bounce animation
  * - Mobile hamburger menu
  * - User account link with dropdown (sign in / profile / sign out)
  * - Admin panel link for admin users
  *
- * Uses useHydratedCart to prevent SSR hydration mismatches.
+ * Uses useCartCount for optimized cart badge updates.
  */
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [cartBounce, setCartBounce] = useState(false);
   
-  // Use hydration hook to prevent SSR mismatches
-  const { hydrated, itemCount } = useHydratedCart();
+  // Use optimized cart count - returns 0 until hydrated
+  const itemCount = useCartCount();
+  const prevCountRef = useRef(0);
+
+  // Trigger bounce animation when item count increases
+  useEffect(() => {
+    const prevCount = prevCountRef.current;
+    if (itemCount > prevCount && prevCount > 0) {
+      setCartBounce(true);
+      setTimeout(() => setCartBounce(false), 500);
+    }
+    prevCountRef.current = itemCount;
+  }, [itemCount]);
 
   const [user, setUser] = useState<{
     name: string | null;
@@ -187,7 +199,7 @@ export function Header() {
             {/* Cart */}
             <Link
               href="/cart"
-              className="relative p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+              className={`relative p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors ${cartBounce ? "animate-bounce-once" : ""}`}
               aria-label={`Cart (${itemCount} items)`}
             >
               <ShoppingBag className="w-5 h-5" />
