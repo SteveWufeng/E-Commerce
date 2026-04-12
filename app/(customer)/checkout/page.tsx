@@ -26,7 +26,12 @@ import type { PickupSlot, PaymentMethod } from "@/types";
  */
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, subtotal, clearCart } = useCartStore();
+  const items = useCartStore((state) => state.items);
+
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const taxRate = 0.08;
+  const tax = subtotal * taxRate;
+  const total = subtotal + tax;
 
   const [pickupSlots, setPickupSlots] = useState<PickupSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string>("");
@@ -39,10 +44,7 @@ export default function CheckoutPage() {
     email: string;
     phone: string;
   } | null>(null);
-
-  const taxRate = 0.08;
-  const tax = subtotal * taxRate;
-  const total = subtotal + tax;
+  const clearCart = useCartStore((state) => state.clearCart);
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -100,6 +102,19 @@ export default function CheckoutPage() {
       return;
     }
 
+    const orderData = {
+      ...formData,
+      items: items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+      })),
+      paymentMethod,
+      pickupSlotId: selectedSlot,
+      subtotal: Math.max(0.01, subtotal),
+      tax: Math.max(0, tax),
+      total: Math.max(0.01, total),
+    };
+
     setIsProcessing(true);
     setError(null);
 
@@ -107,18 +122,7 @@ export default function CheckoutPage() {
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          items: items.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-          })),
-          paymentMethod,
-          pickupSlotId: selectedSlot,
-          subtotal,
-          tax,
-          total,
-        }),
+        body: JSON.stringify(orderData),
       });
 
       const result = await response.json();
@@ -129,7 +133,7 @@ export default function CheckoutPage() {
 
       // Clear cart and redirect to order confirmation
       clearCart();
-      router.push(`/orders/${result.data.orderId}?orderNumber=${result.data.orderNumber}`);
+      router.push(`/orders/${result.data.orderId}?orderNumber=${result.data.orderNumber}&id=${result.data.orderId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {

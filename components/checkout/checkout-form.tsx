@@ -46,16 +46,13 @@ export function CheckoutForm({
   } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
-      firstName: prefillData?.firstName || "",
-      lastName: prefillData?.lastName || "",
-      email: prefillData?.email || "",
-      phone: prefillData?.phone || "",
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
       notes: "",
     },
   });
-
-  // Determine if fields should be read-only (authenticated user)
-  const isPrefilled = !!prefillData;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="card">
@@ -63,7 +60,7 @@ export function CheckoutForm({
         Contact Information
       </h2>
 
-      {isPrefilled && (
+      {prefillData?.firstName && (
         <p className="mb-4 text-sm text-primary-600 bg-primary-50 rounded-lg px-3 py-2">
           ✓ Signed in as {prefillData.firstName} {prefillData.lastName}
         </p>
@@ -72,14 +69,13 @@ export function CheckoutForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="firstName" className="label">
-            First Name
+            First Name *
           </label>
           <input
             id="firstName"
             type="text"
             className={`input ${errors.firstName ? "border-red-500" : ""}`}
             {...register("firstName")}
-            readOnly={isPrefilled}
           />
           {errors.firstName && (
             <p className="mt-1 text-xs text-red-600">{errors.firstName.message}</p>
@@ -88,14 +84,13 @@ export function CheckoutForm({
 
         <div>
           <label htmlFor="lastName" className="label">
-            Last Name
+            Last Name *
           </label>
           <input
             id="lastName"
             type="text"
             className={`input ${errors.lastName ? "border-red-500" : ""}`}
             {...register("lastName")}
-            readOnly={isPrefilled}
           />
           {errors.lastName && (
             <p className="mt-1 text-xs text-red-600">{errors.lastName.message}</p>
@@ -104,14 +99,13 @@ export function CheckoutForm({
 
         <div>
           <label htmlFor="email" className="label">
-            Email
+            Email *
           </label>
           <input
             id="email"
             type="email"
             className={`input ${errors.email ? "border-red-500" : ""}`}
             {...register("email")}
-            readOnly={isPrefilled}
           />
           {errors.email && (
             <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
@@ -120,7 +114,7 @@ export function CheckoutForm({
 
         <div>
           <label htmlFor="phone" className="label">
-            Phone
+            Phone *
           </label>
           <input
             id="phone"
@@ -146,6 +140,14 @@ export function CheckoutForm({
           {...register("notes")}
         />
       </div>
+
+      <button
+        type="submit"
+        disabled={isProcessing}
+        className="btn-primary w-full mt-6 py-3 text-base"
+      >
+        {isProcessing ? "Processing..." : "Reserve Pickup"}
+      </button>
     </form>
   );
 }

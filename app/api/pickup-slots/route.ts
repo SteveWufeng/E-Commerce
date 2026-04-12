@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth/session";
 
 type PickupSlotRecord = {
   isActive: boolean;
@@ -64,7 +65,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Add admin auth check
+    const admin = await requireAdmin();
+    if (!admin) {
+      return NextResponse.json({ success: false, error: "Admin required" }, { status: 401 });
+    }
+
     const body = await request.json();
 
     const slot = await db.pickupSlot.create({

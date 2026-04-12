@@ -19,7 +19,7 @@ Welcome — this document is intended to help a new team member ramp up quickly 
 2. Start the app with Docker (no host installs required):
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 docker compose logs -f app
 ```
 

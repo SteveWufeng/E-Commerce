@@ -185,6 +185,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const limit = searchParams.get("limit");
+    const orderId = searchParams.get("id");
     const maxLimit = Math.min(parseInt(limit || "50") || 50, 100);
 
     const session = await auth();
@@ -204,6 +205,32 @@ export async function GET(request: NextRequest) {
         { success: false, error: "User email not found in session" },
         { status: 400 }
       );
+    }
+
+    // If fetching a single order by ID or orderNumber
+    if (orderId) {
+      const order = await db.order.findFirst({
+        where: {
+          OR: [
+            { id: orderId },
+            { orderNumber: orderId },
+          ],
+          customerEmail: userEmail,
+        },
+        include: {
+          items: true,
+          pickupSlot: true,
+        },
+      });
+
+      if (!order) {
+        return NextResponse.json(
+          { success: false, error: "Order not found" },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({ success: true, data: order });
     }
 
     // Fetch only orders belonging to the authenticated user

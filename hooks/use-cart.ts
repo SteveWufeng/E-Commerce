@@ -103,34 +103,19 @@ export const useCartStore = create<CartState>()(
     {
       name: "ecommerce-cart",
       partialize: (state) => ({ items: state.items }),
-      onRehydrateStorage: () => (state, error) => {
-        if (!error) {
-          // Use setTimeout to ensure this runs after hydration completes
-          setTimeout(() => {
-            state?.setHydrated(true);
-          }, 0);
-        }
-      },
     }
   )
 );
 
-/**
- * Hook to ensure cart is hydrated before using.
- * Returns both hydrated state and items - use hydrated to prevent flash of empty cart.
- */
-export function useHydratedCart() {
-  const hydrated = useCartStore((state) => state.hydrated);
-  const items = useCartStore((state) => state.items);
-  return { hydrated, items };
+// Initialize hydration flag after persist loads
+if (typeof window !== "undefined") {
+  useCartStore.setState({ hydrated: true });
 }
 
 /**
- * Hook to get cart item count only - optimized for header badge updates.
- * Returns 0 until hydrated to prevent showing wrong count.
+ * Hook to get cart item count - returns 0 during SSR to prevent mismatch.
  */
 export function useCartCount() {
-  const hydrated = useCartStore((state) => state.hydrated);
   const itemCount = useCartStore((state) => state.itemCount);
-  return hydrated ? itemCount : 0;
+  return itemCount;
 }

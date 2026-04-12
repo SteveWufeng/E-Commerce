@@ -59,9 +59,10 @@ export default function OrdersPage() {
         ) : orders.length > 0 ? (
           <div className="space-y-4">
             {orders.map((order) => (
-              <div
+              <Link
                 key={order.id}
-                className="card flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                href={`/orders/${order.id}?orderNumber=${order.orderNumber}`}
+                className="card flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:border-primary-300 transition-colors"
               >
                 <div>
                   <p className="font-semibold text-gray-900">
@@ -83,7 +84,7 @@ export default function OrdersPage() {
                     {order.status.toLowerCase().replace(/_/g, " ")}
                   </span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         ) : (
