@@ -23,7 +23,7 @@ RUN mkdir -p /app/public
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Ensure Prisma client is generated before building (required for runtime)
-RUN npm run db:generate
+RUN npx prisma generate
 
 RUN npm run build
 

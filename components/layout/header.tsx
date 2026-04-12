@@ -1,25 +1,23 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { ShoppingBag, User, Menu, X } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
 import { useCartCount } from "@/hooks/use-cart";
-import { signOut } from "next-auth/react";
 import { useCurrency } from "@/hooks/use-currency";
+import { useSettingsStore } from "@/hooks/use-settings";
+import { signOut } from "next-auth/react";
 
-function CurrencySelector() {
-  const { currency, setCurrency } = useCurrency();
+function CurrencyDisplay() {
+  const { symbol, conversionRate } = useCurrency();
+  const settings = useSettingsStore((state) => state.settings);
+  
+  if (!settings) return null;
+  
   return (
-    <select
-      value={currency}
-      onChange={(e) => setCurrency(e.target.value)}
-      className="text-sm border rounded px-2 py-1"
-      aria-label="Currency selector"
-    >
-      <option value="USD">USD</option>
-      <option value="GOLD">GOLD</option>
-      <option value="BOLIVAR">BOLIVAR</option>
-    </select>
+    <div className="text-xs text-gray-500 hidden sm:block">
+      {settings.currencyCode}: {settings.currencySymbol}{conversionRate.toFixed(2)}
+    </div>
   );
 }
 
@@ -120,9 +118,9 @@ export function Header() {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            {/* Currency selector */}
+            {/* Currency display */}
             <div className="hidden sm:block">
-              <CurrencySelector />
+              <CurrencyDisplay />
             </div>
             {/* User Menu */}
             <div className="relative">

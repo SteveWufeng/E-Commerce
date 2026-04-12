@@ -24,11 +24,11 @@ export default function OrderDetailPage() {
       }
 
       try {
-        const res = await fetch(`/api/orders?id=${orderId}`);
+        const res = await fetch(`/api/orders/${orderId}`);
         const data = await res.json();
 
         if (!res.ok || !data.data) {
-          setError("Order not found");
+          setError(data.error || "Order not found");
           return;
         }
 

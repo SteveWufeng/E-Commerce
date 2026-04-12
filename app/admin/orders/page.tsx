@@ -1,23 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 
-/**
- * Admin orders page — manage all customer orders.
- *
- * Features:
- * - Order list with status filtering
- * - Update order status (confirm, ready, picked up, cancel)
- * - View order details
- * - Search by order number or customer email
- */
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
   useEffect(() => {
     async function loadOrders() {
@@ -39,7 +32,7 @@ export default function AdminOrdersPage() {
     const matchesSearch =
       !search ||
       order.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
-      order.customerEmail.toLowerCase().includes(search.toLowerCase());
+      order.customerEmail?.toLowerCase().includes(search.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
@@ -60,12 +53,31 @@ export default function AdminOrdersPage() {
       });
 
       if (res.ok) {
+        const updated = await res.json();
         setOrders((prev) =>
-          prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
+          prev.map((o) => (o.id === orderId ? updated.data : o))
         );
       }
     } catch (error) {
       console.error("Failed to update order status:", error);
+    }
+  }
+
+  async function undoOrder(orderId: string) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    // If picked up, go to ready. If ready, go to confirmed. If confirmed, go to pending
+    const undoMap: Record<string, string> = {
+      PICKED_UP: "READY_FOR_PICKUP",
+      READY_FOR_PICKUP: "CONFIRMED",
+      CONFIRMED: "PENDING",
+      CANCELLED: "PENDING",
+    };
+    
+    const newStatus = undoMap[order.status];
+    if (newStatus) {
+      await updateStatus(orderId, newStatus);
     }
   }
 
@@ -119,8 +131,13 @@ export default function AdminOrdersPage() {
               <tbody>
                 {filtered.map((order) => (
                   <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium text-primary-600">
-                      {order.orderNumber}
+                    <td className="py-3 px-4">
+                      <button 
+                        onClick={() => setSelectedOrder(order)}
+                        className="font-medium text-primary-600 hover:underline"
+                      >
+                        {order.orderNumber}
+                      </button>
                     </td>
                     <td className="py-3 px-4">
                       <div className="text-gray-900">
@@ -154,6 +171,38 @@ export default function AdminOrdersPage() {
                           Mark Ready
                         </button>
                       )}
+                      {order.status === "READY_FOR_PICKUP" && (
+                        <button
+                          onClick={() => updateStatus(order.id, "PICKED_UP")}
+                          className="btn-primary text-xs py-1.5 px-3"
+                        >
+                          Mark Picked Up
+                        </button>
+                      )}
+                      {order.status === "PICKED_UP" && (
+                        <button
+                          onClick={() => undoOrder(order.id)}
+                          className="btn-secondary text-xs py-1.5 px-3"
+                        >
+                          Undo
+                        </button>
+                      )}
+                      {(order.status === "CONFIRMED" || order.status === "PENDING") && (
+                        <button
+                          onClick={() => updateStatus(order.id, "CANCELLED")}
+                          className="ml-2 text-xs py-1.5 px-3 text-red-600 hover:text-red-700"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                      {order.status === "CANCELLED" && (
+                        <button
+                          onClick={() => undoOrder(order.id)}
+                          className="btn-secondary text-xs py-1.5 px-3"
+                        >
+                          Restore
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -163,6 +212,94 @@ export default function AdminOrdersPage() {
           {filtered.length === 0 && (
             <div className="text-center py-12 text-gray-500">No orders found.</div>
           )}
+        </div>
+      )}
+
+      {/* Order Detail Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Order Details</h2>
+              <button onClick={() => setSelectedOrder(null)} className="p-1 rounded hover:bg-gray-100">
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-500">Order Number</p>
+                  <p className="font-medium">{selectedOrder.orderNumber}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Status</p>
+                  <span className={`badge ${statusColors[selectedOrder.status]}`}>
+                    {selectedOrder.status.toLowerCase().replace(/_/g, " ")}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-gray-500">Customer</p>
+                  <p className="font-medium">{selectedOrder.customerFirstName} {selectedOrder.customerLastName}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500">Email</p>
+                  <p className="font-medium">{selectedOrder.customerEmail}</p>
+                </div>
+                {selectedOrder.customerPhone && (
+                  <div>
+                    <p className="text-gray-500">Phone</p>
+                    <p className="font-medium">{selectedOrder.customerPhone}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-gray-500">Date</p>
+                  <p className="font-medium">{formatDateTime(selectedOrder.createdAt)}</p>
+                </div>
+              </div>
+
+              {selectedOrder.pickupSlot && (
+                <div className="border-t pt-4">
+                  <p className="text-gray-500 text-sm mb-2">Pickup Info</p>
+                  <p className="text-sm">
+                    {formatDateTime(selectedOrder.pickupSlot.date)} at {selectedOrder.pickupSlot.startTime} - {selectedOrder.pickupSlot.endTime}
+                  </p>
+                </div>
+              )}
+
+              <div className="border-t pt-4">
+                <p className="text-gray-500 text-sm mb-2">Items</p>
+                {selectedOrder.items?.map((item: any) => (
+                  <div key={item.id} className="flex justify-between py-2 text-sm">
+                    <span>{item.productName} x{item.quantity}</span>
+                    <span className="font-medium">${Number(item.productPrice * item.quantity).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t pt-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Subtotal</span>
+                  <span>${selectedOrder.subtotal}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Tax</span>
+                  <span>${selectedOrder.tax}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-lg mt-2">
+                  <span>Total</span>
+                  <span>${selectedOrder.total}</span>
+                </div>
+              </div>
+
+              {selectedOrder.notes && (
+                <div className="border-t pt-4">
+                  <p className="text-gray-500 text-sm">Notes</p>
+                  <p className="text-sm">{selectedOrder.notes}</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </AdminLayout>

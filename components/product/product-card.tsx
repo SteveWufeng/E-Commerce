@@ -25,8 +25,13 @@ export function ProductCard({ product }: { product: Product }) {
   const isLowStock = product.stock > 0 && product.stock <= 5;
   const isOutOfStock = product.stock <= 0;
   const onSale = product.comparePrice && product.comparePrice > product.price;
-  const { currency } = useCurrency();
+  const { symbol, conversionRate } = useCurrency();
   const { showToast } = useToast();
+
+  const formatPrice = (price: number) => {
+    const converted = price * conversionRate;
+    return `${symbol}${converted.toFixed(2)}`;
+  };
 
   const handleAddToCart = () => {
     addItem({
@@ -85,11 +90,11 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="mt-auto pt-2">
           <div className="flex items-baseline gap-2">
             <span className="text-lg font-bold text-gray-900">
-              {formatCurrency(product.price, currency)}
+              {formatPrice(product.price)}
             </span>
             {onSale && (
               <span className="text-sm text-gray-400 line-through">
-                {formatCurrency(product.comparePrice!, currency)}
+                {formatPrice(product.comparePrice!)}
               </span>
             )}
           </div>

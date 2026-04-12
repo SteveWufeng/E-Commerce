@@ -255,6 +255,22 @@ enum NotificationStatus {
 }
 
 // ========================
+// Store Settings
+// ========================
+
+model Settings {
+  id              String   @id @default(cuid())
+  storeName       String   @default("My Store")
+  storeAddress    String   @default("")
+  taxRate         Float    @default(8)
+  currencyCode    String   @default("USD")
+  currencySymbol  String   @default("$")
+  conversionRate  Float    @default(1) // 1 USD = ? local currency
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ========================
 // Audit Log (security)
 // ========================
 

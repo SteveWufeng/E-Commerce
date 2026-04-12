@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET handler - returns user's own orders when authenticated
+// GET handler - returns orders
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -189,34 +189,29 @@ export async function GET(request: NextRequest) {
     const maxLimit = Math.min(parseInt(limit || "50") || 50, 100);
 
     const session = await auth();
+    const userRole = (session?.user as { role?: string })?.role;
 
-    // Require authentication - unauthenticated users cannot see any orders
-    if (!session?.user) {
+    // Admins can see all orders, regular users see only their own
+    const isAdmin = userRole === "ADMIN";
+
+    if (!session?.user && !isAdmin) {
       return NextResponse.json(
         { success: false, error: "Authentication required" },
         { status: 401 }
       );
     }
 
-    const userEmail = session.user.email;
-
-    if (!userEmail) {
-      return NextResponse.json(
-        { success: false, error: "User email not found in session" },
-        { status: 400 }
-      );
-    }
-
     // If fetching a single order by ID or orderNumber
     if (orderId) {
+      const where: Record<string, unknown> = isAdmin
+        ? { OR: [{ id: orderId }, { orderNumber: orderId }] }
+        : {
+            OR: [{ id: orderId }, { orderNumber: orderId }],
+            customerEmail: session?.user?.email,
+          };
+
       const order = await db.order.findFirst({
-        where: {
-          OR: [
-            { id: orderId },
-            { orderNumber: orderId },
-          ],
-          customerEmail: userEmail,
-        },
+        where,
         include: {
           items: true,
           pickupSlot: true,
@@ -233,11 +228,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data: order });
     }
 
-    // Fetch only orders belonging to the authenticated user
+    // Fetch orders - admins see all, users see only their own
+    const userEmail = session?.user?.email;
     const orders = await db.order.findMany({
-      where: {
-        customerEmail: userEmail,
-      },
+      where: isAdmin ? {} : { customerEmail: userEmail || "" },
       include: {
         items: true,
         pickupSlot: true,
