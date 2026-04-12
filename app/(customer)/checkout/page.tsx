@@ -133,7 +133,7 @@ export default function CheckoutPage() {
 
       // Clear cart and redirect to order confirmation
       clearCart();
-      router.push(`/orders/${result.data.orderId}?orderNumber=${result.data.orderNumber}&id=${result.data.orderId}`);
+      router.push(`/orders/${result.data.orderId}?orderNumber=${result.data.orderNumber}&email=${encodeURIComponent(formData.email)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {

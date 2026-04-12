@@ -56,11 +56,15 @@ export async function GET(
     const session = await auth();
     const userRole = (session?.user as { role?: string })?.role;
     const isAdmin = userRole === "ADMIN";
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get("email");
     const { id } = await params;
 
     const where = isAdmin 
       ? { id } 
-      : { id, customerEmail: session?.user?.email || "" };
+      : email 
+        ? { OR: [{ id }, { orderNumber: id }], customerEmail: email }
+        : { OR: [{ id }, { orderNumber: id }], customerEmail: session?.user?.email || "" };
 
     const order = await db.order.findFirst({
       where,
