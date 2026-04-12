@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, X } from "lucide-react";
 
 /**
  * Admin products page — manage product catalog.
@@ -20,6 +20,10 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [editProduct, setEditProduct] = useState<any>(null);
+  const [editPrice, setEditPrice] = useState("");
+  const [editStock, setEditStock] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     async function loadProducts() {
@@ -39,6 +43,45 @@ export default function AdminProductsPage() {
   const filtered = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  function handleEditClick(product: any) {
+    setEditProduct(product);
+    setEditPrice(product.price.toString());
+    setEditStock(product.stock.toString());
+  }
+
+  async function handleSaveEdit() {
+    if (!editProduct) return;
+
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/products/${editProduct.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          price: parseFloat(editPrice),
+          stock: parseInt(editStock),
+        }),
+      });
+
+      if (res.ok) {
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === editProduct.id
+              ? { ...p, price: parseFloat(editPrice), stock: parseInt(editStock) }
+              : p
+          )
+        );
+        setEditProduct(null);
+      } else {
+        console.error("Failed to update product");
+      }
+    } catch (error) {
+      console.error("Failed to update product:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <AdminLayout>
@@ -110,7 +153,10 @@ export default function AdminProductsPage() {
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                        <button
+                          onClick={() => handleEditClick(product)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                        >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors">
@@ -128,6 +174,72 @@ export default function AdminProductsPage() {
               {search ? "No products match your search." : "No products yet. Add your first product!"}
             </div>
           )}
+        </div>
+      )}
+    </AdminLayout>
+
+      {/* Edit Product Modal */}
+      {editProduct && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Edit Product</h2>
+              <button
+                onClick={() => setEditProduct(null)}
+                className="p-1 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Product Name
+                </label>
+                <p className="text-gray-900 font-medium">{editProduct.name}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Price ($)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editPrice}
+                  onChange={(e) => setEditPrice(e.target.value)}
+                  className="input w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Stock
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editStock}
+                  onChange={(e) => setEditStock(e.target.value)}
+                  className="input w-full"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setEditProduct(null)}
+                className="flex-1 btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={isSaving}
+                className="flex-1 btn-primary"
+              >
+                {isSaving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </AdminLayout>

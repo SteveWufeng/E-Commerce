@@ -183,8 +183,12 @@ export async function POST(request: NextRequest) {
 // GET handler - returns user's own orders when authenticated
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const limit = searchParams.get("limit");
+    const maxLimit = Math.min(parseInt(limit || "50") || 50, 100);
+
     const session = await auth();
-    
+
     // Require authentication - unauthenticated users cannot see any orders
     if (!session?.user) {
       return NextResponse.json(
@@ -194,7 +198,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userEmail = session.user.email;
-    
+
     if (!userEmail) {
       return NextResponse.json(
         { success: false, error: "User email not found in session" },
@@ -214,6 +218,7 @@ export async function GET(request: NextRequest) {
       orderBy: {
         createdAt: "desc",
       },
+      take: maxLimit,
     });
 
     return NextResponse.json({
