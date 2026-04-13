@@ -25,6 +25,8 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: postgresql://${DB_USER:-ecommerce}:${DB_PASSWORD:-secret}@postgres:5432/${DB_NAME:-ecommerce_mvp}?schema=public
+      DB_HOST: postgres
+      DB_PORT: 5432
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-me-in-production}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       MOCK_PAYMENTS: "true"
