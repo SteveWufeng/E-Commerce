@@ -1,0 +1,40 @@
+# E-Commerce MVP — Cloudflare Workers Configuration
+# Managed by OpenNext Cloudflare adapter
+
+name = "ecommerce-mvp"
+main = ".open-next/worker.js"
+
+# Compatibility date (use latest stable)
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+# === Observability ===
+[observability]
+enabled = true
+
+# Logpush for production monitoring (optional, requires Workers Paid plan)
+# For MVP: rely on wrangler tail for debugging
+
+# === Assets ===
+# Static assets served by Workers (JS, CSS, images)
+[assets]
+directory = ".open-next/assets"
+
+# === Environment Variables (non-secret) ===
+# These are safe for version control — no secrets here
+[vars]
+NODE_ENV = "production"
+
+# === Secrets (set via `wrangler secret put`) ===
+# These MUST be set before first deploy:
+# - DATABASE_URL        → Supabase PostgreSQL connection string
+# - NEXTAUTH_SECRET      → NextAuth.js signing secret
+# - STRIPE_SECRET_KEY    → Stripe API key (mock in v1)
+# - RESEND_API_KEY       → Email API key (mock in v1)
+#
+# Set each with: npx wrangler secret put <NAME>
+# Per D-09/D-10: GitHub Actions injects these at deploy time
+
+# === Routes (optional for workers.dev subdomain) ===
+# Default workers.dev subdomain is auto-assigned per D-02
+# Custom domain: add `routes = [{ pattern = "example.com", custom_domain = true }]`
