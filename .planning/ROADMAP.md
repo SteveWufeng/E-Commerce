@@ -36,7 +36,7 @@
 **Plans:** 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — OpenNext + Cloudflare Workers build configuration (INF-01)
+- [x] 01-01-PLAN.md — OpenNext + Cloudflare Workers build configuration (INF-01)
 - [ ] 01-02-PLAN.md — CI/CD pipeline + production environment (INF-02, INF-03, INF-04)
 
 ---
