@@ -1,15 +1,16 @@
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+
+initOpenNextCloudflareForDev();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable standalone output for Docker portability
   output: "standalone",
 
-  // Image optimization
   images: {
     remotePatterns: [],
     unoptimized: process.env.NODE_ENV === "development",
   },
 
-  // Security headers
   async headers() {
     return [
       {
@@ -29,4 +30,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;
