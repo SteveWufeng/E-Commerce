@@ -8,9 +8,9 @@
 ### Infrastructure
 
 - [x] **INF-01**: Deploy application to Cloudflare Workers via Docker + OpenNext
-- [ ] **INF-02**: Connect to Supabase managed PostgreSQL database
-- [ ] **INF-03**: Configure environment variables for production
-- [ ] **INF-04**: Set up CI/CD for automatic deployments
+- [x] **INF-02**: Connect to Supabase managed PostgreSQL database
+- [x] **INF-03**: Configure environment variables for production
+- [x] **INF-04**: Set up CI/CD for automatic deployments
 
 ### Security
 
@@ -64,9 +64,9 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | INF-01 | Phase 1 | Complete |
-| INF-02 | Phase 1 | Pending |
-| INF-03 | Phase 1 | Pending |
-| INF-04 | Phase 1 | Pending |
+| INF-02 | Phase 1 | Complete |
+| INF-03 | Phase 1 | Complete |
+| INF-04 | Phase 1 | Complete |
 | SEC-01 | Phase 2 | Pending |
 | SEC-02 | Phase 2 | Pending |
 | SEC-03 | Phase 2 | Pending |
