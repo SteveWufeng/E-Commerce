@@ -33,9 +33,11 @@ export function useCurrency() {
   };
 }
 
-export function formatWithConversion(amountInUSD: number): string {
+export function formatWithConversion(amountInUSD: number | string): string {
+  const num = typeof amountInUSD === "number" ? amountInUSD : parseFloat(String(amountInUSD)) || 0;
   const settings = useSettingsStore.getState().settings;
-  if (!settings) return `$${amountInUSD.toFixed(2)}`;
-  const converted = amountInUSD * settings.conversionRate;
+  if (!settings) return `$${num.toFixed(2)}`;
+  const rate = typeof settings.conversionRate === "number" ? settings.conversionRate : parseFloat(String(settings.conversionRate)) || 1;
+  const converted = num * rate;
   return `${settings.currencySymbol}${converted.toFixed(2)}`;
 }
