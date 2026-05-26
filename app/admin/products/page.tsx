@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/admin/admin-layout";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { formatCurrency } from "@/lib/utils";
 import { Plus, Edit, Trash2, X } from "lucide-react";
 
@@ -23,6 +24,7 @@ export default function AdminProductsPage() {
   const [editProduct, setEditProduct] = useState<any>(null);
   const [editPrice, setEditPrice] = useState("");
   const [editStock, setEditStock] = useState("");
+  const [editImages, setEditImages] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [addProduct, setAddProduct] = useState(false);
   const [newProduct, setNewProduct] = useState({
@@ -31,6 +33,7 @@ export default function AdminProductsPage() {
     stock: "",
     categoryId: "",
     description: "",
+    images: [] as string[],
   });
 
   useEffect(() => {
@@ -56,6 +59,7 @@ export default function AdminProductsPage() {
     setEditProduct(product);
     setEditPrice(product.price.toString());
     setEditStock(product.stock.toString());
+    setEditImages(product.images || []);
   }
 
   async function handleSaveEdit() {
@@ -69,20 +73,23 @@ export default function AdminProductsPage() {
         body: JSON.stringify({
           price: parseFloat(editPrice),
           stock: parseInt(editStock),
+          images: editImages,
         }),
       });
 
       if (res.ok) {
+        const updated = await res.json();
         setProducts((prev) =>
           prev.map((p) =>
             p.id === editProduct.id
-              ? { ...p, price: parseFloat(editPrice), stock: parseInt(editStock) }
+              ? { ...p, price: parseFloat(editPrice), stock: parseInt(editStock), images: updated.data.images }
               : p
           )
         );
         setEditProduct(null);
       } else {
-        console.error("Failed to update product");
+        const data = await res.json();
+        console.error("Failed to update product:", data.error);
       }
     } catch (error) {
       console.error("Failed to update product:", error);
@@ -105,6 +112,7 @@ export default function AdminProductsPage() {
           price: parseFloat(newProduct.price),
           stock: parseInt(newProduct.stock) || 0,
           categoryId: newProduct.categoryId,
+          images: newProduct.images,
           isActive: true,
         }),
       });
@@ -113,7 +121,7 @@ export default function AdminProductsPage() {
         const created = await res.json();
         setProducts((prev) => [...prev, created.data]);
         setAddProduct(false);
-        setNewProduct({ name: "", price: "", stock: "", categoryId: "", description: "" });
+        setNewProduct({ name: "", price: "", stock: "", categoryId: "", description: "", images: [] });
       } else {
         console.error("Failed to create product");
       }
@@ -284,6 +292,12 @@ export default function AdminProductsPage() {
                   className="input w-full"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Images
+                </label>
+                <ImageUpload images={editImages} onChange={setEditImages} />
+              </div>
             </div>
             <div className="flex gap-3 mt-6">
               <button
@@ -385,6 +399,15 @@ export default function AdminProductsPage() {
                   <option value="cln1p3m4g0002pkv4h1aabcdx">Beverages</option>
                   <option value="cln1p3m4g0003pkv4h1aabcdy">Snacks</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Images
+                </label>
+                <ImageUpload
+                  images={newProduct.images}
+                  onChange={(imgs) => setNewProduct({ ...newProduct, images: imgs })}
+                />
               </div>
             </div>
             <div className="flex gap-3 mt-6">
