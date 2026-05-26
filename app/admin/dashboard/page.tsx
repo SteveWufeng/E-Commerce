@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { DashboardMetrics } from "@/lib/analytics";
 import { formatCurrency } from "@/lib/utils";
-import { TrendingUp, ShoppingBag, DollarSign, Package } from "lucide-react";
+import { ShoppingBag, DollarSign, Package } from "lucide-react";
 import { useLocale } from "@/hooks/use-locale";
 
 /**
@@ -76,12 +76,6 @@ export default function AdminDashboardPage() {
           label={t("totalOrders")}
           value={metrics.totalOrders.toString()}
           color="bg-blue-50 text-blue-700"
-        />
-        <MetricCard
-          icon={<TrendingUp className="w-5 h-5" />}
-          label={t("totalProfit")}
-          value={formatCurrency(metrics.totalProfit)}
-          color="bg-purple-50 text-purple-700"
         />
         <MetricCard
           icon={<Package className="w-5 h-5" />}

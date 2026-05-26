@@ -15,7 +15,6 @@ import { Decimal } from "@prisma/client/runtime/library";
 export interface DashboardMetrics {
   totalRevenue: number;
   totalOrders: number;
-  totalProfit: number;
   averageOrderValue: number;
   topProducts: { name: string; revenue: number; unitsSold: number }[];
   ordersByStatus: Record<string, number>;
@@ -45,7 +44,6 @@ export async function getDashboardMetrics(
     ? { createdAt: dateFilter }
     : {};
 
-  // Total revenue and orders
   const orders = await db.order.findMany({
     where: whereClause,
     include: { items: true },
@@ -53,22 +51,22 @@ export async function getDashboardMetrics(
     take: 50,
   });
 
-  const totalRevenue = orders.reduce(
+  const totalOrders = orders.length;
+
+  const pickedUpOrders = orders.filter((o) => o.status === "PICKED_UP");
+
+  const totalRevenue = pickedUpOrders.reduce(
     (sum: number, o: { total: Decimal | number }) => sum + Number(o.total),
     0
   );
-  const totalOrders = orders.length;
-  const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+  const pickedUpCount = pickedUpOrders.length;
+  const averageOrderValue = pickedUpCount > 0 ? totalRevenue / pickedUpCount : 0;
 
-  // Profit calculation (requires product cost data)
-  let totalProfit = 0;
   const productSales: Record<string, { name: string; revenue: number; units: number }> = {};
 
-  for (const order of orders) {
+  for (const order of pickedUpOrders) {
     for (const item of order.items) {
       const revenue = Number(item.productPrice) * item.quantity;
-      const cost = item.productCost ? Number(item.productCost) * item.quantity : 0;
-      totalProfit += revenue - cost;
 
       if (!productSales[item.productId]) {
         productSales[item.productId] = { name: item.productName, revenue: 0, units: 0 };
@@ -98,13 +96,11 @@ export async function getDashboardMetrics(
     createdAt: o.createdAt,
   }));
 
-  // Daily sales aggregation (last 7 days)
-  const dailySales = getDailySales(orders);
+  const dailySales = getDailySales(pickedUpOrders);
 
   return {
     totalRevenue,
     totalOrders,
-    totalProfit,
     averageOrderValue,
     topProducts,
     ordersByStatus,
