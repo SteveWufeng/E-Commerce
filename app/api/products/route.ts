@@ -101,19 +101,34 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = productSchema.parse(body);
 
+    // Build unique slug
+    let slug = validated.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+    if (!slug) slug = "product";
+
+    // Check if slug exists and append counter
+    const existing = await db.product.findUnique({ where: { slug } });
+    if (existing) {
+      let counter = 1;
+      while (await db.product.findUnique({ where: { slug: `${slug}-${counter}` } })) {
+        counter++;
+      }
+      slug = `${slug}-${counter}`;
+    }
+
     const product = await db.product.create({
       data: {
         ...validated,
-        slug: validated.name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/(^-|-$)/g, ""),
+        slug,
       },
       include: { category: true },
     });
 
     return NextResponse.json({ success: true, data: product }, { status: 201 });
   } catch (error) {
+    console.error("Product create error:", error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, error: error.errors[0].message },
@@ -121,7 +136,7 @@ export async function POST(request: NextRequest) {
       );
     }
     return NextResponse.json(
-      { success: false, error: "Failed to create product" },
+      { success: false, error: (error as Error).message || "Failed to create product" },
       { status: 500 }
     );
   }

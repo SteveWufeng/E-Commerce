@@ -108,6 +108,27 @@ export async function PUT(
       }
     }
 
+    // Regenerate slug if name changed, ensure uniqueness
+    if (updateData.name) {
+      let slug = (updateData.name as string)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+      if (!slug) slug = "product";
+
+      const existing = await db.product.findFirst({
+        where: { slug, id: { not: id } },
+      });
+      if (existing) {
+        let counter = 1;
+        while (await db.product.findFirst({ where: { slug: `${slug}-${counter}`, id: { not: id } } })) {
+          counter++;
+        }
+        slug = `${slug}-${counter}`;
+      }
+      updateData.slug = slug;
+    }
+
     // Clean up removed images from R2
     if (updateData.images) {
       const existing = await db.product.findUnique({ where: { id }, select: { images: true } });
