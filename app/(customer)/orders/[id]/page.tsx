@@ -19,6 +19,10 @@ export default function OrderDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  const isOwner = !!(currentUserEmail && order && currentUserEmail === order.customerEmail);
 
   useEffect(() => {
     async function loadOrder() {
@@ -47,7 +51,20 @@ export default function OrderDetailPage() {
       }
     }
 
+    async function loadSession() {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.data?.email) setCurrentUserEmail(data.data.email);
+        }
+      } catch {
+        // Not logged in
+      }
+    }
+
     loadOrder();
+    loadSession();
   }, [orderId, email]);
 
   async function handleUploadReceipt() {
@@ -76,10 +93,34 @@ export default function OrderDetailPage() {
       setOrder(data.data);
       setReceiptFile(null);
       setReceiptPreview(null);
+      setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to upload receipt");
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleCancel() {
+    if (!order || !isOwner) return;
+    if (!confirm("Are you sure you want to cancel this order?")) return;
+
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/orders/${order.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "CANCELLED" }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to cancel order");
+
+      setOrder(data.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to cancel order");
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -182,16 +223,36 @@ export default function OrderDetailPage() {
           </div>
         )}
 
-        {/* Receipt Upload Section — Bank Transfer Only */}
-        {(order.paymentMethod === "BANK_TRANSFER" && (!order.receiptImage || order.status === "REJECTED")) && (
-          <div className="card mb-6 border-2 border-dashed border-primary-300 bg-primary-50/50">
+        {/* Receipt Upload Section — Bank Transfer Only, owner only */}
+        {order.paymentMethod === "BANK_TRANSFER" && isOwner && (
+          <div className={`card mb-6 ${order.receiptImage && (order.status === "PENDING" || order.status === "CONFIRMED") ? "border-2 border-dashed border-primary-300 bg-primary-50/50" : order.status === "REJECTED" ? "border-2 border-red-300 bg-red-50" : "border-2 border-dashed border-primary-300 bg-primary-50/50"}`}>
             <h2 className="text-lg font-semibold mb-2">
-              {order.status === "REJECTED" ? "Re-upload Payment Receipt" : "Upload Payment Receipt"}
+              {order.status === "REJECTED"
+                ? "Re-upload Payment Receipt"
+                : order.receiptImage
+                  ? "Update Payment Receipt"
+                  : "Upload Payment Receipt"}
             </h2>
+
+            {/* Show current receipt if exists */}
+            {order.receiptImage && (
+              <div className="relative w-full max-w-sm aspect-[4/3] rounded-lg overflow-hidden border mb-4">
+                <Image
+                  src={order.receiptImage}
+                  alt="Payment receipt"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+            )}
+
             <p className="text-sm text-gray-600 mb-4">
-              Please upload a clear image of your bank transfer receipt so we can confirm your payment.
+              {order.status === "REJECTED"
+                ? "Your receipt was rejected. Please upload a valid payment receipt."
+                : "Upload a clear image of your bank transfer receipt so we can confirm your payment."}
             </p>
-            <div className="flex items-center gap-4">
+
+            <div className="flex items-center gap-4 flex-wrap">
               <label className="cursor-pointer btn-secondary text-sm py-2 px-4 rounded-lg">
                 Choose File
                 <input
@@ -210,16 +271,16 @@ export default function OrderDetailPage() {
                 />
               </label>
               {receiptFile && (
-                <span className="text-sm text-gray-600">{receiptFile.name}</span>
-              )}
-              {receiptFile && (
-                <button
-                  onClick={handleUploadReceipt}
-                  disabled={uploading}
-                  className="btn-primary text-sm py-2 px-4"
-                >
-                  {uploading ? "Uploading..." : "Upload Receipt"}
-                </button>
+                <>
+                  <span className="text-sm text-gray-600">{receiptFile.name}</span>
+                  <button
+                    onClick={handleUploadReceipt}
+                    disabled={uploading}
+                    className="btn-primary text-sm py-2 px-4"
+                  >
+                    {uploading ? "Uploading..." : order.receiptImage ? "Update Receipt" : "Upload Receipt"}
+                  </button>
+                </>
               )}
             </div>
             {receiptPreview && (
@@ -238,8 +299,8 @@ export default function OrderDetailPage() {
           </div>
         )}
 
-        {/* Show uploaded receipt (when accepted) */}
-        {order.receiptImage && order.status !== "REJECTED" && (
+        {/* Show uploaded receipt for non-owners */}
+        {order.receiptImage && !isOwner && (
           <div className="card mb-6">
             <h2 className="text-lg font-semibold mb-4">Payment Receipt</h2>
             <div className="relative w-full max-w-sm aspect-[4/3] rounded-lg overflow-hidden border">
@@ -277,6 +338,19 @@ export default function OrderDetailPage() {
             ))}
           </div>
         </div>
+
+        {/* Cancel button — owner only */}
+        {isOwner && ["PENDING", "CONFIRMED"].includes(order.status) && (
+          <div className="mb-6 flex justify-end">
+            <button
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="btn-danger text-sm py-2 px-6"
+            >
+              {cancelling ? "Cancelling..." : "Cancel Order"}
+            </button>
+          </div>
+        )}
 
         <div className="card">
           <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
