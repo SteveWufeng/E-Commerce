@@ -125,6 +125,39 @@ export function orderReadyEmail(params: {
   };
 }
 
+export function verificationEmail(params: {
+  email: string;
+  token: string;
+  appName: string;
+}): EmailTemplate {
+  const verificationUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/auth/verify?token=${params.token}`;
+
+  return {
+    to: params.email,
+    subject: `Verify your email — ${params.appName}`,
+    html: `
+      <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px">
+        <h2 style="color:#16a34a">Verify Your Email</h2>
+        <p>Thanks for signing up!</p>
+        <p>Please verify your email address by clicking the button below:</p>
+        <div style="text-align:center;margin:24px 0">
+          <a href="${verificationUrl}"
+             style="display:inline-block;padding:12px 24px;background-color:#16a34a;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold">
+            Verify Email
+          </a>
+        </div>
+        <p style="color:#6b7280;font-size:14px">
+          Or copy and paste this link into your browser:<br>
+          <span style="font-family:monospace;font-size:12px">${verificationUrl}</span>
+        </p>
+        <p style="color:#6b7280;font-size:14px;margin-top:16px">
+          This link expires in 24 hours. If you didn't create an account, you can ignore this email.
+        </p>
+      </div>
+    `,
+  };
+}
+
 /**
  * Simple HTML-to-text converter for email text fallback.
  */

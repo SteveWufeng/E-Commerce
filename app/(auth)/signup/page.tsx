@@ -2,22 +2,10 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 
-/**
- * Signup page — new customer registration.
- *
- * Features:
- * - Name, email, phone, password form with validation
- * - Auto-sign-in after successful registration
- * - Link to login for existing users
- * - Guest checkout option
- */
 export default function SignupPage() {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const [form, setForm] = useState({
@@ -29,6 +17,7 @@ export default function SignupPage() {
     confirmPassword: "",
   });
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   function updateField(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -38,7 +27,6 @@ export default function SignupPage() {
     e.preventDefault();
     setError(null);
 
-    // Client-side validation
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -51,7 +39,6 @@ export default function SignupPage() {
 
     startTransition(async () => {
       try {
-        // Create the account first
         const res = await fetch("/api/auth/signup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -71,25 +58,40 @@ export default function SignupPage() {
           return;
         }
 
-        // Auto sign-in after successful registration
-        const result = await signIn("credentials", {
-          email: form.email.trim().toLowerCase(),
-          password: form.password,
-          redirect: false,
-        });
-
-        if (result?.error) {
-          // Account created but sign-in failed — redirect to login
-          router.push("/login?error=account_created");
-          return;
-        }
-
-        router.push("/");
-        router.refresh();
+        setSuccess(true);
       } catch {
         setError("An unexpected error occurred");
       }
     });
+  }
+
+  if (success) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center px-4 py-12">
+          <div className="w-full max-w-md text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Check Your Email</h1>
+            <p className="text-gray-500 mb-6">
+              We sent a verification link to <strong>{form.email}</strong>.
+              Click the link to activate your account, then sign in.
+            </p>
+            <Link
+              href="/login"
+              className="btn-primary inline-block px-8 py-3"
+            >
+              Go to Sign In
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   return (
