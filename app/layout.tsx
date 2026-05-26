@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     default: process.env.NEXT_PUBLIC_STORE_NAME || "E-Commerce Store",
     template: `%s | ${process.env.NEXT_PUBLIC_STORE_NAME || "Store"}`,
   },
-  description: "Modern e-commerce with pickup scheduling — browse, order, and pick up at your convenience.",
+  description: "Browse our selection, order online, and pick up at your convenience.",
   viewport: "width=device-width, initial-scale=1, maximum-scale=5",
   themeColor: "#16a34a",
   manifest: "/manifest.json",
