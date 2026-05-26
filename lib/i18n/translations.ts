@@ -133,7 +133,6 @@ export type TranslationKey =
   | "paymentMethods"
   | "totalRevenue"
   | "totalOrders"
-  | "totalProfit"
   | "avgOrderValue"
   | "topProducts"
   | "ordersByStatus"
@@ -186,6 +185,14 @@ export type TranslationKey =
   | "noReceipt"
   | "cancelRejection"
   | "close"
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday"
+  | "pickupHoursSettings"
 
   // Currency display
   | "localCurrency"
@@ -325,7 +332,6 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     paymentMethods: "Métodos de Pago",
     totalRevenue: "Ingresos Totales",
     totalOrders: "Pedidos Totales",
-    totalProfit: "Ganancias Totales",
     avgOrderValue: "Valor Promedio",
     topProducts: "Productos Más Vendidos",
     ordersByStatus: "Pedidos por Estado",
@@ -378,6 +384,15 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     noReceipt: "Sin comprobante",
     cancelRejection: "Cancelar Rechazo",
     close: "Cerrar",
+    // Pickup Hours
+    monday: "Lunes",
+    tuesday: "Martes",
+    wednesday: "Miércoles",
+    thursday: "Jueves",
+    friday: "Viernes",
+    saturday: "Sábado",
+    sunday: "Domingo",
+    pickupHoursSettings: "Horario de Recogida",
 
     // Currency display
     localCurrency: "Moneda Local",
@@ -517,7 +532,6 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     paymentMethods: "Payment Methods",
     totalRevenue: "Total Revenue",
     totalOrders: "Total Orders",
-    totalProfit: "Total Profit",
     avgOrderValue: "Avg Order Value",
     topProducts: "Top Products",
     ordersByStatus: "Orders by Status",
@@ -570,6 +584,15 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     noReceipt: "No receipt",
     cancelRejection: "Cancel Rejection",
     close: "Close",
+    // Pickup Hours
+    monday: "Monday",
+    tuesday: "Tuesday",
+    wednesday: "Wednesday",
+    thursday: "Thursday",
+    friday: "Friday",
+    saturday: "Saturday",
+    sunday: "Sunday",
+    pickupHoursSettings: "Pickup Hours",
 
     // Currency display
     localCurrency: "Local Currency",

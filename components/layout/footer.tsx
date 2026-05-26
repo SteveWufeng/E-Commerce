@@ -2,9 +2,15 @@
 
 import Link from "next/link";
 import { useLocale } from "@/hooks/use-locale";
+import { useSettingsStore } from "@/hooks/use-settings";
 
 export function Footer() {
   const { t } = useLocale();
+  const settings = useSettingsStore((state) => state.settings);
+  const ph = settings?.pickupHours;
+
+  const storeName = settings?.storeName || process.env.NEXT_PUBLIC_STORE_NAME || "E-Commerce Store";
+  const storeAddress = settings?.storeAddress || process.env.NEXT_PUBLIC_STORE_ADDRESS || "";
 
   return (
     <footer className="bg-gray-900 text-gray-400 safe-bottom">
@@ -13,11 +19,11 @@ export function Footer() {
           {/* Store Info */}
           <div>
             <h3 className="text-white font-semibold text-lg mb-4">
-              {process.env.NEXT_PUBLIC_STORE_NAME || "E-Commerce Store"}
+              {storeName}
             </h3>
-            <p className="text-sm leading-relaxed">
-              {process.env.NEXT_PUBLIC_STORE_ADDRESS || "123 Main St, City, State"}
-            </p>
+            {storeAddress && (
+              <p className="text-sm leading-relaxed">{storeAddress}</p>
+            )}
             <p className="text-sm mt-2">
               {t("orderOnlinePickup")}
             </p>
@@ -54,15 +60,45 @@ export function Footer() {
           <div>
             <h3 className="text-white font-semibold mb-4">{t("pickupHours")}</h3>
             <ul className="space-y-2 text-sm">
-              <li>Monday – Friday: 9:00 AM – 7:00 PM</li>
-              <li>Saturday: 9:00 AM – 5:00 PM</li>
-              <li>Sunday: 10:00 AM – 3:00 PM</li>
+              {ph ? (
+                <>
+                  {["monday","tuesday","wednesday","thursday","friday"].every((d) => ph[d]) &&
+                    ph.monday === ph.tuesday &&
+                    ph.tuesday === ph.wednesday &&
+                    ph.wednesday === ph.thursday &&
+                    ph.thursday === ph.friday ? (
+                    <li>
+                      {t("monday")} – {t("friday")}: {ph.monday}
+                    </li>
+                  ) : (
+                    ["monday","tuesday","wednesday","thursday","friday"].map((d) =>
+                      ph[d] ? (
+                        <li key={d}>
+                          {t(d as any)}: {ph[d]}
+                        </li>
+                      ) : null
+                    )
+                  )}
+                  {ph.saturday && (
+                    <li>{t("saturday")}: {ph.saturday}</li>
+                  )}
+                  {ph.sunday && (
+                    <li>{t("sunday")}: {ph.sunday}</li>
+                  )}
+                </>
+              ) : (
+                <>
+                  <li>{t("monday")} – {t("friday")}: 9:00 AM – 7:00 PM</li>
+                  <li>{t("saturday")}: 9:00 AM – 5:00 PM</li>
+                  <li>{t("sunday")}: 10:00 AM – 3:00 PM</li>
+                </>
+              )}
             </ul>
           </div>
         </div>
 
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm">
-          <p>&copy; {new Date().getFullYear()} {process.env.NEXT_PUBLIC_STORE_NAME || "E-Commerce Store"}. {t("allRightsReserved")}</p>
+          <p>&copy; {new Date().getFullYear()} {storeName}. {t("allRightsReserved")}</p>
         </div>
       </div>
     </footer>

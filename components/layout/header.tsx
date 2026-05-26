@@ -40,6 +40,8 @@ function CurrencyDisplay() {
  */
 export function Header() {
   const { t } = useLocale();
+  const settings = useSettingsStore((state) => state.settings);
+  const storeName = settings?.storeName || process.env.NEXT_PUBLIC_STORE_NAME || "Store";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [cartBounce, setCartBounce] = useState(false);
@@ -100,7 +102,7 @@ export function Header() {
               <ShoppingBag className="w-5 h-5 text-white" />
             </div>
             <span className="text-lg font-bold text-gray-900 hidden sm:block">
-              {process.env.NEXT_PUBLIC_STORE_NAME || "Store"}
+              {storeName}
             </span>
           </Link>
 
