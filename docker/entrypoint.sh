@@ -1,13 +1,21 @@
 #!/bin/sh
 set -e
 
+if [ -z "$DATABASE_URL" ]; then
+  echo "ERROR: DATABASE_URL is not set. Add the PostgreSQL plugin in Railway dashboard."
+  echo "       Railway → your project → + New → Database → Add PostgreSQL"
+  exit 1
+fi
+
 printf 'Waiting for database and applying migrations...\n'
 max_retries=30
 i=0
-until npx prisma migrate deploy > /dev/null 2>&1; do
+until npx prisma migrate deploy; do
   i=$((i + 1))
   if [ "$i" -ge "$max_retries" ]; then
-    echo "Failed to apply migrations after $max_retries attempts"
+    echo ""
+    echo "Failed to apply migrations after $max_retries attempts."
+    echo "Check the Railway logs above for the specific error."
     exit 1
   fi
   printf '.'
@@ -25,7 +33,7 @@ prisma.user.findUnique({ where: { email: 'admin@store.com' } })
     return prisma.$disconnect();
   })
   .catch(async error => {
-    console.error(error);
+    console.error("Admin check error:", error);
     await prisma.$disconnect();
     process.exit(1);
   });
@@ -33,8 +41,8 @@ NODE
 )
 
 if [ "$admin_exists" = "no" ]; then
-  printf 'No admin user found. Trying seed script...\n'
-  if npm run db:seed 2>/dev/null; then
+  printf 'No admin user found. Running seed script...\n'
+  if npm run db:seed; then
     printf 'Seed completed\n'
   else
     printf 'ts-node seed failed. Creating admin directly...\n'
