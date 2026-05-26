@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -43,17 +44,30 @@ export function CheckoutForm({
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
-      firstName: prefillData?.firstName || "",
-      lastName: prefillData?.lastName || "",
-      email: prefillData?.email || "",
-      phone: prefillData?.phone || "",
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
       notes: "",
     },
   });
+
+  useEffect(() => {
+    if (prefillData) {
+      reset({
+        firstName: prefillData.firstName,
+        lastName: prefillData.lastName,
+        email: prefillData.email,
+        phone: prefillData.phone,
+        notes: "",
+      });
+    }
+  }, [prefillData, reset]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="card">
