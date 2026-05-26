@@ -99,5 +99,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
+  // trustHost needed for containerized envs (Railway, Docker) where the
+  // request host may not match NEXTAUTH_URL. For Google OAuth, the redirect
+  // URI is determined by NEXTAUTH_URL — set it in Railway dashboard.
+  trustHost: true,
   secret: process.env.NEXTAUTH_SECRET,
 });
