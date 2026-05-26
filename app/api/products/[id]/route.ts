@@ -41,7 +41,7 @@ const updateProductSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().optional(),
   price: z.number().positive().optional(),
-  comparePrice: z.number().positive().optional(),
+  comparePrice: z.number().positive().nullable().optional(),
   cost: z.number().positive().optional(),
   sku: z.string().optional(),
   stock: z.number().int().min(0).optional(),
