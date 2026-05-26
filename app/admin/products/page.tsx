@@ -19,6 +19,7 @@ import { Plus, Edit, Trash2, X } from "lucide-react";
  */
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [editProduct, setEditProduct] = useState<any>(null);
@@ -39,9 +40,14 @@ export default function AdminProductsPage() {
   useEffect(() => {
     async function loadProducts() {
       try {
-        const res = await fetch("/api/products?limit=100");
-        const data = await res.json();
-        setProducts(data.data || []);
+        const [productsRes, categoriesRes] = await Promise.all([
+          fetch("/api/products?limit=100"),
+          fetch("/api/products/categories"),
+        ]);
+        const productsData = await productsRes.json();
+        const categoriesData = await categoriesRes.json();
+        setProducts(productsData.data || []);
+        setCategories(categoriesData.data || []);
       } catch (error) {
         console.error("Failed to load products:", error);
       } finally {
@@ -395,9 +401,11 @@ export default function AdminProductsPage() {
                   className="input w-full"
                 >
                   <option value="">Select category</option>
-                  <option value="cln1p3m4g0001pkv4h1aabcde">Groceries</option>
-                  <option value="cln1p3m4g0002pkv4h1aabcdx">Beverages</option>
-                  <option value="cln1p3m4g0003pkv4h1aabcdy">Snacks</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
