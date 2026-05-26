@@ -7,7 +7,6 @@ interface Settings {
   currencyCode: string;
   currencySymbol: string;
   conversionRate: number;
-  pickupHours: Record<string, string> | null;
 }
 
 interface SettingsState {

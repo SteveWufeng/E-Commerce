@@ -7,7 +7,6 @@ import { useSettingsStore } from "@/hooks/use-settings";
 export function Footer() {
   const { t } = useLocale();
   const settings = useSettingsStore((state) => state.settings);
-  const ph = settings?.pickupHours;
 
   const storeName = settings?.storeName || process.env.NEXT_PUBLIC_STORE_NAME || "Super Todos";
   const storeAddress = settings?.storeAddress || process.env.NEXT_PUBLIC_STORE_ADDRESS || "";
@@ -60,39 +59,9 @@ export function Footer() {
           <div>
             <h3 className="text-white font-semibold mb-4">{t("pickupHours")}</h3>
             <ul className="space-y-2 text-sm">
-              {ph ? (
-                <>
-                  {["monday","tuesday","wednesday","thursday","friday"].every((d) => ph[d]) &&
-                    ph.monday === ph.tuesday &&
-                    ph.tuesday === ph.wednesday &&
-                    ph.wednesday === ph.thursday &&
-                    ph.thursday === ph.friday ? (
-                    <li>
-                      {t("monday")} – {t("friday")}: {ph.monday}
-                    </li>
-                  ) : (
-                    ["monday","tuesday","wednesday","thursday","friday"].map((d) =>
-                      ph[d] ? (
-                        <li key={d}>
-                          {t(d as any)}: {ph[d]}
-                        </li>
-                      ) : null
-                    )
-                  )}
-                  {ph.saturday && (
-                    <li>{t("saturday")}: {ph.saturday}</li>
-                  )}
-                  {ph.sunday && (
-                    <li>{t("sunday")}: {ph.sunday}</li>
-                  )}
-                </>
-              ) : (
-                <>
-                  <li>{t("monday")} – {t("friday")}: 9:00 AM – 7:00 PM</li>
-                  <li>{t("saturday")}: 9:00 AM – 5:00 PM</li>
-                  <li>{t("sunday")}: 10:00 AM – 3:00 PM</li>
-                </>
-              )}
+              <li>{t("monday")} – {t("friday")}: 9:00 AM – 7:00 PM</li>
+              <li>{t("saturday")}: 9:00 AM – 5:00 PM</li>
+              <li>{t("sunday")}: 10:00 AM – 3:00 PM</li>
             </ul>
           </div>
         </div>

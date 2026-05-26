@@ -11,7 +11,6 @@ interface StoreSettings {
   currencyCode: string;
   currencySymbol: string;
   conversionRate: number;
-  pickupHours: Record<string, string> | null;
 }
 
 /**
@@ -27,7 +26,6 @@ interface StoreSettings {
  */
 export default function AdminSettingsPage() {
   const { t } = useLocale();
-  const days = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"] as const;
   const [settings, setSettings] = useState<StoreSettings>({
     storeName: "",
     storeAddress: "",
@@ -35,15 +33,6 @@ export default function AdminSettingsPage() {
     currencyCode: "USD",
     currencySymbol: "$",
     conversionRate: 1,
-    pickupHours: {
-      monday: "9:00 AM – 7:00 PM",
-      tuesday: "9:00 AM – 7:00 PM",
-      wednesday: "9:00 AM – 7:00 PM",
-      thursday: "9:00 AM – 7:00 PM",
-      friday: "9:00 AM – 7:00 PM",
-      saturday: "9:00 AM – 5:00 PM",
-      sunday: "10:00 AM – 3:00 PM",
-    },
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -175,34 +164,6 @@ export default function AdminSettingsPage() {
                 Example: If you set 1 USD = 150 JPY, enter 150
               </p>
             </div>
-          </div>
-        </div>
-
-        {/* Pickup Hours */}
-        <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            {t("pickupHoursSettings")}
-          </h2>
-          <div className="space-y-3">
-            {days.map((day) => (
-              <div key={day} className="flex items-center gap-3">
-                <span className="w-24 text-sm font-medium text-gray-700 capitalize">
-                  {t(day)}
-                </span>
-                <input
-                  type="text"
-                  className="input flex-1"
-                  value={settings.pickupHours?.[day] ?? ""}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      pickupHours: { ...settings.pickupHours!, [day]: e.target.value },
-                    })
-                  }
-                  placeholder="9:00 AM – 7:00 PM"
-                />
-              </div>
-            ))}
           </div>
         </div>
 
