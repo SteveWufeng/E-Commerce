@@ -2,7 +2,7 @@
 ALTER TABLE "User" ALTER COLUMN "passwordHash" DROP NOT NULL;
 
 -- CreateTable
-CREATE TABLE "VerificationToken" (
+CREATE TABLE IF NOT EXISTS "VerificationToken" (
     "id" TEXT NOT NULL,
     "identifier" TEXT NOT NULL,
     "token" TEXT NOT NULL,
@@ -12,8 +12,8 @@ CREATE TABLE "VerificationToken" (
     CONSTRAINT "VerificationToken_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "Settings" (
+-- CreateTable (idempotent — table may already exist from previous state)
+CREATE TABLE IF NOT EXISTS "Settings" (
     "id" TEXT NOT NULL,
     "storeName" TEXT NOT NULL DEFAULT 'My Store',
     "storeAddress" TEXT NOT NULL DEFAULT '',
@@ -27,8 +27,13 @@ CREATE TABLE "Settings" (
     CONSTRAINT "Settings_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
-CREATE UNIQUE INDEX "VerificationToken_token_key" ON "VerificationToken"("token");
-
--- CreateIndex
-CREATE UNIQUE INDEX "VerificationToken_identifier_token_key" ON "VerificationToken"("identifier", "token");
+-- CreateIndex — skip if already exists
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'VerificationToken_token_key') THEN
+    CREATE UNIQUE INDEX "VerificationToken_token_key" ON "VerificationToken"("token");
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'VerificationToken_identifier_token_key') THEN
+    CREATE UNIQUE INDEX "VerificationToken_identifier_token_key" ON "VerificationToken"("identifier", "token");
+  END IF;
+END $$;
