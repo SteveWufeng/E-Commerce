@@ -562,7 +562,7 @@ The app exposes `GET /api/health` which verifies database connectivity. The Dock
 |----------|----------|---------|-------------|
 | `DATABASE_URL` | Yes | — | PostgreSQL connection string |
 | `NEXTAUTH_SECRET` | Yes | — | NextAuth JWT signing secret |
-| `NEXTAUTH_URL` | Yes | — | Public URL of the app |
+| `NEXTAUTH_URL` | **Yes (required for Google OAuth)** | — | Public URL of the app — must match exactly what's registered in Google Cloud Console |
 | `MOCK_PAYMENTS` | No | `true` | Toggle mock vs real Stripe |
 | `STRIPE_SECRET_KEY` | No | — | Stripe secret key (if mock disabled) |
 | `RESEND_API_KEY` | No | — | Resend API key for email |
