@@ -13,7 +13,8 @@ import { auth } from "@/lib/auth";
 import { z } from "zod";
 
 const updateStatusSchema = z.object({
-  status: z.enum(["PENDING", "CONFIRMED", "READY_FOR_PICKUP", "PICKED_UP", "CANCELLED"]),
+  status: z.enum(["PENDING", "CONFIRMED", "READY_FOR_PICKUP", "PICKED_UP", "CANCELLED", "REJECTED"]),
+  rejectionReason: z.string().optional(),
 });
 
 export async function PUT(
@@ -32,10 +33,28 @@ export async function PUT(
     const body = await request.json();
     const validated = updateStatusSchema.parse(body);
 
+    const updateData: Record<string, unknown> = { status: validated.status };
+
+    // When rejecting, store the reason
+    if (validated.status === "REJECTED") {
+      if (!validated.rejectionReason) {
+        return NextResponse.json(
+          { success: false, error: "Rejection reason is required" },
+          { status: 400 }
+        );
+      }
+      updateData.rejectionReason = validated.rejectionReason;
+    }
+
+    // When moving out of REJECTED back to CONFIRMED (re-upload), clear the reason
+    if (validated.status === "CONFIRMED") {
+      updateData.rejectionReason = null;
+    }
+
     const order = await db.order.update({
       where: { id },
-      data: { status: validated.status },
-      include: { items: true, pickupSlot: true },
+      data: updateData,
+      include: { items: true },
     });
 
     return NextResponse.json({ success: true, data: order });
@@ -68,7 +87,7 @@ export async function GET(
 
     const order = await db.order.findFirst({
       where,
-      include: { items: true, pickupSlot: true },
+      include: { items: true },
     });
 
     if (!order) {

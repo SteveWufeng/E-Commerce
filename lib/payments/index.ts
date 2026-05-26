@@ -116,5 +116,5 @@ async function processStripePayment(
  * Validate that a payment method string is supported.
  */
 export function isValidPaymentMethod(method: string): method is PaymentMethod {
-  return ["CREDIT_CARD", "GOOGLE_PAY", "PAYPAL", "CASH_ON_PICKUP"].includes(method);
+  return ["CREDIT_CARD", "GOOGLE_PAY", "PAYPAL", "CASH_ON_PICKUP", "BANK_TRANSFER"].includes(method);
 }

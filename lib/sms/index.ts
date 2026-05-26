@@ -54,15 +54,12 @@ export async function sendSms(template: SmsTemplate): Promise<boolean> {
  */
 export function orderConfirmationSms(params: {
   orderNumber: string;
-  pickupDate: string;
-  pickupTime: string;
 }): SmsTemplate {
   return {
     to: "", // Set by caller
     body:
       `Order ${params.orderNumber} confirmed! ` +
-      `Pickup: ${params.pickupDate} at ${params.pickupTime}. ` +
-      `We'll notify you when it's ready.`,
+      `We'll notify you when it's ready for pickup.`,
   };
 }
 

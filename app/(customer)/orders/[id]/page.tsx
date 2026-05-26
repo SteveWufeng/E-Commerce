@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
@@ -11,9 +12,13 @@ import type { Order } from "@/types";
 export default function OrderDetailPage() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("id") || searchParams.get("orderNumber");
+  const email = searchParams.get("email");
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadOrder() {
@@ -24,7 +29,9 @@ export default function OrderDetailPage() {
       }
 
       try {
-        const res = await fetch(`/api/orders/${orderId}`);
+        const params = new URLSearchParams();
+        if (email) params.set("email", email);
+        const res = await fetch(`/api/orders/${orderId}?${params.toString()}`);
         const data = await res.json();
 
         if (!res.ok || !data.data) {
@@ -33,7 +40,7 @@ export default function OrderDetailPage() {
         }
 
         setOrder(data.data);
-      } catch (err) {
+      } catch {
         setError("Failed to load order");
       } finally {
         setIsLoading(false);
@@ -41,7 +48,40 @@ export default function OrderDetailPage() {
     }
 
     loadOrder();
-  }, [orderId]);
+  }, [orderId, email]);
+
+  async function handleUploadReceipt() {
+    if (!receiptFile || !order) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", receiptFile);
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error(uploadData.error || "Failed to upload receipt");
+
+      const res = await fetch(`/api/orders/${order.id}/receipt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ receiptImage: uploadData.url }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save receipt");
+
+      setOrder(data.data);
+      setReceiptFile(null);
+      setReceiptPreview(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to upload receipt");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const statusColors: Record<string, string> = {
     PENDING: "badge-warning",
@@ -49,6 +89,7 @@ export default function OrderDetailPage() {
     READY_FOR_PICKUP: "badge-success",
     PICKED_UP: "badge-success",
     CANCELLED: "badge-danger",
+    REJECTED: "badge-danger",
   };
 
   if (isLoading) {
@@ -130,25 +171,95 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        {order.pickupSlot && (
-          <div className="card mb-6">
-            <h2 className="text-lg font-semibold mb-4">Pickup Information</h2>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-gray-500">Pickup Date</p>
-                <p className="font-medium">{formatDateTime(order.pickupSlot.date)}</p>
-              </div>
-              <div>
-                <p className="text-gray-500">Pickup Time</p>
-                <p className="font-medium">{order.pickupSlot.startTime} - {order.pickupSlot.endTime}</p>
-              </div>
+        {/* Rejection Notice */}
+        {order.status === "REJECTED" && order.rejectionReason && (
+          <div className="card mb-6 border-2 border-red-300 bg-red-50">
+            <h2 className="text-lg font-semibold text-red-700 mb-2">Receipt Rejected</h2>
+            <p className="text-sm text-red-600 mb-3">{order.rejectionReason}</p>
+            <p className="text-sm text-gray-600">
+              Please upload a valid payment receipt below to continue.
+            </p>
+          </div>
+        )}
+
+        {/* Receipt Upload Section — Bank Transfer Only */}
+        {(order.paymentMethod === "BANK_TRANSFER" && (!order.receiptImage || order.status === "REJECTED")) && (
+          <div className="card mb-6 border-2 border-dashed border-primary-300 bg-primary-50/50">
+            <h2 className="text-lg font-semibold mb-2">
+              {order.status === "REJECTED" ? "Re-upload Payment Receipt" : "Upload Payment Receipt"}
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Please upload a clear image of your bank transfer receipt so we can confirm your payment.
+            </p>
+            <div className="flex items-center gap-4">
+              <label className="cursor-pointer btn-secondary text-sm py-2 px-4 rounded-lg">
+                Choose File
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setReceiptFile(file);
+                      const reader = new FileReader();
+                      reader.onload = () => setReceiptPreview(reader.result as string);
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="hidden"
+                />
+              </label>
+              {receiptFile && (
+                <span className="text-sm text-gray-600">{receiptFile.name}</span>
+              )}
+              {receiptFile && (
+                <button
+                  onClick={handleUploadReceipt}
+                  disabled={uploading}
+                  className="btn-primary text-sm py-2 px-4"
+                >
+                  {uploading ? "Uploading..." : "Upload Receipt"}
+                </button>
+              )}
             </div>
-            {order.notes && (
-              <div className="mt-4 pt-4 border-t">
-                <p className="text-gray-500 text-sm">Order Notes</p>
-                <p className="text-sm">{order.notes}</p>
+            {receiptPreview && (
+              <div className="mt-3 relative w-48 h-48 rounded-lg overflow-hidden border">
+                <Image
+                  src={receiptPreview}
+                  alt="Receipt preview"
+                  fill
+                  className="object-cover"
+                />
               </div>
             )}
+            {error && (
+              <p className="mt-2 text-sm text-red-600">{error}</p>
+            )}
+          </div>
+        )}
+
+        {/* Show uploaded receipt (when accepted) */}
+        {order.receiptImage && order.status !== "REJECTED" && (
+          <div className="card mb-6">
+            <h2 className="text-lg font-semibold mb-4">Payment Receipt</h2>
+            <div className="relative w-full max-w-sm aspect-[4/3] rounded-lg overflow-hidden border">
+              <Image
+                src={order.receiptImage}
+                alt="Payment receipt"
+                fill
+                className="object-contain"
+              />
+            </div>
+            <p className="mt-2 text-xs text-gray-400">
+              Receipt uploaded — awaiting admin confirmation.
+            </p>
+          </div>
+        )}
+
+        {order.notes && (
+          <div className="card mb-6">
+            <h2 className="text-lg font-semibold mb-4">Order Notes</h2>
+            <p className="text-sm">{order.notes}</p>
           </div>
         )}
 

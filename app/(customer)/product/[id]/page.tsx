@@ -16,7 +16,7 @@ import { Minus, Plus, ShoppingBag } from "lucide-react";
  * Product detail page.
  *
  * Features:
- * - Product images (gallery)
+ * - Product images gallery with thumbnail navigation
  * - Full description
  * - Price with sale indicator
  * - Stock status
@@ -31,6 +31,7 @@ export default function ProductPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(0);
   const addItem = useCartStore((state) => state.addItem);
   const { showToast } = useToast();
 
@@ -107,6 +108,7 @@ export default function ProductPage() {
   const isOutOfStock = product.stock <= 0;
   const isLowStock = product.stock > 0 && product.stock <= 5;
   const onSale = product.comparePrice && product.comparePrice > product.price;
+  const images = product.images || [];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -129,22 +131,59 @@ export default function ProductPage() {
         </nav>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-          {/* Image */}
-          <div className="aspect-square rounded-xl bg-gray-100 overflow-hidden">
-            {product.images && product.images.length > 0 ? (
-              <Image
-                src={product.images[0]}
-                alt={product.name}
-                width={600}
-                height={600}
-                className="w-full h-full object-cover"
-                priority
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-300">
-                <svg className="w-24 h-24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+          {/* Image Gallery */}
+          <div>
+            {/* Main Image */}
+            <div className="aspect-square rounded-xl bg-gray-100 overflow-hidden">
+              {images.length > 0 ? (
+                <Image
+                  key={selectedImage}
+                  src={images[selectedImage]}
+                  alt={product.name}
+                  width={600}
+                  height={600}
+                  className="w-full h-full object-cover animate-fade-in"
+                  priority
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-300">
+                  <svg className="w-24 h-24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              )}
+            </div>
+
+            {/* Thumbnail Navigation */}
+            {images.length > 1 && (
+              <div className="mt-4">
+                {/* Mobile: horizontal scrollable row | Desktop: grid */}
+                <div className="flex md:grid md:grid-cols-5 gap-3 overflow-x-auto pb-2 md:overflow-x-visible">
+                  {images.map((image, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedImage(index)}
+                      className={`
+                        relative flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20
+                        md:w-full md:aspect-square
+                        rounded-lg overflow-hidden border-2 transition-all duration-200
+                        ${selectedImage === index
+                          ? 'border-primary-500 ring-2 ring-primary-200'
+                          : 'border-gray-200 hover:border-gray-400'
+                        }
+                      `}
+                      aria-label={`View image ${index + 1}`}
+                    >
+                      <Image
+                        src={image}
+                        alt={`${product.name} ${index + 1}`}
+                        width={100}
+                        height={100}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
