@@ -6,8 +6,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { useLocale } from "@/hooks/use-locale";
 
 export default function LoginPage() {
+  const { t } = useLocale();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [googlePending, setGooglePending] = useState(false);
@@ -32,10 +34,10 @@ export default function LoginPage() {
   }, []);
 
   const errorMessageMap: Record<string, string> = {
-    auth_required: "Please sign in to access that page.",
-    unauthorized: "You do not have permission to access that page.",
-    CredentialsSignin: "Invalid email or password.",
-    missing_token: "Invalid verification link.",
+    auth_required: t("authRequired"),
+    unauthorized: t("unauthorized"),
+    CredentialsSignin: t("invalidCredentials"),
+    missing_token: t("invalidVerificationLink"),
   };
 
   const displayError = error || (urlError ? errorMessageMap[urlError] || urlError : null);
@@ -52,7 +54,7 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        setError(t("invalidCredentials"));
         return;
       }
 
@@ -75,9 +77,9 @@ export default function LoginPage() {
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900">Sign In</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t("signInHeading")}</h1>
             <p className="text-gray-500 mt-2">
-              Welcome back! Sign in to your account.
+              {t("signInSubtitle")}
             </p>
           </div>
 
@@ -86,7 +88,7 @@ export default function LoginPage() {
               className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm"
               role="alert"
             >
-              Email verified! You can now sign in.
+              {t("emailVerified")}
             </div>
           )}
 
@@ -123,7 +125,7 @@ export default function LoginPage() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            {googlePending ? "Signing in..." : "Sign in with Google"}
+            {googlePending ? t("signingIn") : t("signInWithGoogle")}
           </button>
 
           <div className="relative mb-6">
@@ -131,14 +133,14 @@ export default function LoginPage() {
               <div className="w-full border-t border-gray-200" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="bg-white px-4 text-gray-500">or sign in with email</span>
+              <span className="bg-white px-4 text-gray-500">{t("orSignInWithEmail")}</span>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="card space-y-4">
             <div>
               <label htmlFor="email" className="label">
-                Email
+                {t("emailLabel")}
               </label>
               <input
                 id="email"
@@ -148,13 +150,13 @@ export default function LoginPage() {
                 className="input"
                 required
                 autoComplete="email"
-                placeholder="you@example.com"
+                placeholder={t("emailPlaceholder")}
               />
             </div>
 
             <div>
               <label htmlFor="password" className="label">
-                Password
+                {t("passwordLabel")}
               </label>
               <input
                 id="password"
@@ -173,20 +175,20 @@ export default function LoginPage() {
               disabled={isPending}
               className="btn-primary w-full py-3"
             >
-              {isPending ? "Signing in..." : "Sign In"}
+              {isPending ? t("signingIn") : t("signInHeading")}
             </button>
           </form>
 
           <div className="mt-6 text-center space-y-2">
             <p className="text-sm text-gray-500">
-              Don&apos;t have an account?{" "}
+              {t("dontHaveAccount")}{" "}
               <Link href="/signup" className="text-primary-600 font-medium hover:underline">
-                Sign up
+                {t("signUpLink")}
               </Link>
             </p>
             <p className="text-sm text-gray-500">
               <Link href="/" className="text-primary-600 font-medium hover:underline">
-                Continue as guest
+                {t("continueAsGuest")}
               </Link>
             </p>
           </div>

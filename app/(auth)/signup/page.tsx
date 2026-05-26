@@ -4,8 +4,10 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { useLocale } from "@/hooks/use-locale";
 
 export default function SignupPage() {
+  const { t } = useLocale();
   const [isPending, startTransition] = useTransition();
 
   const [form, setForm] = useState({
@@ -28,12 +30,12 @@ export default function SignupPage() {
     setError(null);
 
     if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("passwordsDoNotMatch"));
       return;
     }
 
     if (form.password.length < 6) {
-      setError("Password must be at least 6 characters");
+      setError(t("passwordTooShort"));
       return;
     }
 
@@ -54,13 +56,13 @@ export default function SignupPage() {
         const data = await res.json();
 
         if (!res.ok) {
-          setError(data.error || "Signup failed");
+          setError(data.error || t("signupFailed"));
           return;
         }
 
         setSuccess(true);
       } catch {
-        setError("An unexpected error occurred");
+        setError(t("unexpectedError"));
       }
     });
   }
@@ -76,16 +78,16 @@ export default function SignupPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Check Your Email</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">{t("checkYourEmail")}</h1>
             <p className="text-gray-500 mb-6">
-              We sent a verification link to <strong>{form.email}</strong>.
-              Click the link to activate your account, then sign in.
+              {t("verificationSent")} <strong>{form.email}</strong>.
+              {t("verificationInstructions")}
             </p>
             <Link
               href="/login"
               className="btn-primary inline-block px-8 py-3"
             >
-              Go to Sign In
+              {t("goToSignIn")}
             </Link>
           </div>
         </main>
@@ -101,9 +103,9 @@ export default function SignupPage() {
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900">Create Account</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t("createAccount")}</h1>
             <p className="text-gray-500 mt-2">
-              Join us for a faster checkout experience.
+              {t("createAccountSubtitle")}
             </p>
           </div>
 
@@ -120,7 +122,7 @@ export default function SignupPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="firstName" className="label">
-                  First Name
+                  {t("firstNameLabel")}
                 </label>
                 <input
                   id="firstName"
@@ -134,7 +136,7 @@ export default function SignupPage() {
               </div>
               <div>
                 <label htmlFor="lastName" className="label">
-                  Last Name
+                  {t("lastNameLabel")}
                 </label>
                 <input
                   id="lastName"
@@ -150,7 +152,7 @@ export default function SignupPage() {
 
             <div>
               <label htmlFor="email" className="label">
-                Email
+                {t("emailLabel")}
               </label>
               <input
                 id="email"
@@ -165,7 +167,7 @@ export default function SignupPage() {
 
             <div>
               <label htmlFor="phone" className="label">
-                Phone (optional)
+                {t("phoneOptional")}
               </label>
               <input
                 id="phone"
@@ -179,7 +181,7 @@ export default function SignupPage() {
 
             <div>
               <label htmlFor="password" className="label">
-                Password
+                {t("passwordLabel")}
               </label>
               <input
                 id="password"
@@ -195,7 +197,7 @@ export default function SignupPage() {
 
             <div>
               <label htmlFor="confirmPassword" className="label">
-                Confirm Password
+                {t("confirmPasswordLabel")}
               </label>
               <input
                 id="confirmPassword"
@@ -214,14 +216,14 @@ export default function SignupPage() {
               disabled={isPending}
               className="btn-primary w-full py-3"
             >
-              {isPending ? "Creating account..." : "Create Account"}
+              {isPending ? t("creatingAccount") : t("createAccount")}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-gray-500">
-            Already have an account?{" "}
+            {t("alreadyHaveAccount")}{" "}
             <Link href="/login" className="text-primary-600 font-medium hover:underline">
-              Sign in
+              {t("signInLink")}
             </Link>
           </p>
         </div>
