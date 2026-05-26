@@ -214,6 +214,20 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
+        {/* Payment Notice — Bank Transfer, not yet paid */}
+        {order.paymentMethod === "BANK_TRANSFER" && order.status === "PENDING" && (
+          <div className="card mb-6 border-2 border-amber-300 bg-amber-50">
+            <div className="flex items-start gap-4">
+              <span className="text-3xl">🏦</span>
+              <div>
+                <h2 className="text-lg font-bold text-amber-800 mb-2">{t("paymentNoticeTitle")}</h2>
+                <p className="text-sm text-amber-700 mb-2">{t("paymentNoticeDescription")}</p>
+                <p className="text-sm text-amber-600">{t("paymentNoticeAction")}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Rejection Notice */}
         {order.status === "REJECTED" && order.rejectionReason && (
           <div className="card mb-6 border-2 border-red-300 bg-red-50">

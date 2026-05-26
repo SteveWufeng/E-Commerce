@@ -228,6 +228,9 @@ export type TranslationKey =
   | "passwordTooShort"
   | "signupFailed"
   | "unexpectedError"
+  | "paymentNoticeTitle"
+  | "paymentNoticeDescription"
+  | "paymentNoticeAction"
 
   // Currency display
   | "localCurrency"
@@ -463,6 +466,9 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     passwordTooShort: "La contraseña debe tener al menos 6 caracteres.",
     signupFailed: "Error al registrarse.",
     unexpectedError: "Ocurrió un error inesperado.",
+    paymentNoticeTitle: "⏳ Pago Pendiente",
+    paymentNoticeDescription: "Su pedido NO se procesará hasta que realice el pago mediante transferencia bancaria y suba el comprobante de pago.",
+    paymentNoticeAction: "Use el botón de abajo para subir el comprobante de su transferencia.",
 
     // Currency display
     localCurrency: "Moneda Local",
@@ -698,6 +704,9 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     passwordTooShort: "Password must be at least 6 characters.",
     signupFailed: "Signup failed.",
     unexpectedError: "An unexpected error occurred.",
+    paymentNoticeTitle: "⏳ Payment Pending",
+    paymentNoticeDescription: "Your order will NOT be processed until you complete the bank transfer and upload the payment receipt.",
+    paymentNoticeAction: "Use the button below to upload your transfer receipt.",
 
     // Currency display
     localCurrency: "Local Currency",

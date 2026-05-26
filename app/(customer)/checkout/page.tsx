@@ -136,9 +136,11 @@ export default function CheckoutPage() {
         throw new Error(result.error || "Failed to place order");
       }
 
-      // Clear cart and redirect to orders list
+      // Clear cart and redirect to order detail (works for guest users too)
       clearCart();
-      router.push("/orders");
+      const orderId = result.data?.orderNumber || result.data?.orderId;
+      const email = encodeURIComponent(formData.email);
+      router.push(`/orders?id=${orderId}&email=${email}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {

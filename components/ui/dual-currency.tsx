@@ -14,11 +14,11 @@ export function DualCurrency({ usdAmount, className }: { usdAmount: number | str
   const converted = num * toNum(conversionRate);
 
   return (
-    <span className={className}>
-      <span>{symbol}{converted.toFixed(2)}</span>
+    <span className={`${className} inline-flex flex-col leading-tight`}>
+      <span className="font-medium">{symbol}{converted.toFixed(2)}</span>
       {conversionRate !== 1 && (
-        <span className="text-xs text-gray-400 ml-1.5">
-          (~${num.toFixed(2)} USD)
+        <span className="text-[10px] text-gray-400">
+          ${num.toFixed(2)} USD
         </span>
       )}
     </span>
