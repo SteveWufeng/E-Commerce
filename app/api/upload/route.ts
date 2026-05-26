@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 const R2 = new S3Client({
   region: "auto",
@@ -11,6 +11,7 @@ const R2 = new S3Client({
 });
 
 const BUCKET = process.env.R2_BUCKET_NAME || "ecommerce";
+const PUBLIC_URL = process.env.R2_PUBLIC_URL || "";
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,12 +37,37 @@ export async function POST(request: NextRequest) {
       ContentType: file.type,
     }));
 
-    const url = `${process.env.R2_PUBLIC_URL}/${key}`;
+    const url = `${PUBLIC_URL}/${key}`;
 
     return NextResponse.json({ success: true, url });
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json({ error: "Failed to upload file" }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/upload — Delete a file from R2 by URL.
+ * Body: { url: "https://pub-....r2.dev/uploads/123-file.jpg" }
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const { url } = await request.json();
+    if (!url || !url.startsWith(PUBLIC_URL)) {
+      return NextResponse.json({ error: "Invalid or external URL" }, { status: 400 });
+    }
+
+    const key = url.replace(PUBLIC_URL + "/", "");
+    if (!key) {
+      return NextResponse.json({ error: "Could not extract key from URL" }, { status: 400 });
+    }
+
+    await R2.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Delete error:", error);
+    return NextResponse.json({ error: "Failed to delete file" }, { status: 500 });
   }
 }
 
