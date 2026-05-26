@@ -34,8 +34,10 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const product = await db.product.findUnique({
-      where: { id },
+    const product = await db.product.findFirst({
+      where: {
+        OR: [{ id }, { slug: id }],
+      },
       include: { category: true },
     });
 

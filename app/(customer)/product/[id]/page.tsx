@@ -38,9 +38,9 @@ export default function ProductPage() {
   useEffect(() => {
     async function loadProduct() {
       try {
-        const res = await fetch(`/api/products?slug=${slug}`);
+        const res = await fetch(`/api/products/${slug}`);
         const data = await res.json();
-        setProduct(data.data?.[0] || null);
+        setProduct(data.data || null);
       } catch (error) {
         console.error("Failed to load product:", error);
       } finally {
