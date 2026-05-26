@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/admin/admin-layout";
+import { useLocale } from "@/hooks/use-locale";
 
 interface StoreSettings {
   storeName: string;
@@ -24,6 +25,7 @@ interface StoreSettings {
  * - Admin password change
  */
 export default function AdminSettingsPage() {
+  const { t } = useLocale();
   const [settings, setSettings] = useState<StoreSettings>({
     storeName: "",
     storeAddress: "",
@@ -65,13 +67,13 @@ export default function AdminSettingsPage() {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Settings</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t("settings")}</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Store Info */}
         <div className="card">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Store Information
+            {t("storeInformation")}
           </h2>
           <div className="space-y-4">
             <div>
@@ -100,7 +102,7 @@ export default function AdminSettingsPage() {
         {/* Tax Settings */}
         <div className="card">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Tax Settings
+            {t("taxSettings")}
           </h2>
           <div className="space-y-4">
             <div>
@@ -121,7 +123,7 @@ export default function AdminSettingsPage() {
         {/* Currency Settings */}
         <div className="card">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Currency Settings
+            {t("currencySettings")}
           </h2>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -168,20 +170,20 @@ export default function AdminSettingsPage() {
         {/* Notifications */}
         <div className="card">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Notifications
+            {t("notifications")}
           </h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700">
-                Email Notifications
+                {t("customerEmail")}
               </span>
-              <span className="badge badge-success">Enabled</span>
+              <span className="badge badge-success">{t("active")}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700">
                 SMS Notifications
               </span>
-              <span className="badge badge-warning">Not Configured</span>
+              <span className="badge badge-warning">{t("inactive")}</span>
             </div>
           </div>
         </div>
@@ -189,7 +191,7 @@ export default function AdminSettingsPage() {
         {/* Payment Methods */}
         <div className="card">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Payment Methods
+            {t("paymentMethods")}
           </h2>
           <div className="space-y-3">
             {["Credit Card", "Google Pay", "PayPal", "Cash on Pickup"].map(
@@ -202,7 +204,7 @@ export default function AdminSettingsPage() {
             )}
           </div>
           <p className="mt-3 text-xs text-amber-600">
-            ⚠️ Currently in mock payment mode. No real charges are processed.
+            ⚠️ {t("paymentMethods")}
           </p>
         </div>
       </div>
@@ -213,7 +215,7 @@ export default function AdminSettingsPage() {
           disabled={isSaving}
           className="btn-primary"
         >
-          {isSaving ? "Saving..." : saved ? "✓ Saved!" : "Save All Settings"}
+          {isSaving ? t("creating") : saved ? "✓ Saved!" : t("saveChanges")}
         </button>
       </div>
     </AdminLayout>

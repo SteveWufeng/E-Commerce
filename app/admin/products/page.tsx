@@ -5,6 +5,7 @@ import { AdminLayout } from "@/components/admin/admin-layout";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { formatCurrency } from "@/lib/utils";
 import { Plus, Edit, Trash2, X, ChevronUp, ChevronDown } from "lucide-react";
+import { useLocale } from "@/hooks/use-locale";
 
 /**
  * Admin products page — manage product catalog.
@@ -18,6 +19,7 @@ import { Plus, Edit, Trash2, X, ChevronUp, ChevronDown } from "lucide-react";
  * - Category filtering
  */
 export default function AdminProductsPage() {
+  const { t } = useLocale();
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -191,7 +193,7 @@ export default function AdminProductsPage() {
   }
 
   async function handleDelete(productId: string) {
-    if (!confirm("Are you sure you want to delete this product?")) return;
+    if (!confirm(t("confirmDeleteProduct"))) return;
 
     try {
       const res = await fetch(`/api/products/${productId}`, {
@@ -211,10 +213,10 @@ export default function AdminProductsPage() {
   return (
     <AdminLayout>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Products</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("products")}</h1>
         <button onClick={() => setAddProduct(true)} className="btn-primary">
           <Plus className="w-4 h-4 mr-2" />
-          Add Product
+          {t("addProduct")}
         </button>
       </div>
 
@@ -223,7 +225,7 @@ export default function AdminProductsPage() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search products..."
+          placeholder={t("searchProductsPlaceholder")}
           className="input max-w-md"
         />
       </div>
@@ -246,7 +248,7 @@ export default function AdminProductsPage() {
                         onClick={() => handleSort(field)}
                         className="flex items-center gap-1 font-medium text-gray-500 hover:text-gray-700 transition-colors"
                       >
-                        {field === "name" ? "Product" : field === "category" ? "Category" : field === "sale" ? "Sale" : field === "price" ? "Price" : field === "stock" ? "Stock" : "Status"}
+                        {field === "name" ? t("productName") : field === "category" ? t("categories") : field === "sale" ? t("onSale") : field === "price" ? t("price") : field === "stock" ? t("stock") : t("status")}
                         {sortField === field ? (
                           sortDir === "asc" ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
                         ) : (
@@ -255,7 +257,7 @@ export default function AdminProductsPage() {
                       </button>
                     </th>
                   ))}
-                  <th className="text-right py-3 px-4 font-medium text-gray-500">Actions</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-500">{t("actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -265,9 +267,9 @@ export default function AdminProductsPage() {
                     <td className="py-3 px-4 text-gray-500">{product.category?.name || "—"}</td>
                     <td className="py-3 px-4">
                       {product.comparePrice && parseFloat(product.comparePrice) > parseFloat(product.price) ? (
-                        <span className="badge badge-warning text-xs">SALE</span>
+                        <span className="badge badge-warning text-xs">{t("onSale")}</span>
                       ) : (
-                        <span className="text-gray-300">—</span>
+                        <span className="text-gray-300">{t("notOnSale")}</span>
                       )}
                     </td>
                     <td className="py-3 px-4">
@@ -299,7 +301,7 @@ export default function AdminProductsPage() {
                           product.isActive ? "badge-success" : "badge-danger"
                         }`}
                       >
-                        {product.isActive ? "Active" : "Inactive"}
+                        {product.isActive ? t("active") : t("inactive")}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">
@@ -325,7 +327,7 @@ export default function AdminProductsPage() {
           </div>
           {filtered.length === 0 && (
             <div className="text-center py-12 text-gray-500">
-              {search ? "No products match your search." : "No products yet. Add your first product!"}
+              {search ? t("noProductsMatch") : t("noProductsYetAdd")}
             </div>
           )}
         </div>
@@ -336,7 +338,7 @@ export default function AdminProductsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Edit Product</h2>
+              <h2 className="text-lg font-semibold">{t("editProduct")}</h2>
               <button
                 onClick={() => setEditProduct(null)}
                 className="p-1 rounded-lg hover:bg-gray-100"
@@ -347,13 +349,13 @@ export default function AdminProductsPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Product Name
+                  {t("productName")}
                 </label>
                 <p className="text-gray-900 font-medium">{editProduct.name}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Price ($)
+                  {t("price")}
                 </label>
                 <input
                   type="number"
@@ -366,7 +368,7 @@ export default function AdminProductsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Sale Price ($) <span className="text-gray-400 font-normal">— original price, leave empty for no sale</span>
+                  {t("salePrice")} <span className="text-gray-400 font-normal">— {t("notOnSale")} original price, leave empty for no sale</span>
                 </label>
                 <input
                   type="number"
@@ -380,7 +382,7 @@ export default function AdminProductsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Stock
+                  {t("stock")}
                 </label>
                 <input
                   type="number"
@@ -392,7 +394,7 @@ export default function AdminProductsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Images
+                  {t("receiptImage")}
                 </label>
                 <ImageUpload images={editImages} onChange={setEditImages} />
               </div>
@@ -402,14 +404,14 @@ export default function AdminProductsPage() {
                 onClick={() => setEditProduct(null)}
                 className="flex-1 btn-secondary"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button
                 onClick={handleSaveEdit}
                 disabled={isSaving}
                 className="flex-1 btn-primary"
               >
-                {isSaving ? "Saving..." : "Save Changes"}
+                {isSaving ? t("creating") : t("saveChanges")}
               </button>
             </div>
           </div>
@@ -421,7 +423,7 @@ export default function AdminProductsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Add New Product</h2>
+              <h2 className="text-lg font-semibold">{t("addNewProduct")}</h2>
               <button
                 onClick={() => setAddProduct(false)}
                 className="p-1 rounded-lg hover:bg-gray-100"
@@ -432,32 +434,32 @@ export default function AdminProductsPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Product Name *
+                  {t("productName")} *
                 </label>
                 <input
                   type="text"
                   value={newProduct.name}
                   onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
                   className="input w-full"
-                  placeholder="Enter product name"
+                  placeholder={t("productName")}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
+                  {t("description")}
                 </label>
                 <textarea
                   value={newProduct.description}
                   onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
                   className="input w-full"
                   rows={3}
-                  placeholder="Enter product description"
+                  placeholder={t("description")}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price ($) *
+                    {t("price")} ($) *
                   </label>
                   <input
                     type="number"
@@ -471,7 +473,7 @@ export default function AdminProductsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Stock
+                    {t("stock")}
                   </label>
                   <input
                     type="number"
@@ -485,7 +487,7 @@ export default function AdminProductsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Sale Price ($) <span className="text-gray-400 font-normal">— optional, marks product as on sale</span>
+                  {t("salePrice")} <span className="text-gray-400 font-normal">— optional, marks product as on sale</span>
                 </label>
                 <input
                   type="number"
@@ -499,14 +501,14 @@ export default function AdminProductsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category *
+                  {t("categories")} *
                 </label>
                 <select
                   value={newProduct.categoryId}
                   onChange={(e) => setNewProduct({ ...newProduct, categoryId: e.target.value })}
                   className="input w-full"
                 >
-                  <option value="">Select category</option>
+                  <option value="">{t("categories")}</option>
                   {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name}
@@ -516,7 +518,7 @@ export default function AdminProductsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Images
+                  {t("receiptImage")}
                 </label>
                 <ImageUpload
                   images={newProduct.images}
@@ -529,14 +531,14 @@ export default function AdminProductsPage() {
                 onClick={() => setAddProduct(false)}
                 className="flex-1 btn-secondary"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button
                 onClick={handleAddProduct}
                 disabled={isSaving || !newProduct.name || !newProduct.price || !newProduct.categoryId}
                 className="flex-1 btn-primary"
               >
-                {isSaving ? "Creating..." : "Create Product"}
+                {isSaving ? t("creating") : t("addProduct")}
               </button>
             </div>
           </div>
