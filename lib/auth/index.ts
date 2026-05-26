@@ -51,31 +51,36 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider === "google") {
-        const existingUser = await db.user.findUnique({
-          where: { email: user.email! },
-        });
+        try {
+          const existingUser = await db.user.findUnique({
+            where: { email: user.email! },
+          });
 
-        if (existingUser) {
-          if (!existingUser.isVerified) {
-            await db.user.update({
-              where: { id: existingUser.id },
-              data: { isVerified: true },
-            });
+          if (existingUser) {
+            if (!existingUser.isVerified) {
+              await db.user.update({
+                where: { id: existingUser.id },
+                data: { isVerified: true },
+              });
+            }
+            return true;
           }
+
+          await db.user.create({
+            data: {
+              email: user.email!,
+              firstName: user.name?.split(" ")[0] || "Google",
+              lastName: user.name?.split(" ").slice(1).join(" ") || "User",
+              role: "CUSTOMER",
+              isVerified: true,
+            },
+          });
+
           return true;
+        } catch (error) {
+          console.error("[Google SignIn] Database error:", error);
+          return false;
         }
-
-        await db.user.create({
-          data: {
-            email: user.email!,
-            firstName: user.name?.split(" ")[0] || "Google",
-            lastName: user.name?.split(" ").slice(1).join(" ") || "User",
-            role: "CUSTOMER",
-            isVerified: true,
-          },
-        });
-
-        return true;
       }
 
       return true;
