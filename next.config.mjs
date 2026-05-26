@@ -3,7 +3,12 @@ const nextConfig = {
   output: "standalone",
 
   images: {
-    remotePatterns: [],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.r2.dev",
+      },
+    ],
     unoptimized: process.env.NODE_ENV === "development",
   },
 
