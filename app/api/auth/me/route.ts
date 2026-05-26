@@ -24,9 +24,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const userId = (session.user as { id: string }).id;
+    const { id: userId, email: userEmail } = session.user as { id: string; email?: string };
 
-    const user = await db.user.findUnique({
+    let user = await db.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -39,6 +39,22 @@ export async function GET(request: NextRequest) {
         createdAt: true,
       },
     });
+
+    if (!user && userEmail) {
+      user = await db.user.findUnique({
+        where: { email: userEmail },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          role: true,
+          isVerified: true,
+          createdAt: true,
+        },
+      });
+    }
 
     if (!user) {
       return NextResponse.json(

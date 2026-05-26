@@ -85,10 +85,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.role = ((user as unknown) as { role?: string }).role as string | undefined;
-        token.id = user.id as string;
+        if (account?.provider === "google") {
+          const dbUser = await db.user.findUnique({ where: { email: token.email! } });
+          token.id = dbUser?.id || user.id;
+        } else {
+          token.id = user.id as string;
+        }
       }
       return token;
     },
