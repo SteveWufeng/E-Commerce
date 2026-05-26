@@ -63,8 +63,7 @@ export function orderConfirmationEmail(params: {
   orderNumber: string;
   items: { name: string; quantity: number; price: string }[];
   total: string;
-  pickupDate: string;
-  pickupTime: string;
+  paymentMethod: string;
 }): EmailTemplate {
   const itemsHtml = params.items
     .map(
@@ -88,12 +87,10 @@ export function orderConfirmationEmail(params: {
             <td style="text-align:right;padding:8px 0;font-weight:bold">${params.total}</td>
           </tr>
         </table>
-        <h3>Pickup Details</h3>
-        <p><strong>Date:</strong> ${params.pickupDate}</p>
-        <p><strong>Time:</strong> ${params.pickupTime}</p>
-        <p><strong>Location:</strong> ${process.env.NEXT_PUBLIC_STORE_ADDRESS || "Store Location"}</p>
+        <h3>Payment</h3>
+        <p><strong>Method:</strong> ${params.paymentMethod}</p>
         <p style="margin-top:24px;color:#6b7280;font-size:14px">
-          You'll receive another notification when your order is ready for pickup.
+          We'll notify you when your order is ready for pickup.
         </p>
       </div>
     `,
@@ -106,8 +103,6 @@ export function orderConfirmationEmail(params: {
 export function orderReadyEmail(params: {
   customerName: string;
   orderNumber: string;
-  pickupDate: string;
-  pickupTime: string;
 }): EmailTemplate {
   return {
     to: "",
@@ -117,8 +112,6 @@ export function orderReadyEmail(params: {
         <h2 style="color:#16a34a">Ready for Pickup!</h2>
         <p>Hi ${params.customerName},</p>
         <p>Your order <strong>${params.orderNumber}</strong> is ready!</p>
-        <p><strong>Pickup Date:</strong> ${params.pickupDate}</p>
-        <p><strong>Pickup Time:</strong> ${params.pickupTime}</p>
         <p>Please bring your order number or this email when you arrive.</p>
       </div>
     `,

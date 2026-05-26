@@ -11,6 +11,8 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [rejectOrderId, setRejectOrderId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   useEffect(() => {
     async function loadOrders() {
@@ -42,14 +44,15 @@ export default function AdminOrdersPage() {
     READY_FOR_PICKUP: "badge-success",
     PICKED_UP: "badge-success",
     CANCELLED: "badge-danger",
+    REJECTED: "badge-danger",
   };
 
-  async function updateStatus(orderId: string, newStatus: string) {
+  async function updateStatus(orderId: string, newStatus: string, extra?: Record<string, string>) {
     try {
       const res = await fetch(`/api/orders/${orderId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, ...extra }),
       });
 
       if (res.ok) {
@@ -63,16 +66,23 @@ export default function AdminOrdersPage() {
     }
   }
 
+  async function handleReject() {
+    if (!rejectOrderId || !rejectReason.trim()) return;
+    await updateStatus(rejectOrderId, "REJECTED", { rejectionReason: rejectReason.trim() });
+    setRejectOrderId(null);
+    setRejectReason("");
+  }
+
   async function undoOrder(orderId: string) {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
     
-    // If picked up, go to ready. If ready, go to confirmed. If confirmed, go to pending
     const undoMap: Record<string, string> = {
       PICKED_UP: "READY_FOR_PICKUP",
       READY_FOR_PICKUP: "CONFIRMED",
       CONFIRMED: "PENDING",
       CANCELLED: "PENDING",
+      REJECTED: "CONFIRMED",
     };
     
     const newStatus = undoMap[order.status];
@@ -104,6 +114,7 @@ export default function AdminOrdersPage() {
           <option value="CONFIRMED">Confirmed</option>
           <option value="READY_FOR_PICKUP">Ready for Pickup</option>
           <option value="PICKED_UP">Picked Up</option>
+          <option value="REJECTED">Rejected</option>
           <option value="CANCELLED">Cancelled</option>
         </select>
       </div>
@@ -130,7 +141,7 @@ export default function AdminOrdersPage() {
               </thead>
               <tbody>
                 {filtered.map((order) => (
-                  <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <tr key={order.id} className={`border-b border-gray-100 hover:bg-gray-50 ${order.status === "REJECTED" ? "bg-red-50" : ""}`}>
                     <td className="py-3 px-4">
                       <button 
                         onClick={() => setSelectedOrder(order)}
@@ -147,37 +158,70 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="py-3 px-4 font-medium">{formatCurrency(order.total)}</td>
                     <td className="py-3 px-4">
-                      <span className={`badge ${statusColors[order.status] || "badge-info"}`}>
-                        {order.status.toLowerCase().replace(/_/g, " ")}
-                      </span>
+                  <span className={`badge ${statusColors[order.status] || "badge-info"}`}>
+                    {order.status.toLowerCase().replace(/_/g, " ")}
+                  </span>
+                  {order.receiptImage && (
+                    <span className="ml-1 text-xs text-green-600" title="Receipt uploaded">📎</span>
+                  )}
                     </td>
                     <td className="py-3 px-4 text-gray-500">
                       {formatDateTime(order.createdAt)}
                     </td>
                     <td className="py-3 px-4 text-right">
                       {order.status === "PENDING" && (
-                        <button
-                          onClick={() => updateStatus(order.id, "CONFIRMED")}
-                          className="btn-primary text-xs py-1.5 px-3"
-                        >
-                          Confirm
-                        </button>
+                        <>
+                          <button
+                            onClick={() => updateStatus(order.id, "CONFIRMED")}
+                            className="btn-primary text-xs py-1.5 px-3"
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            onClick={() => updateStatus(order.id, "CANCELLED")}
+                            className="ml-2 text-xs py-1.5 px-3 text-red-600 hover:text-red-700"
+                          >
+                            Cancel
+                          </button>
+                        </>
                       )}
                       {order.status === "CONFIRMED" && (
-                        <button
-                          onClick={() => updateStatus(order.id, "READY_FOR_PICKUP")}
-                          className="btn-primary text-xs py-1.5 px-3"
-                        >
-                          Mark Ready
-                        </button>
+                        <>
+                          <button
+                            onClick={() => updateStatus(order.id, "READY_FOR_PICKUP")}
+                            className="btn-primary text-xs py-1.5 px-3"
+                          >
+                            Mark Ready
+                          </button>
+                          <button
+                            onClick={() => setRejectOrderId(order.id)}
+                            className="ml-2 text-xs py-1.5 px-3 text-red-600 hover:text-red-700 border border-red-300 rounded-lg"
+                          >
+                            Reject
+                          </button>
+                          <button
+                            onClick={() => updateStatus(order.id, "CANCELLED")}
+                            className="ml-2 text-xs py-1.5 px-3 text-gray-500 hover:text-gray-700"
+                          >
+                            Cancel
+                          </button>
+                        </>
                       )}
                       {order.status === "READY_FOR_PICKUP" && (
-                        <button
-                          onClick={() => updateStatus(order.id, "PICKED_UP")}
-                          className="btn-primary text-xs py-1.5 px-3"
-                        >
-                          Mark Picked Up
-                        </button>
+                        <>
+                          <button
+                            onClick={() => updateStatus(order.id, "PICKED_UP")}
+                            className="btn-primary text-xs py-1.5 px-3"
+                          >
+                            Mark Picked Up
+                          </button>
+                          <button
+                            onClick={() => undoOrder(order.id)}
+                            className="ml-2 text-xs py-1.5 px-3 text-gray-500 hover:text-gray-700"
+                          >
+                            Undo
+                          </button>
+                        </>
                       )}
                       {order.status === "PICKED_UP" && (
                         <button
@@ -187,13 +231,21 @@ export default function AdminOrdersPage() {
                           Undo
                         </button>
                       )}
-                      {(order.status === "CONFIRMED" || order.status === "PENDING") && (
-                        <button
-                          onClick={() => updateStatus(order.id, "CANCELLED")}
-                          className="ml-2 text-xs py-1.5 px-3 text-red-600 hover:text-red-700"
-                        >
-                          Cancel
-                        </button>
+                      {order.status === "REJECTED" && (
+                        <>
+                          <button
+                            onClick={() => undoOrder(order.id)}
+                            className="btn-secondary text-xs py-1.5 px-3"
+                          >
+                            Restore
+                          </button>
+                          <button
+                            onClick={() => updateStatus(order.id, "CANCELLED")}
+                            className="ml-2 text-xs py-1.5 px-3 text-red-600 hover:text-red-700"
+                          >
+                            Cancel
+                          </button>
+                        </>
                       )}
                       {order.status === "CANCELLED" && (
                         <button
@@ -212,6 +264,40 @@ export default function AdminOrdersPage() {
           {filtered.length === 0 && (
             <div className="text-center py-12 text-gray-500">No orders found.</div>
           )}
+        </div>
+      )}
+
+      {/* Rejection Reason Modal */}
+      {rejectOrderId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+            <h2 className="text-lg font-semibold mb-2">Reject Receipt</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Provide a reason why the receipt was rejected. The customer will see this message.
+            </p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={4}
+              className="input w-full resize-none"
+              placeholder="The receipt image is unclear. Please upload a clearer image of the bank transfer confirmation."
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => { setRejectOrderId(null); setRejectReason(""); }}
+                className="btn-secondary text-sm py-2 px-4"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={!rejectReason.trim()}
+                className="btn-primary text-sm py-2 px-4 bg-red-600 hover:bg-red-700"
+              >
+                Reject Receipt
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -234,7 +320,7 @@ export default function AdminOrdersPage() {
                 </div>
                 <div>
                   <p className="text-gray-500">Status</p>
-                  <span className={`badge ${statusColors[selectedOrder.status]}`}>
+                  <span className={`badge ${statusColors[selectedOrder.status] || "badge-info"}`}>
                     {selectedOrder.status.toLowerCase().replace(/_/g, " ")}
                   </span>
                 </div>
@@ -253,17 +339,33 @@ export default function AdminOrdersPage() {
                   </div>
                 )}
                 <div>
+                  <p className="text-gray-500">Payment</p>
+                  <p className="font-medium">{selectedOrder.paymentMethod.replace(/_/g, " ")} {selectedOrder.paymentStatus === "PENDING" ? "(Pending)" : "(Paid)"}</p>
+                </div>
+                <div>
                   <p className="text-gray-500">Date</p>
                   <p className="font-medium">{formatDateTime(selectedOrder.createdAt)}</p>
                 </div>
               </div>
 
-              {selectedOrder.pickupSlot && (
+              {selectedOrder.receiptImage && (
                 <div className="border-t pt-4">
-                  <p className="text-gray-500 text-sm mb-2">Pickup Info</p>
-                  <p className="text-sm">
-                    {formatDateTime(selectedOrder.pickupSlot.date)} at {selectedOrder.pickupSlot.startTime} - {selectedOrder.pickupSlot.endTime}
-                  </p>
+                  <p className="text-gray-500 text-sm mb-2">Payment Receipt</p>
+                  <a
+                    href={selectedOrder.receiptImage}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block text-sm text-primary-600 hover:underline"
+                  >
+                    View Receipt Image →
+                  </a>
+                </div>
+              )}
+
+              {selectedOrder.rejectionReason && (
+                <div className="border-t pt-4">
+                  <p className="text-red-600 text-sm font-medium mb-1">Rejection Reason</p>
+                  <p className="text-sm bg-red-50 rounded-lg p-3">{selectedOrder.rejectionReason}</p>
                 </div>
               )}
 

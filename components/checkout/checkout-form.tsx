@@ -3,8 +3,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { formatCurrency } from "@/lib/utils";
-import type { CartItem } from "@/types";
 
 const checkoutSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -146,7 +144,7 @@ export function CheckoutForm({
         disabled={isProcessing}
         className="btn-primary w-full mt-6 py-3 text-base"
       >
-        {isProcessing ? "Processing..." : "Reserve Pickup"}
+        {isProcessing ? "Processing..." : "Place Order"}
       </button>
     </form>
   );

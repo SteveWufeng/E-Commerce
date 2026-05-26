@@ -6,23 +6,19 @@ import { useCartStore } from "@/hooks/use-cart";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
-import { PickupScheduler } from "@/components/pickup/pickup-scheduler";
 import { OrderSummary } from "@/components/checkout/order-summary";
 import { formatCurrency } from "@/lib/utils";
-import type { PickupSlot, PaymentMethod } from "@/types";
+import Image from "next/image";
 
 /**
- * Checkout page — the final step before order placement.
+ * Checkout page — bank transfer only.
  *
  * Flow:
  * 1. Customer fills in their info (name, email, phone)
  *    - Authenticated users have their info pre-filled
  *    - Guest users enter info manually
- * 2. Selects a pickup slot
- * 3. Chooses a payment method
- * 4. Reviews order and confirms
- *
- * Guest checkout is fully supported — no login required.
+ * 2. Reviews order and confirms
+ * 3. After placing order, customer uploads receipt image
  */
 export default function CheckoutPage() {
   const router = useRouter();
@@ -33,9 +29,6 @@ export default function CheckoutPage() {
   const tax = subtotal * taxRate;
   const total = subtotal + tax;
 
-  const [pickupSlots, setPickupSlots] = useState<PickupSlot[]>([]);
-  const [selectedSlot, setSelectedSlot] = useState<string>("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CREDIT_CARD");
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prefillData, setPrefillData] = useState<{
@@ -44,6 +37,8 @@ export default function CheckoutPage() {
     email: string;
     phone: string;
   } | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const clearCart = useCartStore((state) => state.clearCart);
 
   // Redirect if cart is empty
@@ -53,24 +48,13 @@ export default function CheckoutPage() {
     }
   }, [items.length, router]);
 
-  // Load available pickup slots and check for authenticated user
+  // Pre-fill for authenticated users
   useEffect(() => {
     async function loadData() {
-      // Load pickup slots
-      try {
-        const slotsRes = await fetch("/api/pickup-slots?available=true");
-        const slotsData = await slotsRes.json();
-        setPickupSlots(slotsData.data || []);
-      } catch {
-        setError("Failed to load pickup slots. Please try again.");
-      }
-
-      // Try to pre-fill from authenticated session
       try {
         const sessionRes = await fetch("/api/auth/session");
         const sessionData = await sessionRes.json();
         if (sessionData?.user) {
-          // Fetch full profile for phone number
           const profileRes = await fetch("/api/auth/me");
           if (profileRes.ok) {
             const profileData = await profileRes.json();
@@ -90,6 +74,16 @@ export default function CheckoutPage() {
     loadData();
   }, []);
 
+  async function handleReceiptUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      setReceiptFile(file);
+      const reader = new FileReader();
+      reader.onload = () => setReceiptPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  }
+
   async function handleSubmit(formData: {
     firstName: string;
     lastName: string;
@@ -97,19 +91,13 @@ export default function CheckoutPage() {
     phone: string;
     notes?: string;
   }) {
-    if (!selectedSlot) {
-      setError("Please select a pickup time slot.");
-      return;
-    }
-
     const orderData = {
       ...formData,
       items: items.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,
       })),
-      paymentMethod,
-      pickupSlotId: selectedSlot,
+      paymentMethod: "BANK_TRANSFER",
       subtotal: Math.max(0.01, subtotal),
       tax: Math.max(0, tax),
       total: Math.max(0.01, total),
@@ -119,10 +107,25 @@ export default function CheckoutPage() {
     setError(null);
 
     try {
+      // Upload receipt first if selected
+      let receiptImage: string | null = null;
+      if (receiptFile) {
+        const formData = new FormData();
+        formData.append("file", receiptFile);
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadData.error || "Failed to upload receipt");
+        receiptImage = uploadData.url;
+      }
+
+      // Create order
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
+        body: JSON.stringify({ ...orderData, receiptImage }),
       });
 
       const result = await response.json();
@@ -166,47 +169,63 @@ export default function CheckoutPage() {
               prefillData={prefillData}
             />
 
-            {/* Pickup Scheduler */}
-            <PickupScheduler
-              slots={pickupSlots}
-              selected={selectedSlot}
-              onSelect={setSelectedSlot}
-            />
-
-            {/* Payment Method */}
+            {/* Payment Method — Bank Transfer Only */}
             <div className="card">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Payment Method
               </h2>
-              <div className="grid grid-cols-2 gap-3">
-                {(
-                  [
-                    { value: "CREDIT_CARD", label: "Credit Card", icon: "💳" },
-                    { value: "GOOGLE_PAY", label: "Google Pay", icon: "📱" },
-                    { value: "PAYPAL", label: "PayPal", icon: "🅿️" },
-                    { value: "CASH_ON_PICKUP", label: "Cash on Pickup", icon: "💵" },
-                  ] as const
-                ).map((method) => (
-                  <button
-                    key={method.value}
-                    type="button"
-                    onClick={() => setPaymentMethod(method.value)}
-                    className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
-                      paymentMethod === method.value
-                        ? "border-primary-500 bg-primary-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <span className="text-xl">{method.icon}</span>
-                    <span className="text-sm font-medium">{method.label}</span>
-                  </button>
-                ))}
+              <div className="p-4 rounded-lg border-2 border-primary-500 bg-primary-50">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🏦</span>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Bank Transfer</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Pay via bank transfer. Please upload your payment receipt after placing the order.
+                    </p>
+                  </div>
+                </div>
               </div>
-              {process.env.MOCK_PAYMENTS === "true" && (
-                <p className="mt-3 text-xs text-amber-600">
-                  ⚠️ Demo mode — payments are simulated. No real charges will be made.
+
+              {/* Receipt Upload */}
+              <div className="mt-4">
+                <label className="label">Upload Payment Receipt (optional now, required later)</label>
+                <div className="mt-2 flex items-center gap-4">
+                  <label className="cursor-pointer btn-secondary text-sm py-2 px-4 rounded-lg">
+                    Choose File
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleReceiptUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  {receiptFile && (
+                    <span className="text-sm text-gray-600">{receiptFile.name}</span>
+                  )}
+                </div>
+                {receiptPreview && (
+                  <div className="mt-3 relative w-32 h-32 rounded-lg overflow-hidden border">
+                    <Image
+                      src={receiptPreview}
+                      alt="Receipt preview"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+                {receiptPreview && (
+                  <button
+                    type="button"
+                    onClick={() => { setReceiptFile(null); setReceiptPreview(null); }}
+                    className="mt-2 text-xs text-red-600 hover:underline"
+                  >
+                    Remove
+                  </button>
+                )}
+                <p className="mt-2 text-xs text-gray-400">
+                  You can also upload the receipt later from the order detail page.
                 </p>
-              )}
+              </div>
             </div>
           </div>
 

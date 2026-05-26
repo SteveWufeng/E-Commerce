@@ -30,12 +30,12 @@ const createOrderSchema = z.object({
       })
     )
     .min(1),
-  paymentMethod: z.enum(["CREDIT_CARD", "GOOGLE_PAY", "PAYPAL", "CASH_ON_PICKUP"]),
-  pickupSlotId: z.string(),
+  paymentMethod: z.enum(["CREDIT_CARD", "GOOGLE_PAY", "PAYPAL", "CASH_ON_PICKUP", "BANK_TRANSFER"]),
   subtotal: z.number().positive(),
   tax: z.number().min(0),
   total: z.number().positive(),
   notes: z.string().optional(),
+  receiptImage: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -49,20 +49,27 @@ export async function POST(request: NextRequest) {
     const count = await db.order.count();
     const orderNumber = `ORD-${dateStr}-${String(count + 1).padStart(4, "0")}`;
 
-    // Process payment
-    const payment = await processPayment({
-      amount: Math.round(validated.total * 100), // Convert to cents
-      currency: "usd",
-      method: validated.paymentMethod,
-      orderId: orderNumber,
-      customerEmail: validated.email,
-    });
+    // For bank transfer, skip payment processing — payment is manual
+    const isBankTransfer = validated.paymentMethod === "BANK_TRANSFER";
+    let paymentTransactionId: string | null = null;
 
-    if (!payment.success) {
-      return NextResponse.json(
-        { success: false, error: payment.error || "Payment failed" },
-        { status: 402 }
-      );
+    if (!isBankTransfer) {
+      const payment = await processPayment({
+        amount: Math.round(validated.total * 100), // Convert to cents
+        currency: "usd",
+        method: validated.paymentMethod,
+        orderId: orderNumber,
+        customerEmail: validated.email,
+      });
+
+      if (!payment.success) {
+        return NextResponse.json(
+          { success: false, error: payment.error || "Payment failed" },
+          { status: 402 }
+        );
+      }
+
+      paymentTransactionId = payment.transactionId;
     }
 
     // Create order in database
@@ -77,12 +84,9 @@ export async function POST(request: NextRequest) {
         tax: validated.tax,
         total: validated.total,
         paymentMethod: validated.paymentMethod,
-        paymentStatus: "COMPLETED",
-        paymentIntentId: payment.paymentIntentId,
+        paymentStatus: isBankTransfer ? "PENDING" : "COMPLETED",
+        receiptImage: validated.receiptImage || null,
         notes: validated.notes || null,
-        pickupSlot: {
-          connect: { id: validated.pickupSlotId },
-        },
         items: {
           create: await Promise.all(
             validated.items.map(async (item) => {
@@ -110,7 +114,6 @@ export async function POST(request: NextRequest) {
       },
       include: {
         items: true,
-        pickupSlot: true,
       },
     });
 
@@ -124,12 +127,7 @@ export async function POST(request: NextRequest) {
         price: `$${Number(item.productPrice).toFixed(2)}`,
       })),
       total: `$${Number(order.total).toFixed(2)}`,
-      pickupDate: order.pickupSlot
-        ? new Date(order.pickupSlot.date).toLocaleDateString()
-        : "TBD",
-      pickupTime: order.pickupSlot
-        ? `${order.pickupSlot.startTime} - ${order.pickupSlot.endTime}`
-        : "TBD",
+      paymentMethod: isBankTransfer ? "Bank Transfer" : validated.paymentMethod.replace(/_/g, " "),
     });
     emailTemplate.to = validated.email;
     await sendEmail(emailTemplate);
@@ -138,12 +136,6 @@ export async function POST(request: NextRequest) {
     if (validated.phone) {
       const smsTemplate = orderConfirmationSms({
         orderNumber,
-        pickupDate: order.pickupSlot
-          ? new Date(order.pickupSlot.date).toLocaleDateString()
-          : "TBD",
-        pickupTime: order.pickupSlot
-          ? `${order.pickupSlot.startTime} - ${order.pickupSlot.endTime}`
-          : "TBD",
       });
       smsTemplate.to = validated.phone;
       await sendSms(smsTemplate);
@@ -155,7 +147,7 @@ export async function POST(request: NextRequest) {
         data: {
           orderId: order.id,
           orderNumber: order.orderNumber,
-          paymentTransactionId: payment.transactionId,
+          paymentTransactionId: paymentTransactionId,
         },
       },
       { status: 201 }
@@ -214,7 +206,6 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           items: true,
-          pickupSlot: true,
         },
       });
 
@@ -234,7 +225,6 @@ export async function GET(request: NextRequest) {
       where: isAdmin ? {} : { customerEmail: userEmail || "" },
       include: {
         items: true,
-        pickupSlot: true,
       },
       orderBy: {
         createdAt: "desc",

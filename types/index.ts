@@ -63,13 +63,15 @@ export type OrderStatus =
   | "CONFIRMED"
   | "READY_FOR_PICKUP"
   | "PICKED_UP"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "REJECTED";
 
 export type PaymentMethod =
   | "CREDIT_CARD"
   | "GOOGLE_PAY"
   | "PAYPAL"
-  | "CASH_ON_PICKUP";
+  | "CASH_ON_PICKUP"
+  | "BANK_TRANSFER";
 
 export type PaymentStatus =
   | "PENDING"
@@ -86,12 +88,13 @@ export interface Order {
   total: number;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
+  receiptImage: string | null;
+  rejectionReason: string | null;
   customerEmail: string;
   customerFirstName: string;
   customerLastName: string;
   customerPhone: string | null;
   items: OrderItem[];
-  pickupSlot: PickupSlot | null;
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -165,7 +168,6 @@ export interface CheckoutFormData {
   email: string;
   phone: string;
   paymentMethod: PaymentMethod;
-  pickupSlotId: string;
   notes: string;
 }
 
