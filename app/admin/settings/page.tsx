@@ -216,7 +216,7 @@ export default function AdminSettingsPage() {
               <span className="text-sm font-medium text-gray-700">
                 {t("customerEmail")}
               </span>
-              <span className="badge badge-success">{t("active")}</span>
+              <span className="badge badge-warning">{t("inactive")}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700">

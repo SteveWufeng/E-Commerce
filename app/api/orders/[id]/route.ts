@@ -12,6 +12,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { sendEmail, orderConfirmationEmail, orderReadyEmail } from "@/lib/email";
 
 const s3 = new S3Client({
   region: "auto",
@@ -81,6 +82,54 @@ export async function PUT(
         data: updateData,
         include: { items: true },
       });
+
+      // Send email notifications on status changes
+      if (validated.status === "CONFIRMED" && order.customerEmail) {
+        const emailTpl = orderConfirmationEmail({
+          customerName: order.customerFirstName,
+          orderNumber: order.orderNumber,
+          items: order.items.map((item) => ({
+            name: item.productName,
+            quantity: item.quantity,
+            price: `$${Number(item.productPrice).toFixed(2)}`,
+          })),
+          total: `$${Number(order.total).toFixed(2)}`,
+          paymentMethod: order.paymentMethod.replace(/_/g, " "),
+        });
+        emailTpl.to = order.customerEmail;
+        sendEmail(emailTpl).catch(() => {});
+      }
+
+      if (validated.status === "READY_FOR_PICKUP" && order.customerEmail) {
+        const emailTpl = orderReadyEmail({
+          customerName: order.customerFirstName,
+          orderNumber: order.orderNumber,
+        });
+        emailTpl.to = order.customerEmail;
+        sendEmail(emailTpl).catch(() => {});
+      }
+
+      if (validated.status === "REJECTED" && order.customerEmail) {
+        const emailTpl = orderReadyEmail({
+          customerName: order.customerFirstName,
+          orderNumber: order.orderNumber,
+        });
+        emailTpl.to = order.customerEmail;
+        emailTpl.subject = `Your Order ${order.orderNumber} was Rejected`;
+        emailTpl.html = emailTpl.html.replace(
+          "Ready for Pickup!",
+          "Order Rejected"
+        ).replace(
+          /is ready.*$/,
+          "was rejected."
+        ).replace(
+          /Please bring.*$/,
+          order.rejectionReason
+            ? `Reason: ${order.rejectionReason}`
+            : "Please contact us for more information."
+        );
+        sendEmail(emailTpl).catch(() => {});
+      }
 
       return NextResponse.json({ success: true, data: order });
     }
