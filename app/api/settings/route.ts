@@ -1,6 +1,9 @@
 /**
  * Settings API — Store configuration management.
  *
+ * Uses Prisma/Settings model instead of filesystem so it works on
+ * serverless deployment platforms (Railway, Cloudflare, etc.).
+ *
  * GET /api/settings    — Get store settings
  * POST /api/settings   — Update store settings (admin only)
  */
@@ -9,44 +12,19 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/session";
-import fs from "fs";
-import path from "path";
+import db from "@/lib/db";
 
-const defaultSettings = {
-  storeName: "My Store",
-  storeAddress: "",
-  taxRate: 8,
-  currencyCode: "USD",
-  currencySymbol: "$",
-  conversionRate: 1,
-};
-
-const settingsFilePath = path.join(process.cwd(), "data", "settings.json");
-
-function ensureSettingsFile() {
-  const dir = path.dirname(settingsFilePath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+async function getOrCreateSettings() {
+  let settings = await db.settings.findFirst();
+  if (!settings) {
+    settings = await db.settings.create({ data: {} });
   }
-  if (!fs.existsSync(settingsFilePath)) {
-    fs.writeFileSync(settingsFilePath, JSON.stringify(defaultSettings, null, 2));
-  }
-}
-
-function getSettings() {
-  ensureSettingsFile();
-  const data = fs.readFileSync(settingsFilePath, "utf-8");
-  return JSON.parse(data);
-}
-
-function saveSettings(settings: typeof defaultSettings) {
-  ensureSettingsFile();
-  fs.writeFileSync(settingsFilePath, JSON.stringify(settings, null, 2));
+  return settings;
 }
 
 export async function GET() {
   try {
-    const settings = getSettings();
+    const settings = await getOrCreateSettings();
     return NextResponse.json({ success: true, data: settings });
   } catch (error) {
     console.error("Settings GET error:", error);
@@ -65,19 +43,21 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const currentSettings = getSettings();
-    
-    const newSettings = {
-      storeName: body.storeName ?? currentSettings.storeName,
-      storeAddress: body.storeAddress ?? currentSettings.storeAddress,
-      taxRate: body.taxRate ?? currentSettings.taxRate,
-      currencyCode: body.currencyCode ?? currentSettings.currencyCode,
-      currencySymbol: body.currencySymbol ?? currentSettings.currencySymbol,
-      conversionRate: body.conversionRate ?? currentSettings.conversionRate,
-    };
+    const current = await getOrCreateSettings();
 
-    saveSettings(newSettings);
-    return NextResponse.json({ success: true, data: newSettings });
+    const updated = await db.settings.update({
+      where: { id: current.id },
+      data: {
+        storeName: body.storeName ?? current.storeName,
+        storeAddress: body.storeAddress ?? current.storeAddress,
+        taxRate: body.taxRate ?? current.taxRate,
+        currencyCode: body.currencyCode ?? current.currencyCode,
+        currencySymbol: body.currencySymbol ?? current.currencySymbol,
+        conversionRate: body.conversionRate ?? current.conversionRate,
+      },
+    });
+
+    return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     console.error("Settings POST error:", error);
     return NextResponse.json(

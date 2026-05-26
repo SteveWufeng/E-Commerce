@@ -1,23 +1,19 @@
 #!/bin/sh
 set -e
 
-export DB_HOST=${DB_HOST:-postgres}
-export DB_PORT=${DB_PORT:-5432}
-export DB_USER=${DB_USER:-ecommerce}
-export DB_NAME=${DB_NAME:-ecommerce_mvp}
-
-printf "Waiting for database %s:%s... " "$DB_HOST" "$DB_PORT"
-while true; do
-  if node -e "const net=require('net'); const host=process.env.DB_HOST; const port=Number(process.env.DB_PORT); const s=net.connect({host, port}); s.on('connect', () => { process.exit(0) }); s.on('error', () => process.exit(1));" >/dev/null 2>&1; then
-    break
+printf 'Waiting for database and applying migrations...\n'
+max_retries=30
+i=0
+until npx prisma migrate deploy > /dev/null 2>&1; do
+  i=$((i + 1))
+  if [ "$i" -ge "$max_retries" ]; then
+    echo "Failed to connect to database after $max_retries attempts"
+    exit 1
   fi
   printf '.'
-  sleep 1
+  sleep 2
 done
-printf '\nDatabase is reachable\n'
-
-printf 'Applying Prisma migrations...\n'
-npx prisma migrate deploy
+printf '\nMigrations applied\n'
 
 printf 'Checking whether database needs seed data...\n'
 seed_count=$(node - <<'NODE'
