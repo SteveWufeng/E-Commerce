@@ -41,10 +41,11 @@ export function getConvertedPrice(usdPrice: number): number {
   return usdPrice * settings.conversionRate;
 }
 
-export function formatCurrencyWithSettings(amount: number): string {
+export function formatCurrencyWithSettings(amount: number | string): string {
+  const num = typeof amount === "number" ? amount : parseFloat(String(amount)) || 0;
   const settings = useSettingsStore.getState().settings;
-  if (!settings) return `$${amount.toFixed(2)}`;
-  
-  const converted = amount * settings.conversionRate;
+  if (!settings) return `$${num.toFixed(2)}`;
+  const rate = typeof settings.conversionRate === "number" ? settings.conversionRate : parseFloat(String(settings.conversionRate)) || 1;
+  const converted = num * rate;
   return `${settings.currencySymbol}${converted.toFixed(2)}`;
 }

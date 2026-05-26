@@ -16,9 +16,11 @@ function CurrencyDisplay() {
   
   if (!settings) return null;
   
+  const rate = typeof conversionRate === "number" ? conversionRate : parseFloat(String(conversionRate)) || 1;
+  
   return (
     <div className="text-xs text-gray-500 hidden sm:block">
-      {settings.currencyCode}: {settings.currencySymbol}{conversionRate.toFixed(2)}
+      {settings.currencyCode}: {settings.currencySymbol}{rate.toFixed(2)}
     </div>
   );
 }

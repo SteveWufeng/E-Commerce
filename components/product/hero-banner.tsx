@@ -22,9 +22,6 @@ export function HeroBanner() {
             <Link href="/#products" className="bg-white text-primary-700 font-semibold px-6 py-3 rounded-lg hover:bg-primary-50 transition-colors shadow-sm">
               {t("shopNow")}
             </Link>
-            <Link href="/pickup" className="border border-white/30 text-white font-semibold px-6 py-3 rounded-lg hover:bg-white/10 transition-colors">
-              {t("schedulePickup")}
-            </Link>
           </div>
         </div>
       </div>

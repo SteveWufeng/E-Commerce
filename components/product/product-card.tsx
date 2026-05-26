@@ -3,38 +3,18 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Product } from "@/types";
-import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/hooks/use-cart";
-import { useCurrency } from "@/hooks/use-currency";
 import { useToast } from "@/components/ui/toast";
 import { useLocale } from "@/hooks/use-locale";
 import { DualCurrency } from "@/components/ui/dual-currency";
 
-/**
- * Product card component for the storefront grid.
- *
- * Displays:
- * - Product image (or placeholder)
- * - Product name
- * - Price (with sale price if applicable)
- * - Stock status indicator
- * - Add to cart button with animation feedback
- *
- * Responsive: adapts to grid column sizes.
- */
 export function ProductCard({ product }: { product: Product }) {
   const { t } = useLocale();
   const addItem = useCartStore((state) => state.addItem);
   const isLowStock = product.stock > 0 && product.stock <= 5;
   const isOutOfStock = product.stock <= 0;
   const onSale = product.comparePrice && product.comparePrice > product.price;
-  const { symbol, conversionRate } = useCurrency();
   const { showToast } = useToast();
-
-  const formatPrice = (price: number) => {
-    const converted = price * conversionRate;
-    return `${symbol}${converted.toFixed(2)}`;
-  };
 
   const handleAddToCart = () => {
     addItem({
