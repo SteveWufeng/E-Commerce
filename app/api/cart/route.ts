@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         create: { sessionId },
       });
       // Set cookie for future requests
-      setCookieHeader = `cart_session=${sessionId}; Path=/; HttpOnly`;
+      setCookieHeader = `cart_session=${sessionId}; Path=/; HttpOnly; SameSite=Lax${process.env.NODE_ENV === "production" ? '; Secure' : ''}`;
     }
 
     // Merge items into cart

@@ -11,10 +11,17 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDashboardMetrics } from "@/lib/analytics";
+import { requireAdmin } from "@/lib/auth/session";
 
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Add admin authentication check
+    const admin = await requireAdmin();
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: "Admin access required" },
+        { status: 401 }
+      );
+    }
     const { searchParams } = new URL(request.url);
     const from = searchParams.get("from");
     const to = searchParams.get("to");
