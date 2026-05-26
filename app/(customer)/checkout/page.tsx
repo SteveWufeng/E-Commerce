@@ -108,7 +108,7 @@ export default function CheckoutPage() {
 
     try {
       // Upload receipt first if selected
-      let receiptImage: string | null = null;
+      let receiptImage: string | undefined;
       if (receiptFile) {
         const formData = new FormData();
         formData.append("file", receiptFile);
@@ -121,11 +121,11 @@ export default function CheckoutPage() {
         receiptImage = uploadData.url;
       }
 
-      // Create order
+      // Create order — only include receiptImage if set
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...orderData, receiptImage }),
+        body: JSON.stringify(receiptImage ? { ...orderData, receiptImage } : orderData),
       });
 
       const result = await response.json();
