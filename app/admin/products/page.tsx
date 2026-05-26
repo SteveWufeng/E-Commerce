@@ -24,6 +24,7 @@ export default function AdminProductsPage() {
   const [search, setSearch] = useState("");
   const [editProduct, setEditProduct] = useState<any>(null);
   const [editPrice, setEditPrice] = useState("");
+  const [editSalePrice, setEditSalePrice] = useState("");
   const [editStock, setEditStock] = useState("");
   const [editImages, setEditImages] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -33,6 +34,7 @@ export default function AdminProductsPage() {
   const [newProduct, setNewProduct] = useState({
     name: "",
     price: "",
+    salePrice: "",
     stock: "",
     categoryId: "",
     description: "",
@@ -73,6 +75,9 @@ export default function AdminProductsPage() {
         case "category":
           cmp = (a.category?.name || "").localeCompare(b.category?.name || "");
           break;
+        case "sale":
+          cmp = ((a.comparePrice || 0) - (b.comparePrice || 0));
+          break;
         case "price":
           cmp = (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0);
           break;
@@ -98,6 +103,7 @@ export default function AdminProductsPage() {
   function handleEditClick(product: any) {
     setEditProduct(product);
     setEditPrice(product.price.toString());
+    setEditSalePrice(product.comparePrice ? product.comparePrice.toString() : "");
     setEditStock(product.stock.toString());
     setEditImages(product.images || []);
   }
@@ -107,14 +113,21 @@ export default function AdminProductsPage() {
 
     setIsSaving(true);
     try {
+      const body: Record<string, unknown> = {
+        price: parseFloat(editPrice),
+        stock: parseInt(editStock),
+        images: editImages,
+      };
+      if (editSalePrice) {
+        body.comparePrice = parseFloat(editSalePrice);
+      } else {
+        body.comparePrice = null;
+      }
+
       const res = await fetch(`/api/products/${editProduct.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          price: parseFloat(editPrice),
-          stock: parseInt(editStock),
-          images: editImages,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (res.ok) {
@@ -122,7 +135,7 @@ export default function AdminProductsPage() {
         setProducts((prev) =>
           prev.map((p) =>
             p.id === editProduct.id
-              ? { ...p, price: parseFloat(editPrice), stock: parseInt(editStock), images: updated.data.images }
+              ? { ...p, price: parseFloat(editPrice), stock: parseInt(editStock), images: updated.data.images, comparePrice: updated.data.comparePrice }
               : p
           )
         );
@@ -143,25 +156,30 @@ export default function AdminProductsPage() {
 
     setIsSaving(true);
     try {
+      const body: Record<string, unknown> = {
+        name: newProduct.name,
+        description: newProduct.description,
+        price: parseFloat(newProduct.price),
+        stock: parseInt(newProduct.stock) || 0,
+        categoryId: newProduct.categoryId,
+        images: newProduct.images,
+        isActive: true,
+      };
+      if (newProduct.salePrice) {
+        body.comparePrice = parseFloat(newProduct.salePrice);
+      }
+
       const res = await fetch("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: newProduct.name,
-          description: newProduct.description,
-          price: parseFloat(newProduct.price),
-          stock: parseInt(newProduct.stock) || 0,
-          categoryId: newProduct.categoryId,
-          images: newProduct.images,
-          isActive: true,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (res.ok) {
         const created = await res.json();
         setProducts((prev) => [...prev, created.data]);
         setAddProduct(false);
-        setNewProduct({ name: "", price: "", stock: "", categoryId: "", description: "", images: [] });
+        setNewProduct({ name: "", price: "", salePrice: "", stock: "", categoryId: "", description: "", images: [] });
       } else {
         console.error("Failed to create product");
       }
@@ -222,13 +240,13 @@ export default function AdminProductsPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  {(["name", "category", "price", "stock", "status"] as const).map((field) => (
+                  {(["name", "category", "sale", "price", "stock", "status"] as const).map((field) => (
                     <th key={field} className="text-left py-3 px-4">
                       <button
                         onClick={() => handleSort(field)}
                         className="flex items-center gap-1 font-medium text-gray-500 hover:text-gray-700 transition-colors"
                       >
-                        {field === "name" ? "Product" : field === "category" ? "Category" : field === "price" ? "Price" : field === "stock" ? "Stock" : "Status"}
+                        {field === "name" ? "Product" : field === "category" ? "Category" : field === "sale" ? "Sale" : field === "price" ? "Price" : field === "stock" ? "Stock" : "Status"}
                         {sortField === field ? (
                           sortDir === "asc" ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
                         ) : (
@@ -245,7 +263,23 @@ export default function AdminProductsPage() {
                   <tr key={product.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 font-medium text-gray-900">{product.name}</td>
                     <td className="py-3 px-4 text-gray-500">{product.category?.name || "—"}</td>
-                    <td className="py-3 px-4">{formatCurrency(product.price)}</td>
+                    <td className="py-3 px-4">
+                      {product.comparePrice && parseFloat(product.comparePrice) > parseFloat(product.price) ? (
+                        <span className="badge badge-warning text-xs">SALE</span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      {product.comparePrice && parseFloat(product.comparePrice) > parseFloat(product.price) ? (
+                        <span>
+                          <span className="text-gray-400 line-through mr-1">{formatCurrency(product.comparePrice)}</span>
+                          <span className="text-red-600 font-medium">{formatCurrency(product.price)}</span>
+                        </span>
+                      ) : (
+                        formatCurrency(product.price)
+                      )}
+                    </td>
                     <td className="py-3 px-4">
                       <span
                         className={
@@ -328,6 +362,20 @@ export default function AdminProductsPage() {
                   value={editPrice}
                   onChange={(e) => setEditPrice(e.target.value)}
                   className="input w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Sale Price ($) <span className="text-gray-400 font-normal">— original price, leave empty for no sale</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editSalePrice}
+                  onChange={(e) => setEditSalePrice(e.target.value)}
+                  className="input w-full"
+                  placeholder="0.00"
                 />
               </div>
               <div>
@@ -434,6 +482,20 @@ export default function AdminProductsPage() {
                     placeholder="0"
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Sale Price ($) <span className="text-gray-400 font-normal">— optional, marks product as on sale</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={newProduct.salePrice}
+                  onChange={(e) => setNewProduct({ ...newProduct, salePrice: e.target.value })}
+                  className="input w-full"
+                  placeholder="0.00"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
