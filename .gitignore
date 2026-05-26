@@ -45,3 +45,17 @@ yarn-error.log*
 # Docker
 docker/data/
 .open-next/
+
+# Planning & session files
+.planning/
+session-ses*.md
+
+# Wrangler / Cloudflare
+.wrangler/
+
+# Agent DB (opencode)
+agent.db
+agent.db-wal
+
+# Build artifacts
+ecommerce-mvp/
