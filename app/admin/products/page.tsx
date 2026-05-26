@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Edit, Trash2, X } from "lucide-react";
+import { Plus, Edit, Trash2, X, ChevronUp, ChevronDown } from "lucide-react";
 
 /**
  * Admin products page — manage product catalog.
@@ -28,6 +28,8 @@ export default function AdminProductsPage() {
   const [editImages, setEditImages] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [addProduct, setAddProduct] = useState(false);
+  const [sortField, setSortField] = useState<string>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [newProduct, setNewProduct] = useState({
     name: "",
     price: "",
@@ -57,9 +59,41 @@ export default function AdminProductsPage() {
     loadProducts();
   }, []);
 
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = products
+    .filter((p) =>
+      p.name.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => {
+      let cmp = 0;
+      const dir = sortDir === "asc" ? 1 : -1;
+      switch (sortField) {
+        case "name":
+          cmp = a.name.localeCompare(b.name);
+          break;
+        case "category":
+          cmp = (a.category?.name || "").localeCompare(b.category?.name || "");
+          break;
+        case "price":
+          cmp = (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0);
+          break;
+        case "stock":
+          cmp = (a.stock || 0) - (b.stock || 0);
+          break;
+        case "status":
+          cmp = (a.isActive ? 0 : 1) - (b.isActive ? 0 : 1);
+          break;
+      }
+      return cmp * dir;
+    });
+
+  function handleSort(field: string) {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  }
 
   function handleEditClick(product: any) {
     setEditProduct(product);
@@ -188,11 +222,21 @@ export default function AdminProductsPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">Product</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">Category</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">Price</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">Stock</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">Status</th>
+                  {(["name", "category", "price", "stock", "status"] as const).map((field) => (
+                    <th key={field} className="text-left py-3 px-4">
+                      <button
+                        onClick={() => handleSort(field)}
+                        className="flex items-center gap-1 font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                      >
+                        {field === "name" ? "Product" : field === "category" ? "Category" : field === "price" ? "Price" : field === "stock" ? "Stock" : "Status"}
+                        {sortField === field ? (
+                          sortDir === "asc" ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />
+                        ) : (
+                          <ChevronUp className="w-3.5 h-3.5 text-gray-300" />
+                        )}
+                      </button>
+                    </th>
+                  ))}
                   <th className="text-right py-3 px-4 font-medium text-gray-500">Actions</th>
                 </tr>
               </thead>
