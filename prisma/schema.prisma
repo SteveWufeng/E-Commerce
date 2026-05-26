@@ -265,7 +265,7 @@ enum NotificationStatus {
 
 model Settings {
   id              String   @id @default(cuid())
-  storeName       String   @default("My Store")
+  storeName       String   @default("Super Todos")
   storeAddress    String   @default("")
   taxRate         Float    @default(8)
   currencyCode    String   @default("USD")

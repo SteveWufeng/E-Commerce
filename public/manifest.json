@@ -1,6 +1,6 @@
 {
-  "name": "My Store",
-  "short_name": "Store",
+  "name": "Super Todos",
+  "short_name": "Super Todos",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

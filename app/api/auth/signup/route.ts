@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     });
 
     const token = await generateVerificationToken(validated.email);
-    const appName = process.env.NEXT_PUBLIC_APP_NAME || "E-Commerce MVP";
+    const appName = process.env.NEXT_PUBLIC_APP_NAME || "supertodos";
 
     await sendEmail(
       verificationEmail({
