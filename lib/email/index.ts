@@ -36,7 +36,7 @@ export async function sendEmail(template: EmailTemplate): Promise<boolean> {
       const { Resend } = await import("resend");
       const resend = new Resend(process.env.RESEND_API_KEY);
 
-      const fromAddr = process.env.EMAIL_FROM || `${process.env.NEXT_PUBLIC_STORE_NAME || "Store"} <noreply@${process.env.NEXT_PUBLIC_APP_NAME || "ecommerce"}.com>`;
+      const fromAddr = process.env.EMAIL_FROM || `${process.env.NEXT_PUBLIC_STORE_NAME || "Super Todos"} <noreply@${process.env.NEXT_PUBLIC_APP_NAME || "supertodos"}.com>`;
       await resend.emails.send({
         from: fromAddr,
         to: template.to,

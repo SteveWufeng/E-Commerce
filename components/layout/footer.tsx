@@ -9,7 +9,7 @@ export function Footer() {
   const settings = useSettingsStore((state) => state.settings);
   const ph = settings?.pickupHours;
 
-  const storeName = settings?.storeName || process.env.NEXT_PUBLIC_STORE_NAME || "E-Commerce Store";
+  const storeName = settings?.storeName || process.env.NEXT_PUBLIC_STORE_NAME || "Super Todos";
   const storeAddress = settings?.storeAddress || process.env.NEXT_PUBLIC_STORE_ADDRESS || "";
 
   return (

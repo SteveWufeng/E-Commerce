@@ -13,8 +13,8 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: {
-    default: process.env.NEXT_PUBLIC_STORE_NAME || "E-Commerce Store",
-    template: `%s | ${process.env.NEXT_PUBLIC_STORE_NAME || "Store"}`,
+    default: process.env.NEXT_PUBLIC_STORE_NAME || "Super Todos",
+    template: `%s | ${process.env.NEXT_PUBLIC_STORE_NAME || "Super Todos"}`,
   },
   description: "Browse our selection, order online, and pick up at your convenience.",
   viewport: "width=device-width, initial-scale=1, maximum-scale=5",
