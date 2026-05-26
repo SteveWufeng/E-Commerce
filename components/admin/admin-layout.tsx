@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Package,
   ShoppingBag,
-  Clock,
   Settings,
   Store,
 } from "lucide-react";
@@ -27,7 +26,6 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/products", label: "Products", icon: Package },
     { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
-    { href: "/admin/pickups", label: "Pickups", icon: Clock },
     { href: "/admin/settings", label: "Settings", icon: Settings },
   ];
 
