@@ -1,19 +1,6 @@
-/**
- * Authentication configuration for NextAuth.js v5.
- *
- * Supports:
- * - Credentials-based login (email + password) with bcrypt hashing
- * - JWT-based sessions with role and ID embedded in token
- * - Admin role enforced server-side on protected routes
- *
- * Security:
- * - Passwords are bcrypt-hashed (cost factor 12) before storage
- * - Sessions use secure, httpOnly cookies
- * - Token includes user ID and role for server-side authorization
- * - Secret loaded from environment variable — never hardcoded
- */
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -37,6 +24,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const user = await db.user.findUnique({ where: { email } });
         if (!user) return null;
+        if (!user.passwordHash) return null;
+
+        if (!user.isVerified) return null;
 
         const isValid = await bcrypt.compare(password, user.passwordHash);
         if (!isValid) return null;
@@ -49,12 +39,47 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         };
       },
     }),
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
   ],
   pages: {
     signIn: "/login",
     error: "/login",
   },
   callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider === "google") {
+        const existingUser = await db.user.findUnique({
+          where: { email: user.email! },
+        });
+
+        if (existingUser) {
+          if (!existingUser.isVerified) {
+            await db.user.update({
+              where: { id: existingUser.id },
+              data: { isVerified: true },
+            });
+          }
+          return true;
+        }
+
+        await db.user.create({
+          data: {
+            email: user.email!,
+            firstName: user.name?.split(" ")[0] || "Google",
+            lastName: user.name?.split(" ").slice(1).join(" ") || "User",
+            role: "CUSTOMER",
+            isVerified: true,
+          },
+        });
+
+        return true;
+      }
+
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.role = ((user as unknown) as { role?: string }).role as string | undefined;
@@ -72,9 +97,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
-  // Trust the host header when behind proxies/containers (prevents UntrustedHost errors)
   trustHost: true,
   secret: process.env.NEXTAUTH_SECRET,
 });

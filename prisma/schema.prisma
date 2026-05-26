@@ -17,7 +17,7 @@ datasource db {
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
-  passwordHash  String    // bcrypt hashed — never store plaintext
+  passwordHash  String?   // bcrypt hashed — null for OAuth-only (Google) users
   firstName     String
   lastName      String
   phone         String?
@@ -32,6 +32,16 @@ model User {
 
   @@index([email])
   @@index([role])
+}
+
+model VerificationToken {
+  id         String   @id @default(cuid())
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  createdAt  DateTime @default(now())
+
+  @@unique([identifier, token])
 }
 
 enum Role {
@@ -291,26 +301,8 @@ model AuditLog {
 }
 
 // ═══════════════════════════════════════════════════════════
-// Production Deployment Checklist
-// ═══════════════════════════════════════════════════════════
-// Before first deploy:
-// 1. [ ] Supabase project created (https://supabase.com)
-// 2. [ ] DATABASE_URL set in GitHub secrets (Settings → Secrets → Actions)
-// 3. [ ] Cloudflare API Token created (https://dash.cloudflare.com/profile/api-tokens)
-// 4. [ ] CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID set in GitHub secrets
-// 5. [ ] Hyperdrive configured for Workers DB connectivity
-// 6. [ ] All secrets set via `npx wrangler secret put` (DATABASE_URL, NEXTAUTH_SECRET, etc.)
-//
-// After first deploy:
-// 1. [ ] Visit workers.dev URL — app loads without errors
-// 2. [ ] Database queries return data (not connection errors)
-// 3. [ ] NextAuth.js authentication works (sign in, sign out)
-// 4. [ ] Static assets load correctly (CSS, JS, images)
-// 5. [ ] Run: npx wrangler tail — check for runtime errors
-//
 // Migration Strategy:
 // - Local: npx prisma migrate dev --name <name>
 // - Commit migration files (prisma/migrations/) to git
-// - CI/CD: npx prisma migrate deploy runs BEFORE deploy (GitHub Actions runner has TCP access)
-// - Workers runtime: V8 isolates have NO raw TCP — use Hyperdrive (free) or Prisma Accelerate (paid)
+// - CI/CD: npx prisma migrate deploy runs BEFORE deploy
 // ═══════════════════════════════════════════════════════════
