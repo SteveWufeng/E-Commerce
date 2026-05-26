@@ -7,9 +7,11 @@ import Image from "next/image";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { useLocale } from "@/hooks/use-locale";
 import type { Order } from "@/types";
 
 export default function OrderDetailPage() {
+  const { t } = useLocale();
   const searchParams = useSearchParams();
   const orderId = searchParams.get("id") || searchParams.get("orderNumber");
   const email = searchParams.get("email");
@@ -103,7 +105,7 @@ export default function OrderDetailPage() {
 
   async function handleCancel() {
     if (!order || !isOwner) return;
-    if (!confirm("Are you sure you want to cancel this order?")) return;
+    if (!confirm(t("cancelConfirm"))) return;
 
     setCancelling(true);
     try {
@@ -170,43 +172,43 @@ export default function OrderDetailPage() {
 
       <main className="flex-1 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         <Link href="/orders" className="text-primary-600 hover:underline mb-4 inline-block">
-          ← Back to My Orders
+          ← {t("backToMyOrders")}
         </Link>
 
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Order Details</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t("orderDetails")}</h1>
           <span className={`badge ${statusColors[order.status] || "badge-info"}`}>
             {order.status.toLowerCase().replace(/_/g, " ")}
           </span>
         </div>
 
         <div className="card mb-6">
-          <h2 className="text-lg font-semibold mb-4">Order Information</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("orderInformation")}</h2>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-gray-500">Order Number</p>
+              <p className="text-gray-500">{t("orderNumber")}</p>
               <p className="font-medium">{order.orderNumber}</p>
             </div>
             <div>
-              <p className="text-gray-500">Order Date</p>
+              <p className="text-gray-500">{t("orderDate")}</p>
               <p className="font-medium">{formatDateTime(order.createdAt)}</p>
             </div>
             <div>
-              <p className="text-gray-500">Customer Name</p>
+              <p className="text-gray-500">{t("customerName")}</p>
               <p className="font-medium">{order.customerFirstName} {order.customerLastName}</p>
             </div>
             <div>
-              <p className="text-gray-500">Email</p>
+              <p className="text-gray-500">{t("email")}</p>
               <p className="font-medium">{order.customerEmail}</p>
             </div>
             {order.customerPhone && (
               <div>
-                <p className="text-gray-500">Phone</p>
+                <p className="text-gray-500">{t("phone")}</p>
                 <p className="font-medium">{order.customerPhone}</p>
               </div>
             )}
             <div>
-              <p className="text-gray-500">Payment Method</p>
+              <p className="text-gray-500">{t("paymentMethod")}</p>
               <p className="font-medium">{order.paymentMethod.replace(/_/g, " ")}</p>
             </div>
           </div>
@@ -215,10 +217,10 @@ export default function OrderDetailPage() {
         {/* Rejection Notice */}
         {order.status === "REJECTED" && order.rejectionReason && (
           <div className="card mb-6 border-2 border-red-300 bg-red-50">
-            <h2 className="text-lg font-semibold text-red-700 mb-2">Receipt Rejected</h2>
+            <h2 className="text-lg font-semibold text-red-700 mb-2">{t("receiptRejected")}</h2>
             <p className="text-sm text-red-600 mb-3">{order.rejectionReason}</p>
             <p className="text-sm text-gray-600">
-              Please upload a valid payment receipt below to continue.
+              {t("uploadReceiptPrompt")}
             </p>
           </div>
         )}
@@ -228,10 +230,10 @@ export default function OrderDetailPage() {
           <div className={`card mb-6 ${order.receiptImage && (order.status === "PENDING" || order.status === "CONFIRMED") ? "border-2 border-dashed border-primary-300 bg-primary-50/50" : order.status === "REJECTED" ? "border-2 border-red-300 bg-red-50" : "border-2 border-dashed border-primary-300 bg-primary-50/50"}`}>
             <h2 className="text-lg font-semibold mb-2">
               {order.status === "REJECTED"
-                ? "Re-upload Payment Receipt"
-                : order.receiptImage
-                  ? "Update Payment Receipt"
-                  : "Upload Payment Receipt"}
+              ? t("uploadReceiptButton")
+              : order.receiptImage
+                ? t("updateReceipt")
+                : t("uploadReceiptButton")}
             </h2>
 
             {/* Show current receipt if exists */}
@@ -248,13 +250,13 @@ export default function OrderDetailPage() {
 
             <p className="text-sm text-gray-600 mb-4">
               {order.status === "REJECTED"
-                ? "Your receipt was rejected. Please upload a valid payment receipt."
-                : "Upload a clear image of your bank transfer receipt so we can confirm your payment."}
+                ? t("uploadReceiptPrompt")
+                : t("uploadReceiptPrompt")}
             </p>
 
             <div className="flex items-center gap-4 flex-wrap">
               <label className="cursor-pointer btn-secondary text-sm py-2 px-4 rounded-lg">
-                Choose File
+                {t("chooseFile")}
                 <input
                   type="file"
                   accept="image/*"
@@ -278,7 +280,7 @@ export default function OrderDetailPage() {
                     disabled={uploading}
                     className="btn-primary text-sm py-2 px-4"
                   >
-                    {uploading ? "Uploading..." : order.receiptImage ? "Update Receipt" : "Upload Receipt"}
+                    {uploading ? t("uploadReceiptButton") : order.receiptImage ? t("updateReceiptButton") : t("uploadReceiptButton")}
                   </button>
                 </>
               )}
@@ -302,30 +304,30 @@ export default function OrderDetailPage() {
         {/* Show uploaded receipt for non-owners */}
         {order.receiptImage && !isOwner && (
           <div className="card mb-6">
-            <h2 className="text-lg font-semibold mb-4">Payment Receipt</h2>
+            <h2 className="text-lg font-semibold mb-4">{t("paymentReceipt")}</h2>
             <div className="relative w-full max-w-sm aspect-[4/3] rounded-lg overflow-hidden border">
               <Image
                 src={order.receiptImage}
-                alt="Payment receipt"
+                alt={t("paymentReceipt")}
                 fill
                 className="object-contain"
               />
             </div>
             <p className="mt-2 text-xs text-gray-400">
-              Receipt uploaded — awaiting admin confirmation.
+              {t("receiptUploadedAwaiting")}
             </p>
           </div>
         )}
 
         {order.notes && (
           <div className="card mb-6">
-            <h2 className="text-lg font-semibold mb-4">Order Notes</h2>
+            <h2 className="text-lg font-semibold mb-4">{t("orderNotesHeading")}</h2>
             <p className="text-sm">{order.notes}</p>
           </div>
         )}
 
         <div className="card mb-6">
-          <h2 className="text-lg font-semibold mb-4">Order Items</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("orderItems")}</h2>
           <div className="space-y-3">
             {order.items.map((item) => (
               <div key={item.id} className="flex justify-between items-center py-2 border-b last:border-0">
@@ -347,7 +349,7 @@ export default function OrderDetailPage() {
               disabled={cancelling}
               className="btn-danger text-sm py-2 px-6"
             >
-              {cancelling ? "Cancelling..." : "Cancel Order"}
+              {cancelling ? t("cancelling") : t("cancelOrder")}
             </button>
           </div>
         )}
@@ -360,11 +362,11 @@ export default function OrderDetailPage() {
               <span>{formatCurrency(order.subtotal)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Tax</span>
+              <span className="text-gray-500">{t("tax")}</span>
               <span>{formatCurrency(order.tax)}</span>
             </div>
             <div className="flex justify-between pt-2 border-t font-semibold text-lg">
-              <span>Total</span>
+              <span>{t("total")}</span>
               <span>{formatCurrency(order.total)}</span>
             </div>
           </div>

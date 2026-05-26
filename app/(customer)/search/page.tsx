@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { ProductCard } from "@/components/product/product-card";
+import { useLocale } from "@/hooks/use-locale";
 import { Product } from "@/types";
 
 /**
@@ -22,6 +23,7 @@ export default function SearchPage({
 }: {
   searchParams: { q?: string; category?: string; sort?: string };
 }) {
+  const { t } = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const query = searchParams.q || "";
@@ -59,12 +61,14 @@ export default function SearchPage({
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          {query ? `Search results for "${query}"` : "Search Products"}
+          {query ? t("searchResultsFor", { query }) : t("searchProductsHeading")}
         </h1>
         <p className="text-gray-500 mb-8">
           {isLoading
-            ? "Searching..."
-            : `${products.length} product${products.length !== 1 ? "s" : ""} found`}
+            ? t("searching")
+            : products.length === 1
+              ? t("productFound", { count: products.length })
+              : t("productsFound", { count: products.length })}
         </p>
 
         {isLoading ? (
@@ -85,10 +89,10 @@ export default function SearchPage({
         ) : (
           <div className="text-center py-16">
             <p className="text-gray-500 text-lg">
-              No products found matching your search.
+              {t("noSearchResults")}
             </p>
             <Link href="/" className="btn-primary mt-4">
-              Browse All Products
+              {t("browseAllProducts")}
             </Link>
           </div>
         )}

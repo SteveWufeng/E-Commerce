@@ -1,11 +1,11 @@
+"use client";
+
 import Image from "next/image";
 import { Minus, Plus, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { useLocale } from "@/hooks/use-locale";
 import type { CartItem } from "@/types";
 
-/**
- * Cart item row — displays product info with quantity controls.
- */
 export function CartItem({
   item,
   onUpdateQuantity,
@@ -15,6 +15,7 @@ export function CartItem({
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onRemove: (productId: string) => void;
 }) {
+  const { t } = useLocale();
   return (
     <div className="flex gap-4 p-4 rounded-lg border border-gray-200 bg-white">
       {/* Product Image */}
@@ -40,7 +41,7 @@ export function CartItem({
       <div className="flex-1 min-w-0">
         <h3 className="font-medium text-gray-900 truncate">{item.name}</h3>
         <p className="text-sm text-gray-500 mt-1">
-          {formatCurrency(item.price)} each
+          {formatCurrency(item.price)} {t("each")}
         </p>
 
         <div className="flex items-center justify-between mt-3">
@@ -49,7 +50,7 @@ export function CartItem({
             <button
               onClick={() => onUpdateQuantity(item.productId, item.quantity - 1)}
               className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
-              aria-label="Decrease quantity"
+              aria-label={t("decreaseQuantity")}
             >
               <Minus className="w-4 h-4" />
             </button>
@@ -60,7 +61,7 @@ export function CartItem({
               onClick={() => onUpdateQuantity(item.productId, item.quantity + 1)}
               className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-50"
               disabled={item.quantity >= item.maxStock}
-              aria-label="Increase quantity"
+              aria-label={t("increaseQuantity")}
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -73,7 +74,7 @@ export function CartItem({
             <button
               onClick={() => onRemove(item.productId)}
               className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-              aria-label="Remove item"
+              aria-label={t("removeItem")}
             >
               <X className="w-4 h-4" />
             </button>

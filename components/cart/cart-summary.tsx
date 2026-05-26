@@ -1,9 +1,8 @@
-import { formatCurrency } from "@/lib/utils";
+"use client";
 
-/**
- * Cart summary — displays subtotal, tax, and total.
- * Used on both cart page and checkout page.
- */
+import { formatCurrency } from "@/lib/utils";
+import { useLocale } from "@/hooks/use-locale";
+
 export function CartSummary({
   subtotal,
   tax,
@@ -15,29 +14,31 @@ export function CartSummary({
   total: number;
   itemCount: number;
 }) {
+  const { t } = useLocale();
+
   return (
     <div className="card">
       <h2 className="text-lg font-semibold text-gray-900 mb-4">
-        Order Summary
+        {t("orderSummary")}
       </h2>
 
       <div className="space-y-3 text-sm">
         <div className="flex justify-between text-gray-600">
-          <span>Subtotal ({itemCount} item{itemCount !== 1 ? "s" : ""})</span>
+          <span>{t("orderSummaryItemCount", { count: itemCount, items: itemCount !== 1 ? t("items") : t("item") })}</span>
           <span>{formatCurrency(subtotal)}</span>
         </div>
         <div className="flex justify-between text-gray-600">
-          <span>Tax (estimated)</span>
+          <span>{t("taxEstimated")}</span>
           <span>{formatCurrency(tax)}</span>
         </div>
         <div className="border-t border-gray-200 pt-3 flex justify-between font-semibold text-gray-900 text-base">
-          <span>Total</span>
+          <span>{t("total")}</span>
           <span>{formatCurrency(total)}</span>
         </div>
       </div>
 
       <p className="mt-4 text-xs text-gray-500">
-        Tax is calculated at checkout. Final amount may vary.
+        {t("taxNote")}
       </p>
     </div>
   );
