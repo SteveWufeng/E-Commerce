@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { useLocale } from "@/hooks/use-locale";
 import type { Order } from "@/types";
 
 /**
@@ -17,6 +18,7 @@ import type { Order } from "@/types";
  * - Order detail link
  */
 export default function OrdersPage() {
+  const { t } = useLocale();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -48,7 +50,7 @@ export default function OrdersPage() {
       <Header />
 
       <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">My Orders</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">{t("myOrdersHeading")}</h1>
 
         {isLoading ? (
           <div className="space-y-4">
@@ -72,7 +74,7 @@ export default function OrdersPage() {
                     {formatDateTime(order.createdAt)}
                   </p>
                   <p className="text-sm text-gray-500">
-                    {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+                    {order.items.length} {order.items.length !== 1 ? t("items") : t("item")}
                   </p>
                 </div>
 
@@ -89,9 +91,9 @@ export default function OrdersPage() {
           </div>
         ) : (
           <div className="text-center py-16">
-            <p className="text-gray-500 text-lg mb-4">No orders yet.</p>
+            <p className="text-gray-500 text-lg mb-4">{t("noOrdersYet")}</p>
             <Link href="/" className="btn-primary">
-              Start Shopping
+              {t("startShopping")}
             </Link>
           </div>
         )}

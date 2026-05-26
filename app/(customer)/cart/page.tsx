@@ -6,13 +6,12 @@ import { Footer } from "@/components/layout/footer";
 import { CartItem } from "@/components/cart/cart-item";
 import { CartSummary } from "@/components/cart/cart-summary";
 import { formatCurrency } from "@/lib/utils";
+import { useLocale } from "@/hooks/use-locale";
 import { ShoppingBag } from "lucide-react";
 import Link from "next/link";
 
-/**
- * Shopping cart page.
- */
 export default function CartPage() {
+  const { t } = useLocale();
   const items = useCartStore((state) => state.items);
   const { removeItem, updateQuantity, clearCart } = useCartStore();
 
@@ -32,13 +31,13 @@ export default function CartPage() {
           <div className="text-center py-16">
             <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Your cart is empty
+              {t("yourCartIsEmpty")}
             </h2>
             <p className="text-gray-500 mb-6">
-              Browse our products and add items to your cart.
+              {t("browseProductsAddToCart")}
             </p>
             <Link href="/" className="btn-primary">
-              Start Shopping
+              {t("startShopping")}
             </Link>
           </div>
         </main>
@@ -53,7 +52,7 @@ export default function CartPage() {
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">
-          Shopping Cart ({items.length} item{items.length !== 1 ? "s" : ""})
+          {t("shoppingCart")} ({items.length} {items.length !== 1 ? t("items") : t("item")})
         </h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -69,11 +68,11 @@ export default function CartPage() {
 
             <button
               onClick={() => {
-                if (confirm("Clear all items from cart?")) clearCart();
+                if (confirm(t("clearCartConfirm"))) clearCart();
               }}
               className="text-sm text-red-600 hover:text-red-700 font-medium"
             >
-              Clear Cart
+              {t("clearCart")}
             </button>
           </div>
 
@@ -85,7 +84,7 @@ export default function CartPage() {
               itemCount={items.length}
             />
             <Link href="/checkout" className="btn-primary w-full mt-4 py-3 text-base">
-              Proceed to Checkout
+              {t("proceedToCheckout")}
             </Link>
           </div>
         </div>

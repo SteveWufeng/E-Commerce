@@ -7,6 +7,8 @@ import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/hooks/use-cart";
 import { useCurrency } from "@/hooks/use-currency";
 import { useToast } from "@/components/ui/toast";
+import { useLocale } from "@/hooks/use-locale";
+import { DualCurrency } from "@/components/ui/dual-currency";
 
 /**
  * Product card component for the storefront grid.
@@ -21,6 +23,7 @@ import { useToast } from "@/components/ui/toast";
  * Responsive: adapts to grid column sizes.
  */
 export function ProductCard({ product }: { product: Product }) {
+  const { t } = useLocale();
   const addItem = useCartStore((state) => state.addItem);
   const isLowStock = product.stock > 0 && product.stock <= 5;
   const isOutOfStock = product.stock <= 0;
@@ -41,7 +44,7 @@ export function ProductCard({ product }: { product: Product }) {
       image: product.images?.[0] || "",
       maxStock: product.stock,
     });
-    showToast(`${product.name} added to cart!`, "success");
+    showToast(t("addedToCart", { product: product.name }), "success");
   };
 
   return (
@@ -67,7 +70,7 @@ export function ProductCard({ product }: { product: Product }) {
         {/* Sale badge */}
         {onSale && (
           <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
-            SALE
+            {t("sale")}
           </span>
         )}
 
@@ -75,7 +78,7 @@ export function ProductCard({ product }: { product: Product }) {
         {isOutOfStock && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
             <span className="bg-white text-gray-900 text-sm font-semibold px-4 py-2 rounded-lg">
-              Out of Stock
+              {t("outOfStock")}
             </span>
           </div>
         )}
@@ -90,11 +93,11 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="mt-auto pt-2">
           <div className="flex items-baseline gap-2">
             <span className="text-lg font-bold text-gray-900">
-              {formatPrice(product.price)}
+              <DualCurrency usdAmount={product.price} />
             </span>
             {onSale && (
               <span className="text-sm text-gray-400 line-through">
-                {formatPrice(product.comparePrice!)}
+                <DualCurrency usdAmount={product.comparePrice!} />
               </span>
             )}
           </div>
@@ -102,7 +105,7 @@ export function ProductCard({ product }: { product: Product }) {
           {/* Stock indicator */}
           {isLowStock && !isOutOfStock && (
             <p className="text-xs text-amber-600 mt-1">
-              Only {product.stock} left
+              {t("onlyXLeft", { count: product.stock })}
             </p>
           )}
 
@@ -112,7 +115,7 @@ export function ProductCard({ product }: { product: Product }) {
               onClick={handleAddToCart}
               className="mt-2 w-full btn-primary text-xs py-2"
             >
-              Add to Cart
+              {t("addToCart")}
             </button>
           )}
         </div>

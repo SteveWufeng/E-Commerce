@@ -3,6 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useLocale } from "@/hooks/use-locale";
 
 const checkoutSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -37,6 +38,8 @@ export function CheckoutForm({
     phone: string;
   } | null;
 }) {
+  const { t } = useLocale();
+
   const {
     register,
     handleSubmit,
@@ -55,19 +58,19 @@ export function CheckoutForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="card">
       <h2 className="text-lg font-semibold text-gray-900 mb-4">
-        Contact Information
+        {t("contactInformation")}
       </h2>
 
       {prefillData?.firstName && (
         <p className="mb-4 text-sm text-primary-600 bg-primary-50 rounded-lg px-3 py-2">
-          ✓ Signed in as {prefillData.firstName} {prefillData.lastName}
+          {t("signedInAs", { name: `${prefillData.firstName} ${prefillData.lastName}` })}
         </p>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="firstName" className="label">
-            First Name *
+            {t("firstName")}
           </label>
           <input
             id="firstName"
@@ -82,7 +85,7 @@ export function CheckoutForm({
 
         <div>
           <label htmlFor="lastName" className="label">
-            Last Name *
+            {t("lastName")}
           </label>
           <input
             id="lastName"
@@ -97,7 +100,7 @@ export function CheckoutForm({
 
         <div>
           <label htmlFor="email" className="label">
-            Email *
+            {t("email")}
           </label>
           <input
             id="email"
@@ -107,16 +110,13 @@ export function CheckoutForm({
             {...register("email")}
           />
           {prefillData?.email && (
-            <p className="mt-1 text-xs text-gray-400">Email cannot be changed when signed in.</p>
-          )}
-          {errors.email && (
-            <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
+            <p className="mt-1 text-xs text-gray-400">{t("emailCannotBeChanged")}</p>
           )}
         </div>
 
         <div>
           <label htmlFor="phone" className="label">
-            Phone *
+            {t("phone")}
           </label>
           <input
             id="phone"
@@ -132,13 +132,13 @@ export function CheckoutForm({
 
       <div className="mt-4">
         <label htmlFor="notes" className="label">
-          Order Notes (optional)
+          {t("orderNotes")}
         </label>
         <textarea
           id="notes"
           rows={3}
           className="input resize-none"
-          placeholder="Any special instructions for your order..."
+          placeholder={t("orderNotesPlaceholder")}
           {...register("notes")}
         />
       </div>
@@ -148,7 +148,7 @@ export function CheckoutForm({
         disabled={isProcessing}
         className="btn-primary w-full mt-6 py-3 text-base"
       >
-        {isProcessing ? "Processing..." : "Place Order"}
+        {isProcessing ? t("processing") : t("placeOrder")}
       </button>
     </form>
   );

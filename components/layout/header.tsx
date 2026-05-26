@@ -7,6 +7,8 @@ import { useCartCount } from "@/hooks/use-cart";
 import { useCurrency } from "@/hooks/use-currency";
 import { useSettingsStore } from "@/hooks/use-settings";
 import { signOut } from "next-auth/react";
+import { useLocale } from "@/hooks/use-locale";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 
 function CurrencyDisplay() {
   const { symbol, conversionRate } = useCurrency();
@@ -35,6 +37,7 @@ function CurrencyDisplay() {
  * Uses useCartCount for optimized cart badge updates.
  */
 export function Header() {
+  const { t } = useLocale();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [cartBounce, setCartBounce] = useState(false);
@@ -102,22 +105,25 @@ export function Header() {
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-6">
             <Link href="/" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
-              Shop
+              {t("shop")}
             </Link>
             {user && (
               <Link href="/orders" className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
-                My Orders
+                {t("myOrders")}
               </Link>
             )}
             {user?.role === "ADMIN" && (
               <Link href="/admin/dashboard" className="text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors">
-                Admin
+                {t("admin")}
               </Link>
             )}
           </nav>
 
           {/* Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            {/* Language Switcher */}
+            <LanguageSwitcher />
+
             {/* Currency display */}
             <div className="hidden sm:block">
               <CurrencyDisplay />
@@ -128,12 +134,12 @@ export function Header() {
                 <div className="w-9 h-9 rounded-lg bg-gray-100 animate-pulse" />
               ) : user ? (
                 <>
-                  <button
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1"
-                    aria-label="Account menu"
-                    aria-expanded={userMenuOpen}
-                  >
+                    <button
+                      onClick={() => setUserMenuOpen(!userMenuOpen)}
+                      className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1"
+                      aria-label={t("accountMenu")}
+                      aria-expanded={userMenuOpen}
+                    >
                     <User className="w-5 h-5" />
                   </button>
 
@@ -153,7 +159,7 @@ export function Header() {
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         onClick={() => setUserMenuOpen(false)}
                       >
-                        My Profile
+                        {t("myProfile")}
                       </Link>
 
                       <Link
@@ -161,7 +167,7 @@ export function Header() {
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         onClick={() => setUserMenuOpen(false)}
                       >
-                        My Orders
+                        {t("myOrders")}
                       </Link>
 
                       {user.role === "ADMIN" && (
@@ -170,7 +176,7 @@ export function Header() {
                           className="block px-4 py-2 text-sm text-purple-600 hover:bg-purple-50"
                           onClick={() => setUserMenuOpen(false)}
                         >
-                          Admin Panel
+                          {t("adminPanel")}
                         </Link>
                       )}
 
@@ -178,7 +184,7 @@ export function Header() {
                         onClick={handleSignOut}
                         className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100"
                       >
-                        Sign Out
+                        {t("signOut")}
                       </button>
                     </div>
                   )}
@@ -187,7 +193,7 @@ export function Header() {
                 <Link
                   href="/login"
                   className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
-                  aria-label="Sign in"
+                  aria-label={t("signIn")}
                 >
                   <User className="w-5 h-5" />
                 </Link>
@@ -232,7 +238,7 @@ export function Header() {
                 className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 font-medium"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Shop
+                {t("shop")}
               </Link>
 
               {user && (
@@ -242,14 +248,14 @@ export function Header() {
                     className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 font-medium"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    My Orders
+                    {t("myOrders")}
                   </Link>
                   <Link
                     href="/profile"
                     className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 font-medium"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    My Profile
+                    {t("myProfile")}
                   </Link>
                 </>
               )}
@@ -260,7 +266,7 @@ export function Header() {
                   className="px-4 py-2 rounded-lg text-purple-600 hover:bg-purple-50 font-medium"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Admin Panel
+                  {t("adminPanel")}
                 </Link>
               )}
 
@@ -272,7 +278,7 @@ export function Header() {
                   }}
                   className="px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 font-medium text-left"
                 >
-                  Sign Out
+                  {t("signOut")}
                 </button>
               ) : (
                 <Link
@@ -280,7 +286,7 @@ export function Header() {
                   className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 font-medium"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Sign In
+                  {t("signIn")}
                 </Link>
               )}
             </div>

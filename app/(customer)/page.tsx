@@ -8,6 +8,7 @@ import { ProductCard } from "@/components/product/product-card";
 import { SearchBar } from "@/components/product/search-bar";
 import { CategoryNav } from "@/components/product/category-nav";
 import { HeroBanner } from "@/components/product/hero-banner";
+import { useLocale } from "@/hooks/use-locale";
 import { Product, Category } from "@/types";
 
 /**
@@ -21,6 +22,7 @@ import { Product, Category } from "@/types";
  * - Responsive layout for all devices
  */
 export default function HomePage() {
+  const { t } = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [featured, setFeatured] = useState<Product[]>([]);
@@ -91,7 +93,6 @@ export default function HomePage() {
             <SearchBar
               value={searchQuery}
               onChange={setSearchQuery}
-              placeholder="Search products..."
             />
           </div>
 
@@ -106,7 +107,7 @@ export default function HomePage() {
           {featured.length > 0 && !searchQuery && !selectedCategory && (
             <section className="mb-12">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Featured Products
+                {t("featuredProducts")}
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {featured.slice(0, 5).map((product) => (
@@ -120,10 +121,10 @@ export default function HomePage() {
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
               {searchQuery
-                ? `Results for "${searchQuery}"`
+                ? t("resultsFor", { query: searchQuery })
                 : selectedCategory
                 ? categories.find((c) => c.slug === selectedCategory)?.name
-                : "All Products"}
+                : t("allProducts")}
             </h2>
 
             {isLoading ? (
@@ -144,10 +145,10 @@ export default function HomePage() {
             ) : (
               <div className="text-center py-16">
                 <p className="text-gray-500 text-lg">
-                  No products found. Try a different search or category.
+                  {t("noProductsFound")}
                 </p>
                 <Link href="/" className="btn-primary mt-4">
-                  Browse All Products
+                  {t("browseAllProducts")}
                 </Link>
               </div>
             )}

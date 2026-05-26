@@ -8,6 +8,7 @@ import { Footer } from "@/components/layout/footer";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { OrderSummary } from "@/components/checkout/order-summary";
 import { formatCurrency } from "@/lib/utils";
+import { useLocale } from "@/hooks/use-locale";
 import Image from "next/image";
 
 /**
@@ -21,6 +22,7 @@ import Image from "next/image";
  * 3. After placing order, customer uploads receipt image
  */
 export default function CheckoutPage() {
+  const { t } = useLocale();
   const router = useRouter();
   const items = useCartStore((state) => state.items);
 
@@ -151,7 +153,7 @@ export default function CheckoutPage() {
       <Header />
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">{t("proceedToCheckout")}</h1>
 
         {error && (
           <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
@@ -172,15 +174,15 @@ export default function CheckoutPage() {
             {/* Payment Method — Bank Transfer Only */}
             <div className="card">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Payment Method
+                {t("paymentMethod")}
               </h2>
               <div className="p-4 rounded-lg border-2 border-primary-500 bg-primary-50">
                 <div className="flex items-center gap-3">
                   <span className="text-xl">🏦</span>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Bank Transfer</p>
+                    <p className="text-sm font-medium text-gray-900">{t("bankTransfer")}</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Pay via bank transfer. Please upload your payment receipt after placing the order.
+                      {t("payViaBankTransfer")}
                     </p>
                   </div>
                 </div>
@@ -188,10 +190,10 @@ export default function CheckoutPage() {
 
               {/* Receipt Upload */}
               <div className="mt-4">
-                <label className="label">Upload Payment Receipt (optional now, required later)</label>
+                <label className="label">{t("uploadReceiptOptional")}</label>
                 <div className="mt-2 flex items-center gap-4">
                   <label className="cursor-pointer btn-secondary text-sm py-2 px-4 rounded-lg">
-                    Choose File
+                    {t("chooseFile")}
                     <input
                       type="file"
                       accept="image/*"
@@ -207,7 +209,7 @@ export default function CheckoutPage() {
                   <div className="mt-3 relative w-32 h-32 rounded-lg overflow-hidden border">
                     <Image
                       src={receiptPreview}
-                      alt="Receipt preview"
+                      alt={t("uploadReceipt")}
                       fill
                       className="object-cover"
                     />
@@ -219,11 +221,11 @@ export default function CheckoutPage() {
                     onClick={() => { setReceiptFile(null); setReceiptPreview(null); }}
                     className="mt-2 text-xs text-red-600 hover:underline"
                   >
-                    Remove
+                    {t("remove")}
                   </button>
                 )}
                 <p className="mt-2 text-xs text-gray-400">
-                  You can also upload the receipt later from the order detail page.
+                  {t("uploadLaterHint")}
                 </p>
               </div>
             </div>
