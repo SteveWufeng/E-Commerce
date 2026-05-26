@@ -1,6 +1,6 @@
 # E-Commerce MVP
 
-A modern, mobile-responsive e-commerce platform with **pickup-only** fulfillment. Customers browse products, place orders, and schedule pickup times — no shipping. Built for a single-dealer store with a full admin panel.
+A modern, mobile-responsive e-commerce platform with **pickup-only** fulfillment and **bank transfer** payment. Customers browse products, place orders, upload payment receipts, and pick up at the store. Admin manages orders with full receipt review and rejection flow.
 
 ---
 
@@ -8,15 +8,18 @@ A modern, mobile-responsive e-commerce platform with **pickup-only** fulfillment
 
 - [Tech Stack](#tech-stack)
 - [Architecture Overview](#architecture-overview)
+- [Order Lifecycle](#order-lifecycle)
+- [Payment & Receipt Flow](#payment--receipt-flow)
+- [Product Image Gallery](#product-image-gallery)
 - [Directory Structure](#directory-structure)
 - [Prerequisites](#prerequisites)
 - [Environment Setup](#environment-setup)
 - [Local Development](#local-development)
 - [Database](#database)
 - [API Reference](#api-reference)
+- [Admin Panel](#admin-panel)
 - [Testing](#testing)
-- [Deployment (Railway)](#deployment-railway)
-- [Contributing](#contributing)
+- [Deployment](#deployment)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -29,12 +32,12 @@ A modern, mobile-responsive e-commerce platform with **pickup-only** fulfillment
 | Language | TypeScript (strict) |
 | Database | PostgreSQL 16 |
 | ORM | Prisma 5 |
-| Authentication | NextAuth.js v5 (Credentials provider, JWT sessions) |
-| Styling | Tailwind CSS 3.4 + Framer Motion |
+| Authentication | NextAuth.js v5 (Credentials + Google OAuth, JWT sessions) |
+| Styling | Tailwind CSS 3.4 |
 | Forms | React Hook Form + Zod |
 | State Management | Zustand (cart, settings) |
-| Payments | Stripe (mock mode by default, toggleable) |
-| Email | Resend (with SMTP fallback) |
+| File Storage | Cloudflare R2 (S3-compatible) |
+| Email | Resend (with dev console fallback) |
 | SMS | Twilio (with dev console fallback) |
 | Containerization | Docker (multi-stage, standalone output) |
 | Deployment | Railway (via Docker or GitHub integration) |
@@ -55,14 +58,90 @@ A modern, mobile-responsive e-commerce platform with **pickup-only** fulfillment
                                 |           Prisma ORM
                           Zustand stores      |
                                 |         PostgreSQL
-                          Tailwind CSS    (Railway / Supabase)
+                          Tailwind CSS    (Railway)
 ```
 
 - **App Router:** Pages in `app/` with route groups for auth, customer, and admin sections.
 - **API Routes:** Route handlers in `app/api/*` — each file maps to an endpoint.
 - **Middleware:** Auth guard at `/admin/*` (requires ADMIN role) and `/profile` (requires login).
-- **Server Components:** Most pages are server-rendered; client components use `"use client"`.
-- **Guest Checkout:** Works without an account via session-based cart cookies.
+- **Guest Checkout:** Works without an account — customer provides contact info at checkout.
+- **File Uploads:** Images uploaded to Cloudflare R2 via admin or customer receipt flow.
+
+---
+
+## Order Lifecycle
+
+```
+PLACE ORDER                    CUSTOMER                     ADMIN
+───────────                    ────────                     ─────
+                                                   
+  [Checkout] ──> PENDING ──> Upload Receipt ──> CONFIRMED ──> Mark Ready
+                                (receiptImage)                    │
+                                     │                     READY_FOR_PICKUP
+                                     │                            │
+                               [If fake receipt]              Mark Picked Up
+                                     │                            │
+                               REJECTED ──> Customer          PICKED_UP
+                               (rejectionReason)  re-uploads
+                                     │
+                                     └──> CONFIRMED (re-upload clears reason)
+```
+
+### Status Definitions
+
+| Status | Meaning | Who Sets It |
+|--------|---------|-------------|
+| `PENDING` | Order placed, awaiting receipt upload | System (checkout) |
+| `CONFIRMED` | Receipt uploaded, awaiting admin review | Customer (receipt upload) |
+| `READY_FOR_PICKUP` | Admin verified receipt, ready for pickup | Admin |
+| `PICKED_UP` | Customer collected the order | Admin |
+| `REJECTED` | Receipt invalid — customer must re-upload | Admin (with reason) |
+| `CANCELLED` | Order cancelled | Admin |
+
+---
+
+## Payment & Receipt Flow
+
+### How it works
+
+1. **Checkout** — Customer fills in contact info and places the order. Only **Bank Transfer** is available as payment method. Customer can optionally upload the receipt immediately during checkout.
+
+2. **Receipt Upload** — On the order detail page, the customer uploads a clear image of their bank transfer receipt. This is sent to Cloudflare R2 and the URL is stored on the order.
+
+3. **Admin Review** — Admin sees the receipt in the order management panel. They can:
+   - **Mark Ready** — receipt looks valid, order becomes ready for pickup
+   - **Reject** — opens a modal for entering a reason (e.g. "image unclear", "amount incorrect")
+
+4. **Rejection Flow** — The customer sees the rejection reason prominently on their order page and can upload a new receipt. The old rejection reason is cleared.
+
+### Receipt API
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/orders/[id]/receipt` | Public (order lookup) | Store receipt image URL, mark order CONFIRMED |
+
+**Request body:**
+```json
+{ "receiptImage": "https://r2.example.com/products/receipt-123.jpg" }
+```
+
+**Response:** Returns updated order with `paymentStatus: COMPLETED`, `status: CONFIRMED`.
+
+---
+
+## Product Image Gallery
+
+The product detail page (`/product/[id]`) supports multiple images per product:
+
+- **Main Image** — Large display area showing the selected image
+- **Thumbnail Strip** — All product images shown as thumbnails below the main image
+  - **Desktop:** 5-column grid layout
+  - **Mobile:** Horizontal scrollable row with 64px thumbnails
+- **Active thumbnail** is highlighted with a primary color border and ring
+- **Animated transitions** — fade-in effect when switching images (0.3s)
+- **Placeholder** — SVG icon shown when `images` array is empty
+
+Products store images as an array of URLs in the `images: String[]` Prisma field. Admin uploads images via the admin product form using the `ImageUpload` component (supports file upload to R2 and external URL input).
 
 ---
 
@@ -70,116 +149,69 @@ A modern, mobile-responsive e-commerce platform with **pickup-only** fulfillment
 
 ```
 .
-├── app/                            # Next.js App Router
-│   ├── (auth)/                     #   Auth pages (login, signup)
-│   │   ├── login/page.tsx
-│   │   └── signup/page.tsx
-│   ├── (customer)/                 #   Customer-facing pages
-│   │   ├── page.tsx                #     Storefront home
-│   │   ├── cart/page.tsx           #     Shopping cart
-│   │   ├── checkout/page.tsx       #     Checkout flow
-│   │   ├── orders/                 #     Order history
-│   │   │   ├── page.tsx
-│   │   │   └── [id]/page.tsx
-│   │   ├── product/[id]/page.tsx   #     Product detail
-│   │   ├── profile/page.tsx        #     User profile
-│   │   └── search/page.tsx         #     Search results
-│   ├── admin/                      #   Admin panel
-│   │   ├── dashboard/page.tsx      #     Analytics dashboard
-│   │   ├── orders/page.tsx         #     Order management
-│   │   ├── pickups/page.tsx        #     Pickup slot management
-│   │   ├── products/page.tsx       #     Product CRUD
-│   │   └── settings/page.tsx       #     Store config
-│   ├── api/                        #   API route handlers
-│   │   ├── analytics/              #     Dashboard metrics
-│   │   │   ├── route.ts
-│   │   │   └── dashboard/route.ts
-│   │   ├── auth/                   #     Auth endpoints
-│   │   │   ├── [...nextauth]/route.ts
-│   │   │   ├── signup/route.ts
-│   │   │   ├── login/route.ts
-│   │   │   ├── logout/route.ts
-│   │   │   ├── me/route.ts
-│   │   │   └── admin/create/route.ts
-│   │   ├── cart/route.ts           #     Cart operations
-│   │   ├── health/route.ts         #     Health check
-│   │   ├── orders/                 #     Order operations
-│   │   │   ├── route.ts
-│   │   │   └── [id]/route.ts
-│   │   ├── pickup-slots/           #     Pickup scheduling
-│   │   │   ├── route.ts
-│   │   │   └── [id]/route.ts
-│   │   ├── products/               #     Product CRUD
-│   │   │   ├── route.ts
-│   │   │   ├── [id]/route.ts
-│   │   │   └── categories/route.ts
-│   │   └── settings/route.ts       #     Store settings
-│   ├── globals.css                 #   Tailwind imports + custom styles
-│   └── layout.tsx                  #   Root layout
+├── app/
+│   ├── (auth)/                     # Auth pages (login, signup)
+│   ├── (customer)/                 # Customer-facing pages
+│   │   ├── page.tsx                #   Storefront home
+│   │   ├── cart/page.tsx           #   Shopping cart
+│   │   ├── checkout/page.tsx       #   Bank transfer checkout
+│   │   ├── orders/
+│   │   │   ├── page.tsx            #   Order history
+│   │   │   └── [id]/page.tsx       #   Order detail + receipt upload
+│   │   ├── product/[id]/page.tsx   #   Product detail with image gallery
+│   │   ├── profile/page.tsx        #   User profile
+│   │   └── search/page.tsx         #   Search results
+│   ├── admin/
+│   │   ├── dashboard/page.tsx      #   Analytics dashboard
+│   │   ├── orders/page.tsx         #   Order management + receipt review
+│   │   ├── pickups/page.tsx        #   Pickup slot management (legacy)
+│   │   ├── products/page.tsx       #   Product CRUD with image upload
+│   │   └── settings/page.tsx       #   Store config
+│   ├── api/
+│   │   ├── analytics/              #   Dashboard metrics
+│   │   ├── auth/                   #   Auth endpoints
+│   │   ├── cart/route.ts           #   Cart operations
+│   │   ├── health/route.ts         #   Health check
+│   │   ├── orders/
+│   │   │   ├── route.ts            #   Create/list orders
+│   │   │   └── [id]/
+│   │   │       ├── route.ts        #   Get/update order status
+│   │   │       └── receipt/route.ts #   Upload payment receipt
+│   │   ├── pickup-slots/           #   Pickup slot CRUD (legacy)
+│   │   ├── products/               #   Product CRUD
+│   │   ├── settings/route.ts       #   Store settings
+│   │   └── upload/route.ts         #   File upload to Cloudflare R2
+│   ├── globals.css
+│   └── layout.tsx
 │
-├── components/                     # React components
+├── components/
 │   ├── admin/admin-layout.tsx      #   Admin sidebar
-│   ├── cart/                       #   Cart UI
-│   │   ├── cart-item.tsx
-│   │   └── cart-summary.tsx
-│   ├── checkout/                   #   Checkout UI
-│   │   ├── checkout-form.tsx
-│   │   └── order-summary.tsx
-│   ├── layout/                     #   App shell
-│   │   ├── header.tsx
-│   │   ├── footer.tsx
-│   │   └── providers.tsx
-│   ├── pickup/pickup-scheduler.tsx #   Pickup slot picker
-│   ├── product/                    #   Product UI
-│   │   ├── category-nav.tsx
-│   │   ├── hero-banner.tsx
-│   │   ├── product-card.tsx
-│   │   └── search-bar.tsx
-│   └── ui/toast.tsx                #   Toast notification
+│   ├── cart/                       #   Cart UI components
+│   ├── checkout/                   #   Checkout form + order summary
+│   ├── layout/                     #   Header, footer, providers
+│   ├── product/                    #   Product card, search, banner
+│   ├── pickup/pickup-scheduler.tsx #   Legacy pickup slot picker
+│   └── ui/                         #   Toast, image-upload
 │
-├── lib/                            # Core libraries
-│   ├── analytics/index.ts          #   Dashboard metrics (revenue, profit, trends)
-│   ├── auth/                       #   Authentication
-│   │   ├── index.ts                #     NextAuth v5 config (credentials, JWT)
-│   │   └── session.ts              #     Server helpers (requireAdmin, getSession)
+├── lib/
+│   ├── analytics/index.ts
+│   ├── auth/                       #   NextAuth config + session helpers
 │   ├── db/index.ts                 #   Prisma client singleton
-│   ├── email/index.ts              #   Email via Resend (console fallback in dev)
-│   ├── payments/index.ts           #   Stripe/mock payment processor
-│   ├── sms/index.ts                #   SMS via Twilio (console fallback in dev)
-│   └── utils/index.ts              #   Helpers (cn, formatCurrency, slugify)
+│   ├── email/index.ts              #   Email via Resend
+│   ├── payments/index.ts           #   Payment processor (bank transfer aware)
+│   ├── sms/index.ts                #   SMS via Twilio
+│   └── utils/index.ts              #   Helpers (formatCurrency, slugify, etc.)
 │
-├── hooks/                          # Custom React hooks
-│   ├── use-cart.ts                 #   Zustand cart store + localStorage
-│   ├── use-currency.ts             #   Multi-currency formatting
-│   └── use-settings.ts             #   Store settings context
-│
-├── prisma/                         # Database
-│   ├── schema.prisma               #   Full schema (10 models, 6 enums)
+├── prisma/
+│   ├── schema.prisma               #   11 models, 7 enums
 │   ├── migrations/                 #   Migration history
-│   └── seed.ts                     #   Seed: admin user, 9 categories, 20 products, slots
+│   └── seed.ts                     #   Seeds: admin, categories, products, slots
 │
 ├── types/index.ts                  # Shared TypeScript types
-│
-├── docker/                         # Docker config
-│   ├── Dockerfile                  #   Multi-stage production build
-│   └── entrypoint.sh               #   Entrypoint: migrate + seed + start
-│
-├── docker-compose.yml              # Local dev: PostgreSQL + app
 ├── middleware.ts                   # Auth guard middleware
-├── next.config.mjs                 # Next.js config (standalone output, headers)
-├── tailwind.config.ts              # Tailwind theme (colors, animations)
-├── tsconfig.json                   # TypeScript config (strict, @/ path alias)
-├── jest.config.js                  # Jest config
-│
-├── __tests__/                      # Tests
-│   ├── unit/auth/                  #   Unit tests (7 files)
-│   ├── integration/                #   Integration tests
-│   └── e2e/                        #   E2E tests (Playwright)
-│
-├── .env.example                    # Local dev environment template
-├── .env.production.example         # Railway production environment template
-├── .github/workflows/deploy.yml    # CI/CD pipeline
-└── .gitignore
+├── docker/                         # Docker config
+├── docker-compose.yml              # Local dev: PostgreSQL + app
+└── __tests__/                      # Test suites
 ```
 
 ---
@@ -187,7 +219,7 @@ A modern, mobile-responsive e-commerce platform with **pickup-only** fulfillment
 ## Prerequisites
 
 - **Node.js 20+** (for local development outside Docker)
-- **Docker + Docker Compose** (recommended for local PostgreSQL and/or full-stack dev)
+- **Docker + Docker Compose** (recommended for local PostgreSQL)
 - **npm** (v9+) or **bun**
 
 ---
@@ -208,7 +240,7 @@ npm install
 cp .env.example .env.local
 ```
 
-Edit `.env.local` with your values. At minimum, set:
+Edit `.env.local` with your values. At minimum:
 
 | Variable | Description |
 |----------|-------------|
@@ -216,7 +248,7 @@ Edit `.env.local` with your values. At minimum, set:
 | `NEXTAUTH_SECRET` | Random 32+ char string (`openssl rand -base64 32`) |
 | `NEXTAUTH_URL` | Your app URL (`http://localhost:3000` for dev) |
 
-For local Docker dev, use:
+For local Docker dev:
 ```
 DATABASE_URL="postgresql://ecommerce:secret@localhost:5433/ecommerce_mvp?schema=public"
 ```
@@ -225,35 +257,22 @@ DATABASE_URL="postgresql://ecommerce:secret@localhost:5433/ecommerce_mvp?schema=
 
 ## Local Development
 
-### Option A: Full Docker (recommended — everything in containers)
+### Option A: Full Docker
 
 ```bash
-# Build and start both PostgreSQL and the app
 docker compose up -d --build
-
-# Follow app logs
 docker compose logs -f app
-
 # Open http://localhost:3000
-
-# Stop everything
 docker compose down
 ```
-
-The entrypoint runs migrations and seeds automatically on first start.
 
 ### Option B: Docker PostgreSQL + local Node
 
 ```bash
-# Start only PostgreSQL
 docker compose up -d postgres
-
-# Initialize database
 npx prisma generate
 npx prisma migrate dev
 npm run db:seed
-
-# Start dev server (hot reload)
 npm run dev
 ```
 
@@ -263,41 +282,41 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Database
 
-### Schema
+### Schema (11 models)
 
-The Prisma schema (`prisma/schema.prisma`) defines 10 models:
+| Model | Purpose | Key Fields |
+|-------|---------|-----------|
+| `User` | Customers + admins | email, role, isVerified |
+| `Category` | Product groupings | name, slug, isActive |
+| `Product` | Sellable items | price, stock, images[], categoryId |
+| `Cart` | Shopping cart | sessionId (guest) or userId (auth) |
+| `CartItem` | Line item in cart | cartId, productId, quantity |
+| `Order` | Customer order | status, paymentMethod, receiptImage, rejectionReason |
+| `OrderItem` | Line item in order | productName (snapshot), quantity, productPrice |
+| `PickupSlot` | Legacy pickup scheduling | date, startTime, endTime, maxOrders |
+| `Settings` | Store configuration | taxRate, currencyCode, storeName |
+| `Notification` | Email/SMS log | type, recipient, status |
+| `AuditLog` | Admin action trail | action, entity, userId |
 
-| Model | Purpose | Key Relations |
-|-------|---------|--------------|
-| `User` | Customers + admins | has Orders, Cart, PickupSlots |
-| `Category` | Product groupings | has many Products |
-| `Product` | Sellable items | belongs to Category, referenced by OrderItems |
-| `Cart` | Shopping cart (guest or user) | has many CartItems |
-| `CartItem` | Line item in a cart | belongs to Cart |
-| `Order` | Customer order | has OrderItems, optionally has PickupSlot |
-| `OrderItem` | Line item in an order | belongs to Order, references Product |
-| `PickupSlot` | Available pickup time slot | optionally linked to Order + User |
-| `Settings` | Single-row store configuration | — |
-| `Notification` | Outbound email/SMS log | — |
-| `AuditLog` | Admin action audit trail | — |
+### Enums
+
+| Enum | Values |
+|------|--------|
+| `Role` | `CUSTOMER`, `ADMIN` |
+| `OrderStatus` | `PENDING`, `CONFIRMED`, `READY_FOR_PICKUP`, `PICKED_UP`, `CANCELLED`, `REJECTED` |
+| `PaymentStatus` | `PENDING`, `COMPLETED`, `FAILED`, `REFUNDED` |
+| `PaymentMethod` | `CREDIT_CARD`, `GOOGLE_PAY`, `PAYPAL`, `CASH_ON_PICKUP`, `BANK_TRANSFER` |
+| `NotificationType` | `ORDER_CONFIRMATION`, `PICKUP_REMINDER`, `ORDER_READY`, `ORDER_CANCELLED` |
+| `NotificationStatus` | `PENDING`, `SENT`, `FAILED` |
 
 ### Common commands
 
 ```bash
-# Generate Prisma client (run after schema changes)
-npm run db:generate
-
-# Create a new migration
-npm run db:migrate
-
-# Push schema directly (dev only, no migration file)
-npm run db:push
-
-# Seed database
-npm run db:seed
-
-# Open Prisma Studio (GUI)
-npm run db:studio
+npm run db:generate    # Generate Prisma client
+npm run db:migrate     # Create migration
+npm run db:push        # Push schema directly (dev only)
+npm run db:seed        # Seed database
+npm run db:studio      # Open Prisma Studio
 ```
 
 ### Seed data
@@ -308,16 +327,8 @@ npm run db:seed
 
 Creates:
 - **Admin user:** `admin@store.com` / `admin123`
-- **9 categories:** Dairy & Eggs, Fresh Produce, Bakery, Beverages, Snacks, Pantry Staples, Electronics, Household, Personal Care
-- **20 products** across all categories with realistic pricing
-- **14 days of pickup slots** (Mon–Sat, 7 slots per weekday, 4 on Saturdays)
-
----
-
-## Default Credentials
-
-After seeding:
-- **Admin:** `admin@store.com` / `admin123` (change in production)
+- **9 categories, 20 products** across all categories
+- **14 days of pickup slots** (legacy)
 
 ---
 
@@ -327,14 +338,14 @@ After seeding:
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/health` | Public | Database connectivity check (used by Docker HEALTHCHECK) |
+| GET | `/api/health` | Public | Database connectivity check |
 
 ### Authentication
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | POST | `/api/auth/signup` | Public | Register a new CUSTOMER account |
-| POST | `/api/auth/login` | Public | Sign in (NextAuth credentials) |
+| POST | `/api/auth/login` | Public | Sign in |
 | GET | `/api/auth/me` | Auth | Get current user profile |
 | POST | `/api/auth/logout` | Auth | Sign out |
 | POST | `/api/auth/admin/create` | Admin | Create a new ADMIN user |
@@ -362,18 +373,21 @@ After seeding:
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | POST | `/api/orders` | Public (guest or auth) | Create an order (checkout) |
-| GET | `/api/orders` | Auth | List user's orders (or all orders if admin) |
-| GET | `/api/orders/[id]` | Auth | Get order details |
-| PUT | `/api/orders/[id]` | Admin | Update order status |
+| GET | `/api/orders` | Auth | List user's orders (all if admin) |
+| GET | `/api/orders/[id]?email=` | Public (with email) | Get order details |
+| PUT | `/api/orders/[id]` | Admin | Update order status (PENDING/CONFIRMED/READY_FOR_PICKUP/PICKED_UP/CANCELLED/REJECTED) |
+| POST | `/api/orders/[id]/receipt` | Public | Upload receipt image + mark CONFIRMED |
 
-### Pickup Slots
+**PUT `/api/orders/[id]` — Rejection:**
+```json
+{ "status": "REJECTED", "rejectionReason": "Receipt image is unclear. Please upload a clearer photo." }
+```
+
+### Uploads
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/pickup-slots` | Public | List available pickup slots |
-| POST | `/api/pickup-slots` | Admin | Create a pickup slot |
-| PUT | `/api/pickup-slots/[id]` | Admin | Update a pickup slot |
-| DELETE | `/api/pickup-slots/[id]` | Admin | Delete a pickup slot |
+| POST | `/api/upload` | Admin | Upload file to Cloudflare R2 (returns URL) |
 
 ### Settings
 
@@ -389,155 +403,73 @@ After seeding:
 | GET | `/api/analytics` | Admin | Dashboard metrics |
 | GET | `/api/analytics/dashboard` | Admin | Aggregated dashboard metrics |
 
-### Payment Modes
+---
 
-| Mode | Env Variable | Behavior |
-|------|-------------|----------|
-| Mock (default) | `MOCK_PAYMENTS=true` | Simulated payments (~95% success rate) |
-| Live | `MOCK_PAYMENTS=false` + `STRIPE_SECRET_KEY` | Real Stripe payment processing |
+## Admin Panel
+
+Accessible at `/admin` (requires ADMIN role).
+
+### Order Management
+- **Table:** All orders with status filter, search by order number/email
+- **Actions per status:**
+
+| Order Status | Available Actions |
+|-------------|-------------------|
+| `PENDING` | Confirm, Cancel |
+| `CONFIRMED` | Mark Ready, Reject (with reason modal), Cancel |
+| `REJECTED` | Restore (back to CONFIRMED), Cancel |
+| `READY_FOR_PICKUP` | Mark Picked Up, Undo |
+| `PICKED_UP` | Undo |
+| `CANCELLED` | Restore |
+
+- **Detail modal:** Shows order info, receipt link, rejection reason (if any), items, totals
+- **Receipt indicator:** 📎 icon on rows with uploaded receipt
+
+### Product Management
+- Add/edit products with image upload (file or URL)
+- Multiple images per product — stored as array of URLs
 
 ---
 
 ## Testing
 
 ```bash
-# Unit + integration tests (Jest)
-npm test
-
-# Watch mode
-npm run test:watch
-
-# E2E tests (Playwright)
-npm run test:e2e
+npm test              # Unit + integration tests (Jest)
+npm run test:watch    # Watch mode
+npm run test:e2e      # E2E tests (Playwright)
 ```
-
-Test files live in `__tests__/`:
-- `unit/auth/` — 7 test files (signup, login, logout, admin, middleware, profile, security)
-- `integration/` — auth flow integration test
-- `e2e/` — Playwright auth E2E spec
 
 ---
 
-## Deployment (Railway)
+## Deployment
 
-### Automated Deploy (recommended)
+### Automated Deploy (Railway)
 
-1. Push your repository to GitHub.
-2. Create a new project in [Railway](https://railway.app) and connect your GitHub repo.
-3. Add a **PostgreSQL** plugin — Railway auto-provisions `DATABASE_URL`.
-4. Set environment variables in Railway dashboard:
-   - `NEXTAUTH_SECRET` — random 32+ char string
-   - `NEXTAUTH_URL` — your Railway-generated URL (e.g. `https://yourapp.up.railway.app`)
-   - `MOCK_PAYMENTS=true` (or set up Stripe keys)
-5. Railway auto-detects the Dockerfile and deploys.
+1. Push to GitHub and connect to Railway.
+2. Add a **PostgreSQL** plugin — Railway auto-provisions `DATABASE_URL`.
+3. Set environment variables in Railway dashboard.
+4. Railway auto-detects the Dockerfile and deploys.
 
-### CI/CD with GitHub Actions
+### Environment Variables
 
-The project includes `.github/workflows/deploy.yml` for Railway:
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_URL` | Yes | — | PostgreSQL connection string |
+| `NEXTAUTH_SECRET` | Yes | — | NextAuth JWT signing secret |
+| `NEXTAUTH_URL` | Yes* | — | Public URL of the app |
+| `MOCK_PAYMENTS` | No | `true` | Toggle mock vs real Stripe |
+| `STRIPE_SECRET_KEY` | No | — | Stripe secret key |
+| `R2_ENDPOINT` | No | — | Cloudflare R2 endpoint |
+| `R2_ACCESS_KEY_ID` | No | — | R2 access key |
+| `R2_SECRET_ACCESS_KEY` | No | — | R2 secret key |
+| `R2_BUCKET_NAME` | No | — | R2 bucket name |
+| `R2_PUBLIC_URL` | No | — | R2 public URL prefix |
+| `RESEND_API_KEY` | No | — | Resend API key for email |
+| `TWILIO_ACCOUNT_SID` | No | — | Twilio account SID |
+| `TWILIO_AUTH_TOKEN` | No | — | Twilio auth token |
+| `TWILIO_PHONE_NUMBER` | No | — | Twilio sender number |
 
-```yaml
-name: Deploy to Railway
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-      - run: npm ci
-      - run: npx prisma generate
-      - run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      - name: Deploy to Railway
-        uses: railwayapp/cli-action@v3
-        with:
-          railwayToken: ${{ secrets.RAILWAY_TOKEN }}
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-```
-
-To use it:
-1. Generate a Railway token: `railway token create`
-2. Add it as `RAILWAY_TOKEN` in GitHub → Settings → Secrets and variables → Actions.
-3. Add `DATABASE_URL` and `NEXTAUTH_SECRET` as repository secrets.
-
-### Production Environment Variables
-
-See `.env.production.example` for the full list. Key ones:
-
-| Variable | Source | Required |
-|----------|--------|----------|
-| `DATABASE_URL` | Railway PostgreSQL plugin (auto-provisioned) | Yes |
-| `NEXTAUTH_SECRET` | Railway dashboard or CLI | Yes |
-| `NEXTAUTH_URL` | Railway app URL | Yes |
-| `MOCK_PAYMENTS` | Set to `true` or configure Stripe | Yes |
-| `STRIPE_SECRET_KEY` | Stripe dashboard | Only if `MOCK_PAYMENTS=false` |
-
-### Health Check
-
-The app exposes `GET /api/health` which verifies database connectivity. The Dockerfile includes a HEALTHCHECK instruction that polls this endpoint — Railway uses it for container health monitoring.
-
----
-
-## Contributing
-
-### Branch Naming
-
-- `feature/<short-description>` — new features
-- `fix/<short-description>` — bug fixes
-- `docs/<short-description>` — documentation only
-- `refactor/<short-description>` — code restructuring
-
-### Workflow
-
-1. Create a branch from `main`.
-2. Make your changes.
-3. Run tests: `npm test`
-4. Run TypeScript check: `npx tsc --noEmit`
-5. Open a pull request with a concise description of what changed and why.
-
-### Code Standards
-
-- **TypeScript strict mode** is enabled — avoid `any`, prefer proper types.
-- **Zod** for all API input validation (both client and server).
-- **Server Components** by default; only use `"use client"` when interactivity is needed.
-- **Imports** use the `@/` path alias (maps to project root).
-- **Tailwind** for all styling — no CSS modules or inline styles.
-- **Prisma** for all database access — no raw SQL queries (except `$queryRaw` for health checks).
-
-### Adding a New API Route
-
-1. Create file at `app/api/<resource>/route.ts`.
-2. Export named functions for HTTP methods (`GET`, `POST`, `PUT`, `DELETE`).
-3. Add `export const dynamic = "force-dynamic"` if the route should not be cached.
-4. Use `requireAdmin()` from `@/lib/auth/session` for admin-only endpoints.
-5. Use Zod for request body validation.
-6. Add the endpoint to the API Reference section in this README.
-
-### Adding a New Database Model
-
-1. Add the model to `prisma/schema.prisma`.
-2. Run `npm run db:generate` to update Prisma client.
-3. Run `npm run db:migrate` to create a migration.
-4. Add seed data to `prisma/seed.ts` if needed.
-
-### PR Checklist
-
-- [ ] Tests pass (`npm test`)
-- [ ] TypeScript compiles (`npx tsc --noEmit`)
-- [ ] No new ESLint warnings (`npm run lint`)
-- [ ] API changes are reflected in this README
-- [ ] Database migrations are committed (if schema changed)
-- [ ] Environment variable changes are documented in `.env.example`
+*Required for Google OAuth.
 
 ---
 
@@ -545,43 +477,9 @@ The app exposes `GET /api/health` which verifies database connectivity. The Dock
 
 | Problem | Solution |
 |---------|----------|
-| `UntrustedHost` error from NextAuth | Ensure `NEXTAUTH_URL` is set correctly. The config has `trustHost: true` for containers. |
-| `Prisma P2021` (table not found) | Run migrations: `npx prisma migrate deploy` against the database. |
-| `Prisma P1001` (can't connect) | Verify `DATABASE_URL` is correct. For Docker, use `postgresql://ecommerce:secret@postgres:5432/ecommerce_mvp`. |
-| Cart not persisting across sessions | Check the `cart_session` cookie in browser dev tools. It needs `SameSite=Lax` (set correctly). |
-| Docker build fails on `npm run build` | Ensure all dependencies are installed (`npm ci`). Check for TypeScript errors. |
-| `next-env.d.ts` is missing from version control | It's now tracked (removed from `.gitignore`). Run `npx next-env` to regenerate. |
-| Migrations fail on Railway | Run `npx prisma migrate deploy` locally first. Ensure the migration files are committed to git. |
-| Health check fails after deploy | Check the Railway logs. Verify `DATABASE_URL` is set and the database is accessible. |
-
----
-
-## Environment Variables Reference
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `DATABASE_URL` | Yes | — | PostgreSQL connection string |
-| `NEXTAUTH_SECRET` | Yes | — | NextAuth JWT signing secret |
-| `NEXTAUTH_URL` | **Yes (required for Google OAuth)** | — | Public URL of the app — must match exactly what's registered in Google Cloud Console |
-| `MOCK_PAYMENTS` | No | `true` | Toggle mock vs real Stripe |
-| `STRIPE_SECRET_KEY` | No | — | Stripe secret key (if mock disabled) |
-| `RESEND_API_KEY` | No | — | Resend API key for email |
-| `SMTP_HOST` | No | — | SMTP fallback host |
-| `SMTP_PORT` | No | `587` | SMTP fallback port |
-| `SMTP_USER` | No | — | SMTP username |
-| `SMTP_PASSWORD` | No | — | SMTP password |
-| `TWILIO_ACCOUNT_SID` | No | — | Twilio account SID |
-| `TWILIO_AUTH_TOKEN` | No | — | Twilio auth token |
-| `TWILIO_PHONE_NUMBER` | No | — | Twilio sender number |
-| `NEXT_PUBLIC_GA_ID` | No | — | Google Analytics ID |
-| `NEXT_PUBLIC_APP_NAME` | No | `E-Commerce MVP` | App name for emails |
-| `NEXT_PUBLIC_STORE_NAME` | No | `My Store` | Store display name |
-| `NEXT_PUBLIC_STORE_ADDRESS` | No | — | Store address for emails |
-| `NODE_ENV` | No | `development` | Environment mode |
-| `PORT` | No | `3000` | Server port |
-
----
-
-## License
-
-Private — All rights reserved.
+| `UntrustedHost` from NextAuth | Ensure `NEXTAUTH_URL` is set correctly. Config has `trustHost: true`. |
+| `Prisma P2021` (table not found) | Run migrations: `npx prisma migrate deploy` |
+| `Prisma P1001` (can't connect) | Verify `DATABASE_URL`. For Docker: `postgresql://ecommerce:secret@postgres:5432/ecommerce_mvp` |
+| Receipt upload fails | Check R2 environment variables are set and bucket is accessible |
+| Cart not persisting | Check `cart_session` cookie — needs `SameSite=Lax` |
+| Migrations fail on Railway | Ensure migration SQL files are committed to git |
