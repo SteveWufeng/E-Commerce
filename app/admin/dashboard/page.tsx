@@ -5,6 +5,7 @@ import { AdminLayout } from "@/components/admin/admin-layout";
 import { DashboardMetrics } from "@/lib/analytics";
 import { formatCurrency } from "@/lib/utils";
 import { TrendingUp, ShoppingBag, DollarSign, Package } from "lucide-react";
+import { useLocale } from "@/hooks/use-locale";
 
 /**
  * Admin dashboard — overview of store performance.
@@ -17,6 +18,7 @@ import { TrendingUp, ShoppingBag, DollarSign, Package } from "lucide-react";
  * - Order status distribution
  */
 export default function AdminDashboardPage() {
+  const { t } = useLocale();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -51,7 +53,7 @@ export default function AdminDashboardPage() {
     return (
       <AdminLayout>
         <div className="text-center py-16 text-gray-500">
-          Failed to load dashboard data.
+          {t("noSalesData")}
         </div>
       </AdminLayout>
     );
@@ -59,31 +61,31 @@ export default function AdminDashboardPage() {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t("dashboard")}</h1>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <MetricCard
           icon={<DollarSign className="w-5 h-5" />}
-          label="Total Revenue"
+          label={t("totalRevenue")}
           value={formatCurrency(metrics.totalRevenue)}
           color="bg-green-50 text-green-700"
         />
         <MetricCard
           icon={<ShoppingBag className="w-5 h-5" />}
-          label="Total Orders"
+          label={t("totalOrders")}
           value={metrics.totalOrders.toString()}
           color="bg-blue-50 text-blue-700"
         />
         <MetricCard
           icon={<TrendingUp className="w-5 h-5" />}
-          label="Total Profit"
+          label={t("totalProfit")}
           value={formatCurrency(metrics.totalProfit)}
           color="bg-purple-50 text-purple-700"
         />
         <MetricCard
           icon={<Package className="w-5 h-5" />}
-          label="Avg Order Value"
+          label={t("avgOrderValue")}
           value={formatCurrency(metrics.averageOrderValue)}
           color="bg-amber-50 text-amber-700"
         />
@@ -94,7 +96,7 @@ export default function AdminDashboardPage() {
         {/* Top Products */}
         <div className="card">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Top Products
+            {t("topProducts")}
           </h2>
           {metrics.topProducts.length > 0 ? (
             <div className="space-y-3">
@@ -106,7 +108,7 @@ export default function AdminDashboardPage() {
                   <div>
                     <p className="font-medium text-gray-900">{product.name}</p>
                     <p className="text-sm text-gray-500">
-                      {product.unitsSold} sold
+                      {product.unitsSold} {t("sold")}
                     </p>
                   </div>
                   <p className="font-semibold text-gray-900">
@@ -116,14 +118,14 @@ export default function AdminDashboardPage() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-sm">No sales data yet.</p>
+            <p className="text-gray-500 text-sm">{t("noSalesData")}</p>
           )}
         </div>
 
         {/* Order Status Distribution */}
         <div className="card">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Orders by Status
+            {t("ordersByStatus")}
           </h2>
           {Object.keys(metrics.ordersByStatus).length > 0 ? (
             <div className="space-y-3">
@@ -140,7 +142,7 @@ export default function AdminDashboardPage() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-sm">No orders yet.</p>
+            <p className="text-gray-500 text-sm">{t("noOrdersYet2")}</p>
           )}
         </div>
       </div>
@@ -148,7 +150,7 @@ export default function AdminDashboardPage() {
       {/* Recent Orders */}
       <div className="card mt-8">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Recent Orders
+          {t("recentOrders")}
         </h2>
         {metrics.recentOrders.length > 0 ? (
           <div className="overflow-x-auto">
@@ -156,16 +158,16 @@ export default function AdminDashboardPage() {
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 font-medium text-gray-500">
-                    Order #
+                    {t("orderHash")}
                   </th>
                   <th className="text-left py-3 px-4 font-medium text-gray-500">
-                    Total
+                    {t("totalLabel")}
                   </th>
                   <th className="text-left py-3 px-4 font-medium text-gray-500">
-                    Status
+                    {t("status")}
                   </th>
                   <th className="text-left py-3 px-4 font-medium text-gray-500">
-                    Date
+                    {t("date")}
                   </th>
                 </tr>
               </thead>
@@ -193,7 +195,7 @@ export default function AdminDashboardPage() {
             </table>
           </div>
         ) : (
-          <p className="text-gray-500 text-sm">No orders yet.</p>
+          <p className="text-gray-500 text-sm">{t("noOrdersYet2")}</p>
         )}
       </div>
     </AdminLayout>

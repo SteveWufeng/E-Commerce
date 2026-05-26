@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { Plus, Edit, Trash2, X, Check } from "lucide-react";
+import { useLocale } from "@/hooks/use-locale";
 
 export default function AdminCategoriesPage() {
+  const { t } = useLocale();
   const [categories, setCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -73,7 +75,7 @@ export default function AdminCategoriesPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this category? Products in this category will need reassignment.")) return;
+    if (!confirm(t("deleteCategoryConfirm"))) return;
     try {
       const res = await fetch(`/api/categories/${id}`, { method: "DELETE" });
       if (res.ok) {
@@ -87,10 +89,10 @@ export default function AdminCategoriesPage() {
   return (
     <AdminLayout>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("categories")}</h1>
         <button onClick={() => setShowAdd(true)} className="btn-primary">
           <Plus className="w-4 h-4 mr-2" />
-          Add Category
+          {t("addCategory")}
         </button>
       </div>
 
@@ -101,17 +103,17 @@ export default function AdminCategoriesPage() {
           ))}
         </div>
       ) : categories.length === 0 ? (
-        <div className="text-center py-16 text-gray-500">No categories yet.</div>
+        <div className="text-center py-16 text-gray-500">{t("noCategories")}</div>
       ) : (
         <div className="card overflow-hidden p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">Name</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">Slug</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">Products</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-500">Actions</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("categoryName")}</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("slug")}</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("products")}</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-500">{t("actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -179,27 +181,27 @@ export default function AdminCategoriesPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Add Category</h2>
+              <h2 className="text-lg font-semibold">{t("addCategory")}</h2>
               <button onClick={() => setShowAdd(false)} className="p-1 rounded-lg hover:bg-gray-100">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("categoryName")}</label>
               <input
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 className="input w-full"
-                placeholder="Enter category name"
+                placeholder={t("categoryName")}
                 autoFocus
                 onKeyDown={(e) => e.key === "Enter" && handleAdd()}
               />
             </div>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowAdd(false)} className="flex-1 btn-secondary">Cancel</button>
+              <button onClick={() => setShowAdd(false)} className="flex-1 btn-secondary">{t("cancel")}</button>
               <button onClick={handleAdd} disabled={isSaving || !newName.trim()} className="flex-1 btn-primary">
-                {isSaving ? "Creating..." : "Create"}
+                {isSaving ? t("creating") : t("addCategory")}
               </button>
             </div>
           </div>

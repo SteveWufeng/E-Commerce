@@ -120,6 +120,73 @@ export type TranslationKey =
   | "shopNow"
   | "schedulePickup"
 
+  // Admin
+  | "dashboard"
+  | "products"
+  | "categories"
+  | "orders"
+  | "settings"
+  | "storeInformation"
+  | "taxSettings"
+  | "currencySettings"
+  | "notifications"
+  | "paymentMethods"
+  | "totalRevenue"
+  | "totalOrders"
+  | "totalProfit"
+  | "avgOrderValue"
+  | "topProducts"
+  | "ordersByStatus"
+  | "recentOrders"
+  | "noSalesData"
+  | "noOrdersYet2"
+  | "orderHash"
+  | "status"
+  | "date"
+  | "addProduct"
+  | "searchProductsPlaceholder"
+  | "noProductsMatch"
+  | "noProductsYetAdd"
+  | "editProduct"
+  | "addNewProduct"
+  | "productName"
+  | "description"
+  | "price"
+  | "stock"
+  | "salePrice"
+  | "saveChanges"
+  | "creating"
+  | "cancel"
+  | "active"
+  | "inactive"
+  | "actions"
+  | "confirmDeleteProduct"
+  | "delete"
+  | "viewStorefront"
+  | "adminPanelTitle"
+  | "sold"
+  | "onSale"
+  | "notOnSale"
+  | "categoryName"
+  | "slug"
+  | "addCategory"
+  | "deleteCategoryConfirm"
+  | "noCategories"
+  | "allStatuses"
+  | "confirmOrder"
+  | "pickupReady"
+  | "pickedUp"
+  | "reject"
+  | "restore"
+  | "orderDetail"
+  | "totalLabel"
+  | "customerEmail"
+  | "rejectionReasonLabel"
+  | "receiptImage"
+  | "noReceipt"
+  | "cancelRejection"
+  | "close"
+
   // Currency display
   | "localCurrency"
   | "usdEquivalent";
@@ -245,6 +312,73 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     shopNow: "Comprar Ahora",
     schedulePickup: "Agendar Recogida",
 
+    // Admin
+    dashboard: "Panel de Control",
+    products: "Productos",
+    categories: "Categorías",
+    orders: "Pedidos",
+    settings: "Configuración",
+    storeInformation: "Información de la Tienda",
+    taxSettings: "Configuración de Impuestos",
+    currencySettings: "Configuración de Moneda",
+    notifications: "Notificaciones",
+    paymentMethods: "Métodos de Pago",
+    totalRevenue: "Ingresos Totales",
+    totalOrders: "Pedidos Totales",
+    totalProfit: "Ganancias Totales",
+    avgOrderValue: "Valor Promedio",
+    topProducts: "Productos Más Vendidos",
+    ordersByStatus: "Pedidos por Estado",
+    recentOrders: "Pedidos Recientes",
+    noSalesData: "Sin ventas aún.",
+    noOrdersYet2: "Sin pedidos aún.",
+    orderHash: "Pedido #",
+    status: "Estado",
+    date: "Fecha",
+    addProduct: "Añadir Producto",
+    searchProductsPlaceholder: "Buscar productos...",
+    noProductsMatch: "Ningún producto coincide con su búsqueda.",
+    noProductsYetAdd: "Aún no hay productos. ¡Añada su primer producto!",
+    editProduct: "Editar Producto",
+    addNewProduct: "Añadir Nuevo Producto",
+    productName: "Nombre del Producto",
+    description: "Descripción",
+    price: "Precio",
+    stock: "Stock",
+    salePrice: "Precio de Oferta ($)",
+    saveChanges: "Guardar Cambios",
+    creating: "Creando...",
+    cancel: "Cancelar",
+    active: "Activo",
+    inactive: "Inactivo",
+    actions: "Acciones",
+    confirmDeleteProduct: "¿Está seguro de que desea eliminar este producto?",
+    delete: "Eliminar",
+    viewStorefront: "Ver Tienda",
+    adminPanelTitle: "Panel de Admin",
+    sold: "vendidos",
+    onSale: "OFERTA",
+    notOnSale: "—",
+    categoryName: "Nombre",
+    slug: "Slug",
+    addCategory: "Añadir Categoría",
+    deleteCategoryConfirm: "¿Eliminar esta categoría? Los productos en esta categoría deberán reasignarse.",
+    noCategories: "Aún no hay categorías.",
+    allStatuses: "Todos los Estados",
+    confirmOrder: "Confirmar",
+    pickupReady: "Listo para Recoger",
+    pickedUp: "Recogido",
+    reject: "Rechazar",
+    restore: "Restaurar",
+    orderDetail: "Detalle del Pedido",
+    totalLabel: "Total",
+    customerEmail: "Correo",
+    rejectionReasonLabel: "Motivo del Rechazo",
+    receiptImage: "Comprobante",
+    noReceipt: "Sin comprobante",
+    cancelRejection: "Cancelar Rechazo",
+    close: "Cerrar",
+
     // Currency display
     localCurrency: "Moneda Local",
     usdEquivalent: "Equivalente en USD",
@@ -369,6 +503,73 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     heroDescription: "Browse our selection, order online, and pick up at your convenience. No shipping fees, no waiting.",
     shopNow: "Shop Now",
     schedulePickup: "Schedule Pickup",
+
+    // Admin
+    dashboard: "Dashboard",
+    products: "Products",
+    categories: "Categories",
+    orders: "Orders",
+    settings: "Settings",
+    storeInformation: "Store Information",
+    taxSettings: "Tax Settings",
+    currencySettings: "Currency Settings",
+    notifications: "Notifications",
+    paymentMethods: "Payment Methods",
+    totalRevenue: "Total Revenue",
+    totalOrders: "Total Orders",
+    totalProfit: "Total Profit",
+    avgOrderValue: "Avg Order Value",
+    topProducts: "Top Products",
+    ordersByStatus: "Orders by Status",
+    recentOrders: "Recent Orders",
+    noSalesData: "No sales data yet.",
+    noOrdersYet2: "No orders yet.",
+    orderHash: "Order #",
+    status: "Status",
+    date: "Date",
+    addProduct: "Add Product",
+    searchProductsPlaceholder: "Search products...",
+    noProductsMatch: "No products match your search.",
+    noProductsYetAdd: "No products yet. Add your first product!",
+    editProduct: "Edit Product",
+    addNewProduct: "Add New Product",
+    productName: "Product Name",
+    description: "Description",
+    price: "Price",
+    stock: "Stock",
+    salePrice: "Sale Price ($)",
+    saveChanges: "Save Changes",
+    creating: "Creating...",
+    cancel: "Cancel",
+    active: "Active",
+    inactive: "Inactive",
+    actions: "Actions",
+    confirmDeleteProduct: "Are you sure you want to delete this product?",
+    delete: "Delete",
+    viewStorefront: "View Storefront",
+    adminPanelTitle: "Admin Panel",
+    sold: "sold",
+    onSale: "SALE",
+    notOnSale: "—",
+    categoryName: "Name",
+    slug: "Slug",
+    addCategory: "Add Category",
+    deleteCategoryConfirm: "Delete this category? Products in this category will need reassignment.",
+    noCategories: "No categories yet.",
+    allStatuses: "All Statuses",
+    confirmOrder: "Confirm",
+    pickupReady: "Ready for Pickup",
+    pickedUp: "Picked Up",
+    reject: "Reject",
+    restore: "Restore",
+    orderDetail: "Order Detail",
+    totalLabel: "Total",
+    customerEmail: "Email",
+    rejectionReasonLabel: "Rejection Reason",
+    receiptImage: "Receipt",
+    noReceipt: "No receipt",
+    cancelRejection: "Cancel Rejection",
+    close: "Close",
 
     // Currency display
     localCurrency: "Local Currency",

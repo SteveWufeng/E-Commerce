@@ -11,6 +11,7 @@ import {
   Settings,
   Store,
 } from "lucide-react";
+import { useLocale } from "@/hooks/use-locale";
 
 /**
  * Admin layout wrapper — provides sidebar navigation for admin pages.
@@ -22,13 +23,14 @@ import {
  */
 export function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { t } = useLocale();
 
   const navItems = [
-    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/admin/products", label: "Products", icon: Package },
-    { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
-    { href: "/admin/categories", label: "Categories", icon: Tags },
-    { href: "/admin/settings", label: "Settings", icon: Settings },
+    { href: "/admin/dashboard", label: t("dashboard"), icon: LayoutDashboard },
+    { href: "/admin/products", label: t("products"), icon: Package },
+    { href: "/admin/orders", label: t("orders"), icon: ShoppingBag },
+    { href: "/admin/categories", label: t("categories"), icon: Tags },
+    { href: "/admin/settings", label: t("settings"), icon: Settings },
   ];
 
   return (
@@ -38,7 +40,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         <div className="p-6 border-b border-gray-800">
           <Link href="/admin/dashboard" className="flex items-center gap-2">
             <Store className="w-6 h-6" />
-            <span className="font-bold text-lg">Admin Panel</span>
+            <span className="font-bold text-lg">{t("adminPanelTitle")}</span>
           </Link>
         </div>
 
@@ -68,7 +70,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors"
           >
             <Store className="w-4 h-4" />
-            View Storefront
+            {t("viewStorefront")}
           </Link>
         </div>
       </aside>
@@ -78,10 +80,10 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center justify-between p-4">
           <Link href="/admin/dashboard" className="flex items-center gap-2">
             <Store className="w-5 h-5" />
-            <span className="font-bold">Admin</span>
+            <span className="font-bold">{t("adminPanelTitle")}</span>
           </Link>
           <Link href="/" className="text-sm text-gray-400 hover:text-white">
-            View Store
+            {t("viewStorefront")}
           </Link>
         </div>
         <nav className="flex overflow-x-auto px-4 pb-3 gap-1">
