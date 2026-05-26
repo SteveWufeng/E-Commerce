@@ -194,6 +194,41 @@ export type TranslationKey =
   | "sunday"
   | "pickupHoursSettings"
 
+  // Auth
+  | "signInHeading"
+  | "signInSubtitle"
+  | "emailVerified"
+  | "signingIn"
+  | "signInWithGoogle"
+  | "orSignInWithEmail"
+  | "emailLabel"
+  | "emailPlaceholder"
+  | "passwordLabel"
+  | "dontHaveAccount"
+  | "signUpLink"
+  | "continueAsGuest"
+  | "authRequired"
+  | "unauthorized"
+  | "invalidCredentials"
+  | "invalidVerificationLink"
+  | "checkYourEmail"
+  | "verificationSent"
+  | "verificationInstructions"
+  | "goToSignIn"
+  | "createAccount"
+  | "createAccountSubtitle"
+  | "firstNameLabel"
+  | "lastNameLabel"
+  | "phoneOptional"
+  | "confirmPasswordLabel"
+  | "creatingAccount"
+  | "alreadyHaveAccount"
+  | "signInLink"
+  | "passwordsDoNotMatch"
+  | "passwordTooShort"
+  | "signupFailed"
+  | "unexpectedError"
+
   // Currency display
   | "localCurrency"
   | "usdEquivalent";
@@ -394,6 +429,41 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     sunday: "Domingo",
     pickupHoursSettings: "Horario de Recogida",
 
+    // Auth
+    signInHeading: "Iniciar Sesión",
+    signInSubtitle: "¡Bienvenido de nuevo! Inicie sesión en su cuenta.",
+    emailVerified: "¡Correo verificado! Ahora puede iniciar sesión.",
+    signingIn: "Entrando...",
+    signInWithGoogle: "Iniciar sesión con Google",
+    orSignInWithEmail: "o inicie sesión con correo electrónico",
+    emailLabel: "Correo Electrónico",
+    emailPlaceholder: "usted@ejemplo.com",
+    passwordLabel: "Contraseña",
+    dontHaveAccount: "¿No tiene una cuenta?",
+    signUpLink: "Registrarse",
+    continueAsGuest: "Continuar como invitado",
+    authRequired: "Debe iniciar sesión para acceder a esa página.",
+    unauthorized: "No tiene permiso para acceder a esa página.",
+    invalidCredentials: "Correo o contraseña inválidos.",
+    invalidVerificationLink: "Enlace de verificación inválido.",
+    checkYourEmail: "Revise su Correo",
+    verificationSent: "Enviamos un enlace de verificación a",
+    verificationInstructions: "Haga clic en el enlace para activar su cuenta, luego inicie sesión.",
+    goToSignIn: "Ir a Iniciar Sesión",
+    createAccount: "Crear Cuenta",
+    createAccountSubtitle: "Regístrese para una experiencia de pago más rápida.",
+    firstNameLabel: "Nombre",
+    lastNameLabel: "Apellido",
+    phoneOptional: "Teléfono (opcional)",
+    confirmPasswordLabel: "Confirmar Contraseña",
+    creatingAccount: "Creando cuenta...",
+    alreadyHaveAccount: "¿Ya tiene una cuenta?",
+    signInLink: "Iniciar Sesión",
+    passwordsDoNotMatch: "Las contraseñas no coinciden.",
+    passwordTooShort: "La contraseña debe tener al menos 6 caracteres.",
+    signupFailed: "Error al registrarse.",
+    unexpectedError: "Ocurrió un error inesperado.",
+
     // Currency display
     localCurrency: "Moneda Local",
     usdEquivalent: "Equivalente en USD",
@@ -593,6 +663,41 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     saturday: "Saturday",
     sunday: "Sunday",
     pickupHoursSettings: "Pickup Hours",
+
+    // Auth
+    signInHeading: "Sign In",
+    signInSubtitle: "Welcome back! Sign in to your account.",
+    emailVerified: "Email verified! You can now sign in.",
+    signingIn: "Signing in...",
+    signInWithGoogle: "Sign in with Google",
+    orSignInWithEmail: "or sign in with email",
+    emailLabel: "Email",
+    emailPlaceholder: "you@example.com",
+    passwordLabel: "Password",
+    dontHaveAccount: "Don't have an account?",
+    signUpLink: "Sign up",
+    continueAsGuest: "Continue as guest",
+    authRequired: "Please sign in to access that page.",
+    unauthorized: "You do not have permission to access that page.",
+    invalidCredentials: "Invalid email or password.",
+    invalidVerificationLink: "Invalid verification link.",
+    checkYourEmail: "Check Your Email",
+    verificationSent: "We sent a verification link to",
+    verificationInstructions: "Click the link to activate your account, then sign in.",
+    goToSignIn: "Go to Sign In",
+    createAccount: "Create Account",
+    createAccountSubtitle: "Join us for a faster checkout experience.",
+    firstNameLabel: "First Name",
+    lastNameLabel: "Last Name",
+    phoneOptional: "Phone (optional)",
+    confirmPasswordLabel: "Confirm Password",
+    creatingAccount: "Creating account...",
+    alreadyHaveAccount: "Already have an account?",
+    signInLink: "Sign in",
+    passwordsDoNotMatch: "Passwords do not match.",
+    passwordTooShort: "Password must be at least 6 characters.",
+    signupFailed: "Signup failed.",
+    unexpectedError: "An unexpected error occurred.",
 
     // Currency display
     localCurrency: "Local Currency",
