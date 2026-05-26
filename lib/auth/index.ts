@@ -87,7 +87,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async jwt({ token, user, account }) {
       if (user) {
-        token.role = ((user as unknown) as { role?: string }).role as string | undefined;
         if (account?.provider === "google") {
           const dbUser = await db.user.findUnique({ where: { email: token.email! } });
           token.id = dbUser?.id || user.id;
@@ -95,12 +94,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.id = user.id as string;
         }
       }
+      if (token.id) {
+        try {
+          const dbUser = await db.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true },
+          });
+          if (dbUser) {
+            token.role = dbUser.role;
+          }
+        } catch {
+          // keep existing token values if DB query fails
+        }
+      }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        ((session.user as unknown) as { role?: string }).role = token.role as string;
         ((session.user as unknown) as { id?: string }).id = token.id as string;
+        ((session.user as unknown) as { role?: string }).role = token.role as string;
       }
       return session;
     },
