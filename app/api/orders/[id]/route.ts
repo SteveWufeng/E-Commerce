@@ -79,14 +79,11 @@ export async function GET(
     const email = searchParams.get("email");
     const { id } = await params;
 
-    const where = isAdmin 
-      ? { id } 
-      : email 
-        ? { OR: [{ id }, { orderNumber: id }], customerEmail: email }
-        : { OR: [{ id }, { orderNumber: id }], customerEmail: session?.user?.email || "" };
-
     const order = await db.order.findFirst({
-      where,
+      where: {
+        OR: [{ id }, { orderNumber: id }],
+        ...(isAdmin ? {} : email ? { customerEmail: email } : session?.user?.email ? { customerEmail: session.user.email } : {}),
+      },
       include: { items: true },
     });
 
