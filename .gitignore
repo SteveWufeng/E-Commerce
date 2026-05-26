@@ -46,6 +46,9 @@ yarn-error.log*
 docker/data/
 .open-next/
 
+# GitHub workflows (not used)
+.github/workflows/
+
 # Planning & session files
 .planning/
 session-ses*.md
