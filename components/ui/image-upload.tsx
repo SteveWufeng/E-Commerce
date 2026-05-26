@@ -50,7 +50,19 @@ export function ImageUpload({ images, onChange, maxImages = 5 }: ImageUploadProp
     }
   }
 
-  function removeImage(index: number) {
+  async function removeImage(index: number) {
+    const removed = images[index];
+    if (removed && removed.startsWith("https://") && !removed.startsWith(window.location.origin)) {
+      try {
+        await fetch("/api/upload", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: removed }),
+        });
+      } catch {
+        // Non-critical — file may already be gone or URL is external
+      }
+    }
     onChange(images.filter((_, i) => i !== index));
   }
 

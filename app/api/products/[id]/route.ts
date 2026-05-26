@@ -12,6 +12,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/session";
+import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
+
+const R2 = new S3Client({
+  region: "auto",
+  endpoint: process.env.R2_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+  },
+});
+
+const BUCKET = process.env.R2_BUCKET_NAME || "ecommerce";
+const PUBLIC_URL = process.env.R2_PUBLIC_URL || "";
+
+async function deleteR2File(url: string) {
+  if (!url.startsWith(PUBLIC_URL)) return;
+  const key = url.replace(PUBLIC_URL + "/", "");
+  if (!key) return;
+  try {
+    await R2.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
+  } catch {
+    // Non-critical
+  }
+}
 
 const updateProductSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -84,6 +108,15 @@ export async function PUT(
       }
     }
 
+    // Clean up removed images from R2
+    if (updateData.images) {
+      const existing = await db.product.findUnique({ where: { id }, select: { images: true } });
+      if (existing) {
+        const removed = existing.images.filter((img) => !(updateData.images as string[]).includes(img));
+        await Promise.all(removed.map(deleteR2File));
+      }
+    }
+
     const product = await db.product.update({
       where: { id },
       data: updateData,
@@ -121,6 +154,10 @@ export async function DELETE(
     }
 
     const { id } = await params;
+    const product = await db.product.findUnique({ where: { id }, select: { images: true } });
+    if (product) {
+      await Promise.all(product.images.map(deleteR2File));
+    }
     await db.product.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
