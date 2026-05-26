@@ -44,10 +44,10 @@ export function CheckoutForm({
   } = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
+      firstName: prefillData?.firstName || "",
+      lastName: prefillData?.lastName || "",
+      email: prefillData?.email || "",
+      phone: prefillData?.phone || "",
       notes: "",
     },
   });
@@ -102,9 +102,13 @@ export function CheckoutForm({
           <input
             id="email"
             type="email"
-            className={`input ${errors.email ? "border-red-500" : ""}`}
+            readOnly={!!prefillData?.email}
+            className={`input ${errors.email ? "border-red-500" : ""} ${prefillData?.email ? "bg-gray-100 cursor-not-allowed" : ""}`}
             {...register("email")}
           />
+          {prefillData?.email && (
+            <p className="mt-1 text-xs text-gray-400">Email cannot be changed when signed in.</p>
+          )}
           {errors.email && (
             <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>
           )}
