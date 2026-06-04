@@ -43,6 +43,7 @@ export async function generateMercantilRedirect(
 ): Promise<MercantilPaymentResult> {
   const secret = process.env.DOMINIO_API_SECRET;
   const integratorId = process.env.INTEGRATOR_ID || '31';
+  const baseUrl = process.env.MERCANTIL_REDIRECT_URL || 'https://apimbu.mercantilbanco.com/mercantil-banco/prod/v1/payment';
 
   if (!secret) {
     return { success: false, error: 'DOMINIO_API_SECRET is not configured' };
@@ -51,7 +52,6 @@ export async function generateMercantilRedirect(
   const plaintext = JSON.stringify(transactionData);
   const encrypted = encryptTransactionData(plaintext, secret);
 
-  const baseUrl = 'https://dominio.com/mercantil/botondepagos';
   const params = new URLSearchParams({
     merchantid: transactionData.merchantId,
     integratorid: integratorId,
