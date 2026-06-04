@@ -71,7 +71,8 @@ export type PaymentMethod =
   | "GOOGLE_PAY"
   | "PAYPAL"
   | "CASH_ON_PICKUP"
-  | "BANK_TRANSFER";
+  | "BANK_TRANSFER"
+  | "MERCANTIL";
 
 export type PaymentStatus =
   | "PENDING"

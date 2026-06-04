@@ -206,6 +206,7 @@ enum PaymentMethod {
   PAYPAL
   CASH_ON_PICKUP
   BANK_TRANSFER
+  MERCANTIL
 }
 
 // ========================
