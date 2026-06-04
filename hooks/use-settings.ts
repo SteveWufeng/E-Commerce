@@ -7,6 +7,7 @@ interface Settings {
   currencyCode: string;
   currencySymbol: string;
   conversionRate: number;
+  bankTransferEnabled: boolean;
 }
 
 interface SettingsState {

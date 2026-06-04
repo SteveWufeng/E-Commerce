@@ -11,6 +11,7 @@ interface StoreSettings {
   currencyCode: string;
   currencySymbol: string;
   conversionRate: number;
+  bankTransferEnabled: boolean;
 }
 
 /**
@@ -33,6 +34,7 @@ export default function AdminSettingsPage() {
     currencyCode: "USD",
     currencySymbol: "$",
     conversionRate: 1,
+    bankTransferEnabled: false,
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -193,18 +195,29 @@ export default function AdminSettingsPage() {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
             {t("paymentMethods")}
           </h2>
-          <div className="space-y-3">
-            {["Credit Card", "Google Pay", "PayPal", "Cash on Pickup"].map(
-              (method) => (
-                <label key={method} className="flex items-center gap-3">
-                  <input type="checkbox" defaultChecked className="w-4 h-4 rounded" />
-                  <span className="text-sm text-gray-700">{method}</span>
-                </label>
-              )
-            )}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-primary-50 border border-primary-200">
+              <div>
+                <p className="text-sm font-medium text-gray-900">Mercantil Payment Button</p>
+                <p className="text-xs text-gray-500">Débito Inmediato, Tarjetas, C2P</p>
+              </div>
+              <span className="text-xs font-medium text-primary-700 bg-primary-100 px-2 py-1 rounded-full">Active</span>
+            </div>
+            <label className="flex items-center justify-between p-3 rounded-lg border border-gray-200 cursor-pointer hover:border-gray-300">
+              <div>
+                <p className="text-sm font-medium text-gray-900">Bank Transfer</p>
+                <p className="text-xs text-gray-500">Receipt upload after ordering</p>
+              </div>
+              <input
+                type="checkbox"
+                className="w-5 h-5 accent-primary-500 rounded"
+                checked={settings.bankTransferEnabled}
+                onChange={(e) => setSettings({ ...settings, bankTransferEnabled: e.target.checked })}
+              />
+            </label>
           </div>
-          <p className="mt-3 text-xs text-amber-600">
-            ⚠️ {t("paymentMethods")}
+          <p className="mt-3 text-xs text-gray-500">
+            Mercantil is always available. Bank Transfer can be toggled for customers who prefer manual transfers.
           </p>
         </div>
       </div>
