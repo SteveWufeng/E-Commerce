@@ -43,7 +43,7 @@ export async function generateMercantilRedirect(
 ): Promise<MercantilPaymentResult> {
   const secret = process.env.DOMINIO_API_SECRET;
   const integratorId = process.env.INTEGRATOR_ID || '31';
-  const baseUrl = process.env.MERCANTIL_REDIRECT_URL || 'https://botondepagos.mercantilbanco.com/mercantil/botondepagos';
+  const baseUrl = process.env.MERCANTIL_REDIRECT_URL || 'https://apimbu.mercantilbanco.com/mercantil/botondepagos';
 
   if (!secret) {
     return { success: false, error: 'DOMINIO_API_SECRET is not configured' };
