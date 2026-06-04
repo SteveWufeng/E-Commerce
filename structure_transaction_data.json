@@ -1,0 +1,22 @@
+{
+    "amount": 500.00,
+    "customerName": "John Doe",
+    "returnUrl": "https://example.com/return",
+    "merchantId": "merchant_12345",
+    "invoiceNumber": {
+        "number": "INV-1001",
+        "invoiceCreationDate": "2024-06-01",
+        "invoiceCancelledDate": "2024-06-02"
+    },
+    "contract": {
+        "contractNumber": "contract_67890",
+        "contractDate": "2025-06-01"
+    },
+    "trxType": "compra",
+    "currency": "ves",
+    "paymentConcepts": [
+        "b2b",
+        "c2p",
+        "tdd"
+    ]
+}

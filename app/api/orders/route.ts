@@ -12,6 +12,8 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { processPayment } from "@/lib/payments";
+import { generateMercantilRedirect } from "@/lib/payments/mercantil";
+import type { MercantilTransactionData } from "@/lib/payments/mercantil";
 import { sendEmail, orderConfirmationEmail } from "@/lib/email";
 import { sendSms, orderConfirmationSms } from "@/lib/sms";
 import { auth } from "@/lib/auth";
@@ -30,7 +32,7 @@ const createOrderSchema = z.object({
       })
     )
     .min(1),
-  paymentMethod: z.enum(["CREDIT_CARD", "GOOGLE_PAY", "PAYPAL", "CASH_ON_PICKUP", "BANK_TRANSFER"]),
+  paymentMethod: z.enum(["CREDIT_CARD", "GOOGLE_PAY", "PAYPAL", "CASH_ON_PICKUP", "BANK_TRANSFER", "MERCANTIL"]),
   subtotal: z.number().positive(),
   tax: z.number().min(0),
   total: z.number().positive(),
@@ -49,11 +51,39 @@ export async function POST(request: NextRequest) {
     const count = await db.order.count();
     const orderNumber = `ORD-${dateStr}-${String(count + 1).padStart(4, "0")}`;
 
-    // For bank transfer, skip payment processing — payment is manual
-    const isBankTransfer = validated.paymentMethod === "BANK_TRANSFER";
+    // Offline payment methods (skip real payment processing)
+    const isDeferredPayment = validated.paymentMethod === "BANK_TRANSFER" || validated.paymentMethod === "MERCANTIL";
     let paymentTransactionId: string | null = null;
+    let mercantilRedirectUrl: string | undefined;
 
-    if (!isBankTransfer) {
+    if (validated.paymentMethod === "MERCANTIL") {
+      const txData: MercantilTransactionData = {
+        amount: Number(validated.total),
+        customerName: `${validated.firstName} ${validated.lastName}`,
+        returnUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/orders?order=${orderNumber}`,
+        merchantId: process.env.MERCHANT_RIF || '',
+        invoiceNumber: {
+          number: orderNumber,
+          invoiceCreationDate: new Date().toISOString().slice(0, 10),
+        },
+        contract: {
+          contractNumber: `contract_${orderNumber}`,
+          contractDate: new Date().toISOString().slice(0, 10),
+        },
+        trxType: "compra",
+        currency: "ves",
+        paymentConcepts: ["b2b", "c2p", "tdd"],
+      };
+
+      const mercantilResult = await generateMercantilRedirect(txData);
+      if (!mercantilResult.success) {
+        return NextResponse.json(
+          { success: false, error: mercantilResult.error || "Failed to generate Mercantil payment" },
+          { status: 500 }
+        );
+      }
+      mercantilRedirectUrl = mercantilResult.redirectUrl;
+    } else if (!isDeferredPayment) {
       const payment = await processPayment({
         amount: Math.round(validated.total * 100), // Convert to cents
         currency: "usd",
@@ -84,7 +114,7 @@ export async function POST(request: NextRequest) {
         tax: validated.tax,
         total: validated.total,
         paymentMethod: validated.paymentMethod,
-        paymentStatus: isBankTransfer ? "PENDING" : "COMPLETED",
+        paymentStatus: isDeferredPayment ? "PENDING" : "COMPLETED",
         receiptImage: validated.receiptImage || null,
         notes: validated.notes || null,
         items: {
@@ -127,7 +157,7 @@ export async function POST(request: NextRequest) {
         price: `$${Number(item.productPrice).toFixed(2)}`,
       })),
       total: `$${Number(order.total).toFixed(2)}`,
-      paymentMethod: isBankTransfer ? "Bank Transfer" : validated.paymentMethod.replace(/_/g, " "),
+      paymentMethod: isDeferredPayment ? (validated.paymentMethod === "MERCANTIL" ? "Mercantil Payment" : "Bank Transfer") : validated.paymentMethod.replace(/_/g, " "),
     });
     emailTemplate.to = validated.email;
     await sendEmail(emailTemplate);
@@ -148,6 +178,7 @@ export async function POST(request: NextRequest) {
           orderId: order.id,
           orderNumber: order.orderNumber,
           paymentTransactionId: paymentTransactionId,
+          ...(mercantilRedirectUrl ? { redirectUrl: mercantilRedirectUrl } : {}),
         },
       },
       { status: 201 }

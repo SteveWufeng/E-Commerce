@@ -55,6 +55,8 @@ export type TranslationKey =
   | "processing"
   | "bankTransfer"
   | "payViaBankTransfer"
+  | "mercantilPayment"
+  | "payViaMercantil"
   | "uploadReceipt"
   | "uploadReceiptOptional"
   | "chooseFile"
@@ -292,6 +294,8 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     processing: "Procesando...",
     bankTransfer: "Transferencia Bancaria",
     payViaBankTransfer: "Pague mediante transferencia bancaria. Suba su comprobante de pago después de realizar el pedido.",
+    mercantilPayment: "Botón de Pago Mercantil",
+    payViaMercantil: "Pague con Mercantil Banco — débito inmediato, tarjetas o pagos móviles C2P.",
     uploadReceipt: "Subir Comprobante de Pago",
     uploadReceiptOptional: "Subir comprobante de pago (opcional ahora, requerido después)",
     chooseFile: "Elegir Archivo",
@@ -530,6 +534,8 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     processing: "Processing...",
     bankTransfer: "Bank Transfer",
     payViaBankTransfer: "Pay via bank transfer. Please upload your payment receipt after placing the order.",
+    mercantilPayment: "Mercantil Payment Button",
+    payViaMercantil: "Pay with Mercantil Banco — debit, credit cards, or mobile payments (C2P).",
     uploadReceipt: "Upload Payment Receipt",
     uploadReceiptOptional: "Upload Payment Receipt (optional now, required later)",
     chooseFile: "Choose File",
