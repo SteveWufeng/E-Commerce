@@ -30,7 +30,9 @@ export default function CheckoutPage() {
     email: string;
     phone: string;
   } | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentOption>("BANK_TRANSFER");
+  const [bankTransferEnabled, setBankTransferEnabled] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentOption>("MERCANTIL");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const clearCart = useCartStore((state) => state.clearCart);
@@ -44,7 +46,17 @@ export default function CheckoutPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const sessionRes = await fetch("/api/auth/session");
+        const [sessionRes, settingsRes] = await Promise.all([
+          fetch("/api/auth/session"),
+          fetch("/api/settings"),
+        ]);
+
+        const settingsData = await settingsRes.json();
+        if (settingsData.data) {
+          setBankTransferEnabled(settingsData.data.bankTransferEnabled);
+        }
+        setSettingsLoaded(true);
+
         const sessionData = await sessionRes.json();
         if (sessionData?.user) {
           const profileRes = await fetch("/api/auth/me");
@@ -60,7 +72,7 @@ export default function CheckoutPage() {
           }
         }
       } catch {
-        // Not authenticated — guest checkout
+        setSettingsLoaded(true);
       }
     }
     loadData();
@@ -170,28 +182,6 @@ export default function CheckoutPage() {
               <div className="space-y-3">
                 <label
                   className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                    paymentMethod === "BANK_TRANSFER"
-                      ? "border-primary-500 bg-primary-50"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="BANK_TRANSFER"
-                    checked={paymentMethod === "BANK_TRANSFER"}
-                    onChange={() => setPaymentMethod("BANK_TRANSFER")}
-                    className="accent-primary-500"
-                  />
-                  <span className="text-xl">🏦</span>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{t("bankTransfer")}</p>
-                    <p className="text-xs text-gray-500 mt-1">{t("payViaBankTransfer")}</p>
-                  </div>
-                </label>
-
-                <label
-                  className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                     paymentMethod === "MERCANTIL"
                       ? "border-primary-500 bg-primary-50"
                       : "border-gray-200 hover:border-gray-300"
@@ -211,6 +201,30 @@ export default function CheckoutPage() {
                     <p className="text-xs text-gray-500 mt-1">{t("payViaMercantil")}</p>
                   </div>
                 </label>
+
+                {bankTransferEnabled && (
+                  <label
+                    className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                      paymentMethod === "BANK_TRANSFER"
+                        ? "border-primary-500 bg-primary-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="BANK_TRANSFER"
+                      checked={paymentMethod === "BANK_TRANSFER"}
+                      onChange={() => setPaymentMethod("BANK_TRANSFER")}
+                      className="accent-primary-500"
+                    />
+                    <span className="text-xl">🏦</span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{t("bankTransfer")}</p>
+                      <p className="text-xs text-gray-500 mt-1">{t("payViaBankTransfer")}</p>
+                    </div>
+                  </label>
+                )}
               </div>
 
               {/* Receipt Upload — only for bank transfer */}
