@@ -42,7 +42,6 @@ export async function generateMercantilRedirect(
   transactionData: MercantilTransactionData
 ): Promise<MercantilPaymentResult> {
   const secret = process.env.DOMINIO_API_SECRET;
-  const integratorId = process.env.INTEGRATOR_ID || '31';
   const baseUrl = process.env.MERCANTIL_REDIRECT_URL || 'https://botondepagos.mercantilbanco.com/';
 
   if (!secret) {
@@ -54,7 +53,6 @@ export async function generateMercantilRedirect(
 
   const params = new URLSearchParams({
     merchantid: transactionData.merchantId,
-    integratorid: integratorId,
     transactiondata: encrypted,
   });
 
