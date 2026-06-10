@@ -20,9 +20,15 @@ interface CardFormData {
   cardType: CardType;
 }
 
-interface OrderResult {
-  orderId: string;
-  orderNumber: string;
+interface CheckoutData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  notes?: string;
+  subtotal: number;
+  tax: number;
+  total: number;
 }
 
 export default function CheckoutPage() {
@@ -30,6 +36,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const items = useCartStore((state) => state.items);
   const hydrated = useCartStore((state) => state.hydrated);
+  const clearCart = useCartStore((state) => state.clearCart);
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const taxRate = 0.08;
@@ -48,10 +55,10 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentOption>("MERCANTIL");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
-  const clearCart = useCartStore((state) => state.clearCart);
 
-  const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
-  const [cardStep, setCardStep] = useState<"form" | "otp" | "done">("form");
+  const [showingCard, setShowingCard] = useState(false);
+  const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null);
+  const [cardStep, setCardStep] = useState<"form" | "otp">("form");
   const [cardData, setCardData] = useState<CardFormData>({
     cardNumber: "",
     expirationDate: "",
@@ -62,10 +69,10 @@ export default function CheckoutPage() {
   const [otp, setOtp] = useState("");
 
   useEffect(() => {
-    if (hydrated && items.length === 0 && !orderResult) {
+    if (hydrated && items.length === 0 && !showingCard) {
       router.push("/cart");
     }
-  }, [hydrated, items.length, orderResult, router]);
+  }, [hydrated, items.length, showingCard, router]);
 
   useEffect(() => {
     async function loadData() {
@@ -118,71 +125,68 @@ export default function CheckoutPage() {
     phone: string;
     notes?: string;
   }) {
-    const orderData = {
-      ...formData,
-      items: items.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-      })),
-      paymentMethod,
-      subtotal: Math.max(0.01, subtotal),
-      tax: Math.max(0, tax),
-      total: Math.max(0.01, total),
-    };
-
-    setIsProcessing(true);
     setError(null);
 
-    try {
-      let receiptImage: string | undefined;
-      if (paymentMethod === "BANK_TRANSFER" && receiptFile) {
-        const fd = new FormData();
-        fd.append("file", receiptFile);
-        const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
-        const uploadData = await uploadRes.json();
-        if (!uploadRes.ok) throw new Error(uploadData.error || "Failed to upload receipt");
-        receiptImage = uploadData.url;
-      }
+    if (paymentMethod === "BANK_TRANSFER") {
+      setIsProcessing(true);
+      try {
+        let receiptImage: string | undefined;
+        if (receiptFile) {
+          const fd = new FormData();
+          fd.append("file", receiptFile);
+          const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
+          const uploadData = await uploadRes.json();
+          if (!uploadRes.ok) throw new Error(uploadData.error || "Failed to upload receipt");
+          receiptImage = uploadData.url;
+        }
 
-      const response = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(receiptImage ? { ...orderData, receiptImage } : orderData),
-      });
+        const response = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...formData,
+            items: items.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+            })),
+            paymentMethod,
+            subtotal: Math.max(0.01, subtotal),
+            tax: Math.max(0, tax),
+            total: Math.max(0.01, total),
+            ...(receiptImage ? { receiptImage } : {}),
+          }),
+        });
 
-      const result = await response.json();
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Failed to place order");
 
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to place order");
-      }
+        clearCart();
 
-      clearCart();
-
-      if (paymentMethod === "BANK_TRANSFER") {
         const orderId = result.data?.orderNumber || result.data?.orderId;
         const email = encodeURIComponent(formData.email);
         router.push(`/orders?id=${orderId}&email=${email}`);
-        return;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An unexpected error occurred");
+      } finally {
+        setIsProcessing(false);
       }
-
-      if (result.data?.redirectUrl) {
-        window.location.href = result.data.redirectUrl;
-        return;
-      }
-
-      setOrderResult({
-        orderId: result.data.orderId,
-        orderNumber: result.data.orderNumber,
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred");
-    } finally {
-      setIsProcessing(false);
+      return;
     }
+
+    setCheckoutData({
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      phone: formData.phone || "",
+      notes: formData.notes,
+      subtotal: Math.max(0.01, subtotal),
+      tax: Math.max(0, tax),
+      total: Math.max(0.01, total),
+    });
+    setShowingCard(true);
   }
 
   async function handleCardPay() {
-    if (!orderResult) return;
     setError(null);
 
     try {
@@ -193,7 +197,6 @@ export default function CheckoutPage() {
           cardNumber: cardData.cardNumber,
           customerId: cardData.customerId,
           paymentMethod: cardData.cardType,
-          orderId: orderResult.orderId,
         }),
       });
 
@@ -209,7 +212,7 @@ export default function CheckoutPage() {
   }
 
   async function handleOtpConfirm() {
-    if (!orderResult) return;
+    if (!checkoutData) return;
     setIsProcessing(true);
     setError(null);
 
@@ -224,10 +227,9 @@ export default function CheckoutPage() {
           customerId: cardData.customerId,
           paymentMethod: cardData.cardType,
           otp,
-          amount: total,
+          amount: checkoutData.total,
           currency: "ves",
-          invoiceNumber: orderResult.orderNumber,
-          orderId: orderResult.orderId,
+          invoiceNumber: `TMP-${Date.now()}`,
         }),
       });
 
@@ -236,8 +238,34 @@ export default function CheckoutPage() {
         throw new Error(payResult.error || "Payment failed");
       }
 
-      setCardStep("done");
-      router.push(`/orders?id=${orderResult.orderNumber}`);
+      const orderRes = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: checkoutData.firstName,
+          lastName: checkoutData.lastName,
+          email: checkoutData.email,
+          phone: checkoutData.phone,
+          notes: checkoutData.notes,
+          items: items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+          })),
+          paymentMethod: "MERCANTIL",
+          subtotal: checkoutData.subtotal,
+          tax: checkoutData.tax,
+          total: checkoutData.total,
+          paymentTransactionId: payResult.data?.transactionId,
+        }),
+      });
+
+      const orderResult = await orderRes.json();
+      if (!orderRes.ok) {
+        throw new Error(orderResult.error || "Failed to create order");
+      }
+
+      clearCart();
+      router.push(`/orders?id=${orderResult.data.orderNumber}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Payment failed");
     } finally {
@@ -245,9 +273,9 @@ export default function CheckoutPage() {
     }
   }
 
-  if (items.length === 0 && !orderResult) return null;
+  if (items.length === 0 && !showingCard) return null;
 
-  if (orderResult) {
+  if (showingCard) {
     return (
       <div className="min-h-screen flex flex-col">
         <Header />
@@ -265,7 +293,7 @@ export default function CheckoutPage() {
               Card Payment
             </h2>
             <p className="text-sm text-gray-500 mb-4">
-              Order: {orderResult.orderNumber}
+              Total: {new Intl.NumberFormat("es-VE", { style: "currency", currency: "VES" }).format(checkoutData?.total || total)}
             </p>
 
             {cardStep === "form" && (
@@ -346,7 +374,7 @@ export default function CheckoutPage() {
                   onClick={handleCardPay}
                   className="btn-primary w-full py-3 text-base"
                 >
-                  Pay {new Intl.NumberFormat("es-VE", { style: "currency", currency: "VES" }).format(total)}
+                  Pay {new Intl.NumberFormat("es-VE", { style: "currency", currency: "VES" }).format(checkoutData?.total || total)}
                 </button>
               </div>
             )}
