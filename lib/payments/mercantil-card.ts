@@ -109,10 +109,20 @@ export async function requestAuth(data: CardAuthRequest): Promise<CardAuthRespon
       };
     }
 
+    const authRef =
+      (result.authReference as string) ||
+      (result.reference as string) ||
+      (result.transactionId as string) ||
+      (result.id as string) ||
+      (result.status as string);
+    const respMsg =
+      (result.message as string) ||
+      ((result.response as Record<string, unknown>)?.message as string) ||
+      "OTP sent to customer phone";
     return {
       success: true,
-      authReference: result.authReference || result.reference || result.transactionId || result.id || result.status,
-      message: result.message || result.response?.message || "OTP sent to customer phone",
+      authReference: authRef,
+      message: respMsg,
     };
   } catch (error) {
     return {
@@ -174,8 +184,9 @@ export async function confirmPayment(data: CardPayRequest): Promise<CardPayRespo
 
     return {
       success: true,
-      transactionId: result.transactionId || result.id || result.paymentId,
-      paymentReference: result.paymentReference || result.reference || result.referenceNumber,
+      transactionId: (result.transactionId as string) || (result.id as string) || (result.paymentId as string),
+      paymentReference:
+        (result.paymentReference as string) || (result.reference as string) || (result.referenceNumber as string),
     };
   } catch (error) {
     return {
