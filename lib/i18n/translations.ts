@@ -27,6 +27,9 @@ export type TranslationKey =
   | "noProductsFound"
   | "browseAllProducts"
 
+  // General
+  | "loading"
+
   // Cart
   | "yourCartIsEmpty"
   | "browseProductsAddToCart"
@@ -267,6 +270,7 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     browseAllProducts: "Ver Todos los Productos",
 
     // Cart
+    loading: "Cargando...",
     yourCartIsEmpty: "Tu carrito está vacío",
     browseProductsAddToCart: "Explore nuestros productos y añada artículos a su carrito.",
     startShopping: "Comenzar a Comprar",
@@ -507,6 +511,7 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     browseAllProducts: "Browse All Products",
 
     // Cart
+    loading: "Loading...",
     yourCartIsEmpty: "Your cart is empty",
     browseProductsAddToCart: "Browse our products and add items to your cart.",
     startShopping: "Start Shopping",
