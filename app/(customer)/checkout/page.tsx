@@ -215,28 +215,88 @@ export default function CheckoutPage() {
     return raw.trim().replace(/\s+/g, " ");
   }
 
+  async function createOrderAfterPayment(transactionId: string) {
+    if (!checkoutData) return;
+    const orderRes = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        firstName: checkoutData.firstName,
+        lastName: checkoutData.lastName,
+        email: checkoutData.email,
+        phone: checkoutData.phone,
+        notes: checkoutData.notes,
+        items: items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        })),
+        paymentMethod: "MERCANTIL",
+        subtotal: checkoutData.subtotal,
+        tax: checkoutData.tax,
+        total: checkoutData.total,
+        paymentTransactionId: transactionId,
+      }),
+    });
+
+    const orderResult = await orderRes.json();
+    if (!orderRes.ok) {
+      throw new Error(orderResult.error || "Failed to create order");
+    }
+
+    clearCart();
+    router.push(`/orders?id=${orderResult.data.orderNumber}`);
+  }
+
   async function handleCardPay() {
+    if (!checkoutData) return;
+    setIsProcessing(true);
     setError(null);
 
     try {
-      const authRes = await fetch("/api/payments/mercantil/getauth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cardNumber: cleanCardNumber(cardData.cardNumber),
-          customerId: cleanCustomerId(cardData.customerId),
-          paymentMethod: cardData.cardType,
-        }),
-      });
+      if (cardData.cardType === "tdc") {
+        const payRes = await fetch("/api/payments/mercantil/pay", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cardNumber: cleanCardNumber(cardData.cardNumber),
+            expirationDate: convertExpiry(cardData.expirationDate),
+            cvv: cardData.cvv,
+            customerId: cleanCustomerId(cardData.customerId),
+            paymentMethod: "tdc",
+            amount: checkoutData.total,
+            currency: "ves",
+            invoiceNumber: `TMP-${Date.now()}`,
+          }),
+        });
 
-      const authResult = await authRes.json();
-      if (!authRes.ok) {
-        throw new Error(authResult.error || "Failed to request OTP");
+        const payResult = await payRes.json();
+        if (!payRes.ok) {
+          throw new Error(payResult.error || "Payment failed");
+        }
+
+        await createOrderAfterPayment(payResult.data?.transactionId);
+      } else {
+        const authRes = await fetch("/api/payments/mercantil/getauth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cardNumber: cleanCardNumber(cardData.cardNumber),
+            customerId: cleanCustomerId(cardData.customerId),
+            paymentMethod: "tdd",
+          }),
+        });
+
+        const authResult = await authRes.json();
+        if (!authRes.ok) {
+          throw new Error(authResult.error || "Failed to request OTP");
+        }
+
+        setCardStep("otp");
       }
-
-      setCardStep("otp");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start payment");
+      setError(err instanceof Error ? err.message : "Payment failed");
+    } finally {
+      setIsProcessing(false);
     }
   }
 
@@ -254,7 +314,7 @@ export default function CheckoutPage() {
           expirationDate: convertExpiry(cardData.expirationDate),
           cvv: cardData.cvv,
           customerId: cleanCustomerId(cardData.customerId),
-          paymentMethod: cardData.cardType,
+          paymentMethod: "tdd",
           otp,
           amount: checkoutData.total,
           currency: "ves",
@@ -267,34 +327,7 @@ export default function CheckoutPage() {
         throw new Error(payResult.error || "Payment failed");
       }
 
-      const orderRes = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: checkoutData.firstName,
-          lastName: checkoutData.lastName,
-          email: checkoutData.email,
-          phone: checkoutData.phone,
-          notes: checkoutData.notes,
-          items: items.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-          })),
-          paymentMethod: "MERCANTIL",
-          subtotal: checkoutData.subtotal,
-          tax: checkoutData.tax,
-          total: checkoutData.total,
-          paymentTransactionId: payResult.data?.transactionId,
-        }),
-      });
-
-      const orderResult = await orderRes.json();
-      if (!orderRes.ok) {
-        throw new Error(orderResult.error || "Failed to create order");
-      }
-
-      clearCart();
-      router.push(`/orders?id=${orderResult.data.orderNumber}`);
+      await createOrderAfterPayment(payResult.data?.transactionId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Payment failed");
     } finally {
