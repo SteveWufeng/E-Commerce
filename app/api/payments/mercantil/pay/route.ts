@@ -2,7 +2,6 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { confirmPayment } from "@/lib/payments/mercantil-card";
-import { db } from "@/lib/db";
 import { z } from "zod";
 
 const paySchema = z.object({
@@ -15,7 +14,6 @@ const paySchema = z.object({
   amount: z.number().positive(),
   currency: z.string().default("ves"),
   invoiceNumber: z.string().min(1),
-  orderId: z.string().min(1),
 });
 
 export async function POST(request: NextRequest) {
@@ -42,27 +40,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const order = await db.order.findUnique({
-      where: { id: validated.orderId },
-    });
-
-    if (order) {
-      await db.order.update({
-        where: { id: order.id },
-        data: {
-          paymentStatus: "COMPLETED",
-          status: "CONFIRMED",
-          paymentIntentId: result.transactionId || order.paymentIntentId,
-        },
-      });
-    }
-
     return NextResponse.json({
       success: true,
       data: {
         transactionId: result.transactionId,
         paymentReference: result.paymentReference,
-        orderId: validated.orderId,
       },
     });
   } catch (error) {

@@ -29,6 +29,7 @@ const createOrderSchema = z.object({
   total: z.number().positive(),
   notes: z.string().optional(),
   receiptImage: z.string().optional(),
+  paymentTransactionId: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -46,36 +47,40 @@ export async function POST(request: NextRequest) {
     let mercantilRedirectUrl: string | undefined;
 
     if (validated.paymentMethod === "MERCANTIL") {
-      const settings = await db.settings.findFirst();
-      const redirectEnabled = settings?.mercantilRedirectEnabled ?? false;
+      if (validated.paymentTransactionId) {
+        paymentTransactionId = validated.paymentTransactionId;
+      } else {
+        const settings = await db.settings.findFirst();
+        const redirectEnabled = settings?.mercantilRedirectEnabled ?? false;
 
-      if (redirectEnabled) {
-        const txData: MercantilTransactionData = {
-          amount: Number(validated.total),
-          customerName: `${validated.firstName} ${validated.lastName}`,
-          returnUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/orders?order=${orderNumber}`,
-          merchantId: process.env.MERCHANT_RIF || '',
-          invoiceNumber: {
-            number: orderNumber,
-            invoiceCreationDate: new Date().toISOString().slice(0, 10),
-          },
-          contract: {
-            contractNumber: `contract_${orderNumber}`,
-            contractDate: new Date().toISOString().slice(0, 10),
-          },
-          trxType: "compra",
-          currency: "ves",
-          paymentConcepts: ["b2b", "c2p", "tdd"],
-        };
+        if (redirectEnabled) {
+          const txData: MercantilTransactionData = {
+            amount: Number(validated.total),
+            customerName: `${validated.firstName} ${validated.lastName}`,
+            returnUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/orders?order=${orderNumber}`,
+            merchantId: process.env.MERCHANT_RIF || '',
+            invoiceNumber: {
+              number: orderNumber,
+              invoiceCreationDate: new Date().toISOString().slice(0, 10),
+            },
+            contract: {
+              contractNumber: `contract_${orderNumber}`,
+              contractDate: new Date().toISOString().slice(0, 10),
+            },
+            trxType: "compra",
+            currency: "ves",
+            paymentConcepts: ["b2b", "c2p", "tdd"],
+          };
 
-        const mercantilResult = await generateMercantilRedirect(txData);
-        if (!mercantilResult.success) {
-          return NextResponse.json(
-            { success: false, error: mercantilResult.error || "Failed to generate Mercantil payment" },
-            { status: 500 }
-          );
+          const mercantilResult = await generateMercantilRedirect(txData);
+          if (!mercantilResult.success) {
+            return NextResponse.json(
+              { success: false, error: mercantilResult.error || "Failed to generate Mercantil payment" },
+              { status: 500 }
+            );
+          }
+          mercantilRedirectUrl = mercantilResult.redirectUrl;
         }
-        mercantilRedirectUrl = mercantilResult.redirectUrl;
       }
     } else if (!isDeferredPayment) {
       const payment = await processPayment({
@@ -107,7 +112,7 @@ export async function POST(request: NextRequest) {
         tax: validated.tax,
         total: validated.total,
         paymentMethod: validated.paymentMethod,
-        paymentStatus: isDeferredPayment ? "PENDING" : "COMPLETED",
+        paymentStatus: paymentTransactionId ? "COMPLETED" : isDeferredPayment ? "PENDING" : "COMPLETED",
         receiptImage: validated.receiptImage || null,
         notes: validated.notes || null,
         items: {
@@ -167,7 +172,7 @@ export async function POST(request: NextRequest) {
         data: {
           orderId: order.id,
           orderNumber: order.orderNumber,
-          paymentTransactionId: paymentTransactionId,
+          paymentTransactionId,
           ...(mercantilRedirectUrl ? { redirectUrl: mercantilRedirectUrl } : {}),
         },
       },
