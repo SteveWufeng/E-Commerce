@@ -12,6 +12,7 @@ interface StoreSettings {
   currencySymbol: string;
   conversionRate: number;
   bankTransferEnabled: boolean;
+  mercantilRedirectEnabled: boolean;
 }
 
 /**
@@ -35,6 +36,7 @@ export default function AdminSettingsPage() {
     currencySymbol: "$",
     conversionRate: 1,
     bankTransferEnabled: false,
+    mercantilRedirectEnabled: false,
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -196,13 +198,18 @@ export default function AdminSettingsPage() {
             {t("paymentMethods")}
           </h2>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-primary-50 border border-primary-200">
+            <label className="flex items-center justify-between p-3 rounded-lg border border-gray-200 cursor-pointer hover:border-gray-300">
               <div>
-                <p className="text-sm font-medium text-gray-900">Mercantil Payment Button</p>
-                <p className="text-xs text-gray-500">Débito Inmediato, Tarjetas, C2P</p>
+                <p className="text-sm font-medium text-gray-900">Mercantil — Redirect Button (Legacy)</p>
+                <p className="text-xs text-gray-500">Botón de Pagos Web redirect flow</p>
               </div>
-              <span className="text-xs font-medium text-primary-700 bg-primary-100 px-2 py-1 rounded-full">Active</span>
-            </div>
+              <input
+                type="checkbox"
+                className="w-5 h-5 accent-primary-500 rounded"
+                checked={settings.mercantilRedirectEnabled}
+                onChange={(e) => setSettings({ ...settings, mercantilRedirectEnabled: e.target.checked })}
+              />
+            </label>
             <label className="flex items-center justify-between p-3 rounded-lg border border-gray-200 cursor-pointer hover:border-gray-300">
               <div>
                 <p className="text-sm font-medium text-gray-900">Bank Transfer</p>
