@@ -23,7 +23,7 @@ export interface CardPayRequest {
   cvv: string;
   customerId: string;
   paymentMethod: "tdc" | "tdd";
-  otp: string;
+  otp?: string;
   amount: number;
   currency: string;
   invoiceNumber: string;
