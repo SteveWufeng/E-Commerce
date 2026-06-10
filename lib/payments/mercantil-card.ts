@@ -93,14 +93,19 @@ export async function requestAuth(data: CardAuthRequest): Promise<CardAuthRespon
       body: JSON.stringify(body),
     });
 
-    const result = await response.json();
+    const text = await response.text();
+    let result: Record<string, unknown> = {};
+    try {
+      result = JSON.parse(text);
+    } catch {
+      // response is not JSON
+    }
 
     if (!response.ok) {
-      const errorMsg = result.errorDescription || result.errorMessage || result.message || result.error || "";
-      const errorCode = result.errorCode ? ` (code ${result.errorCode})` : "";
+      console.error("getauth error response:", response.status, text);
       return {
         success: false,
-        error: errorMsg ? `${errorMsg}${errorCode}` : `Auth request failed: ${response.status}`,
+        error: text || `Auth request failed: ${response.status}`,
       };
     }
 
@@ -151,14 +156,19 @@ export async function confirmPayment(data: CardPayRequest): Promise<CardPayRespo
       body: JSON.stringify(body),
     });
 
-    const result = await response.json();
+    const text = await response.text();
+    let result: Record<string, unknown> = {};
+    try {
+      result = JSON.parse(text);
+    } catch {
+      // response is not JSON
+    }
 
     if (!response.ok) {
-      const errorMsg = result.errorDescription || result.errorMessage || result.message || result.error || "";
-      const errorCode = result.errorCode ? ` (code ${result.errorCode})` : "";
+      console.error("pay error response:", response.status, text);
       return {
         success: false,
-        error: errorMsg ? `${errorMsg}${errorCode}` : `Payment failed: ${response.status}`,
+        error: text || `Payment failed: ${response.status}`,
       };
     }
 
