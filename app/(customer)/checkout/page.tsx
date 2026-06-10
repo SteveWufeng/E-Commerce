@@ -254,6 +254,7 @@ export default function CheckoutPage() {
 
     try {
       if (cardData.cardType === "tdc") {
+        const invoiceNumber = `INV-${Date.now()}`.slice(0, 15);
         const payRes = await fetch("/api/payments/mercantil/pay", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -263,9 +264,9 @@ export default function CheckoutPage() {
             cvv: cardData.cvv,
             customerId: cleanCustomerId(cardData.customerId),
             paymentMethod: "tdc",
-            amount: checkoutData.total,
+            amount: checkoutData.total.toFixed(2),
             currency: "ves",
-            invoiceNumber: `TMP-${Date.now()}`,
+            invoiceNumber,
           }),
         });
 
@@ -306,6 +307,7 @@ export default function CheckoutPage() {
     setError(null);
 
     try {
+      const invoiceNumber = `INV-${Date.now()}`.slice(0, 15);
       const payRes = await fetch("/api/payments/mercantil/pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -316,9 +318,9 @@ export default function CheckoutPage() {
           customerId: cleanCustomerId(cardData.customerId),
           paymentMethod: "tdd",
           otp,
-          amount: checkoutData.total,
+          amount: checkoutData.total.toFixed(2),
           currency: "ves",
-          invoiceNumber: `TMP-${Date.now()}`,
+          invoiceNumber,
         }),
       });
 
