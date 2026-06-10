@@ -190,6 +190,31 @@ export default function CheckoutPage() {
     setShowingCard(true);
   }
 
+  function cleanCardNumber(raw: string): string {
+    return raw.replace(/\D/g, "");
+  }
+
+  function convertExpiry(raw: string): string {
+    const cleaned = raw.replace(/[^0-9\/]/g, "");
+    const parts = cleaned.split("/");
+    if (parts.length === 2) {
+      const month = parts[0].padStart(2, "0");
+      const year = parts[1].length === 2 ? `20${parts[1]}` : parts[1];
+      return `${year}/${month}`;
+    }
+    const match = cleaned.match(/^(\d{2})(\d{2,4})$/);
+    if (match) {
+      const month = match[1];
+      const year = match[2].length === 2 ? `20${match[2]}` : match[2];
+      return `${year}/${month}`;
+    }
+    return raw;
+  }
+
+  function cleanCustomerId(raw: string): string {
+    return raw.trim().replace(/\s+/g, " ");
+  }
+
   async function handleCardPay() {
     setError(null);
 
@@ -198,8 +223,8 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          cardNumber: cardData.cardNumber,
-          customerId: cardData.customerId,
+          cardNumber: cleanCardNumber(cardData.cardNumber),
+          customerId: cleanCustomerId(cardData.customerId),
           paymentMethod: cardData.cardType,
         }),
       });
@@ -225,10 +250,10 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          cardNumber: cardData.cardNumber,
-          expirationDate: cardData.expirationDate,
+          cardNumber: cleanCardNumber(cardData.cardNumber),
+          expirationDate: convertExpiry(cardData.expirationDate),
           cvv: cardData.cvv,
-          customerId: cardData.customerId,
+          customerId: cleanCustomerId(cardData.customerId),
           paymentMethod: cardData.cardType,
           otp,
           amount: checkoutData.total,

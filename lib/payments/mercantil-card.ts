@@ -96,16 +96,18 @@ export async function requestAuth(data: CardAuthRequest): Promise<CardAuthRespon
     const result = await response.json();
 
     if (!response.ok) {
+      const errorMsg = result.errorDescription || result.errorMessage || result.message || result.error || "";
+      const errorCode = result.errorCode ? ` (code ${result.errorCode})` : "";
       return {
         success: false,
-        error: result.error || `Auth request failed: ${response.status}`,
+        error: errorMsg ? `${errorMsg}${errorCode}` : `Auth request failed: ${response.status}`,
       };
     }
 
     return {
       success: true,
-      authReference: result.authReference || result.reference || result.transactionId,
-      message: result.message || "OTP sent to customer phone",
+      authReference: result.authReference || result.reference || result.transactionId || result.id || result.status,
+      message: result.message || result.response?.message || "OTP sent to customer phone",
     };
   } catch (error) {
     return {
@@ -152,16 +154,18 @@ export async function confirmPayment(data: CardPayRequest): Promise<CardPayRespo
     const result = await response.json();
 
     if (!response.ok) {
+      const errorMsg = result.errorDescription || result.errorMessage || result.message || result.error || "";
+      const errorCode = result.errorCode ? ` (code ${result.errorCode})` : "";
       return {
         success: false,
-        error: result.error || `Payment failed: ${response.status}`,
+        error: errorMsg ? `${errorMsg}${errorCode}` : `Payment failed: ${response.status}`,
       };
     }
 
     return {
       success: true,
-      transactionId: result.transactionId || result.id,
-      paymentReference: result.paymentReference || result.reference,
+      transactionId: result.transactionId || result.id || result.paymentId,
+      paymentReference: result.paymentReference || result.reference || result.referenceNumber,
     };
   } catch (error) {
     return {
