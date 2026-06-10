@@ -62,10 +62,10 @@ export default function CheckoutPage() {
   const [otp, setOtp] = useState("");
 
   useEffect(() => {
-    if (hydrated && items.length === 0) {
+    if (hydrated && items.length === 0 && !orderResult) {
       router.push("/cart");
     }
-  }, [hydrated, items.length, router]);
+  }, [hydrated, items.length, orderResult, router]);
 
   useEffect(() => {
     async function loadData() {
@@ -245,7 +245,7 @@ export default function CheckoutPage() {
     }
   }
 
-  if (items.length === 0) return null;
+  if (items.length === 0 && !orderResult) return null;
 
   if (orderResult) {
     return (
