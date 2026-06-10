@@ -24,7 +24,7 @@ export interface CardPayRequest {
   customerId: string;
   paymentMethod: "tdc" | "tdd";
   otp?: string;
-  amount: number;
+  amount: number | string;
   currency: string;
   invoiceNumber: string;
   accountType?: "cc" | "ca";

@@ -11,7 +11,7 @@ const paySchema = z.object({
   customerId: z.string().min(1),
   paymentMethod: z.enum(["tdc", "tdd"]),
   otp: z.string().optional(),
-  amount: z.number().positive(),
+  amount: z.union([z.string(), z.number()]),
   currency: z.string().default("ves"),
   invoiceNumber: z.string().min(1),
 });
