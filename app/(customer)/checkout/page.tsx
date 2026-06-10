@@ -52,6 +52,7 @@ export default function CheckoutPage() {
     phone: string;
   } | null>(null);
   const [bankTransferEnabled, setBankTransferEnabled] = useState(false);
+  const [currencySymbol, setCurrencySymbol] = useState("$");
   const [paymentMethod, setPaymentMethod] = useState<PaymentOption>("MERCANTIL");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
@@ -85,6 +86,9 @@ export default function CheckoutPage() {
         const settingsData = await settingsRes.json();
         if (settingsData.data) {
           setBankTransferEnabled(settingsData.data.bankTransferEnabled);
+          if (settingsData.data.currencySymbol) {
+            setCurrencySymbol(settingsData.data.currencySymbol);
+          }
         }
 
         const sessionData = await sessionRes.json();
@@ -293,7 +297,7 @@ export default function CheckoutPage() {
               Card Payment
             </h2>
             <p className="text-sm text-gray-500 mb-4">
-              Total: {new Intl.NumberFormat("es-VE", { style: "currency", currency: "VES" }).format(checkoutData?.total || total)}
+              Total: {currencySymbol}{(checkoutData?.total || total).toFixed(2)}
             </p>
 
             {cardStep === "form" && (
@@ -359,11 +363,11 @@ export default function CheckoutPage() {
                 </div>
 
                 <div>
-                  <label className="label">Customer ID (Cédula)</label>
+                  <label className="label">National ID (Cédula / RIF)</label>
                   <input
                     type="text"
                     className="input"
-                    placeholder="V-10780248"
+                    placeholder="V-12345678 (your ID card number)"
                     value={cardData.customerId}
                     onChange={(e) => setCardData({ ...cardData, customerId: e.target.value })}
                   />
@@ -374,7 +378,7 @@ export default function CheckoutPage() {
                   onClick={handleCardPay}
                   className="btn-primary w-full py-3 text-base"
                 >
-                  Pay {new Intl.NumberFormat("es-VE", { style: "currency", currency: "VES" }).format(checkoutData?.total || total)}
+                  Pay {currencySymbol}{(checkoutData?.total || total).toFixed(2)}
                 </button>
               </div>
             )}
