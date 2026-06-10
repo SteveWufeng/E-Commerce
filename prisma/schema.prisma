@@ -272,9 +272,10 @@ model Settings {
   currencyCode        String   @default("USD")
   currencySymbol      String   @default("$")
   conversionRate      Float    @default(1)
-  bankTransferEnabled Boolean  @default(false)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  bankTransferEnabled      Boolean  @default(false)
+  mercantilRedirectEnabled Boolean  @default(false)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 }
 
 // ========================

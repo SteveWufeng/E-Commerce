@@ -30,7 +30,7 @@ encrypted += cipher.final('base64');
 console.log('\nEncrypted transactiondata (base64):', encrypted);
 
 // ─── Build redirect URL ────────────────────────────────────
-const url = `https://dominio.com/mercantil/botondepagos`
+const url = `https://buhoya.com/mercantil/botondepagos`
   + `?merchantid=${encodeURIComponent(MERCHANT_RIF)}`
   + `&integratorid=${INTEGRATOR_ID}`
   + `&transactiondata=${encodeURIComponent(encrypted)}`;

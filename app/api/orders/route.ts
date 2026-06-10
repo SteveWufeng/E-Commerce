@@ -1,12 +1,3 @@
-/**
- * Orders API — Create and manage orders.
- *
- * POST /api/orders       — Create a new order (public, with payment)
- * GET  /api/orders       — List user's orders (authenticated users only)
- * GET  /api/orders/[id]  — Get single order (authenticated user or admin)
- * PUT  /api/orders/[id]  — Update order status (admin only)
- */
-
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
@@ -45,47 +36,50 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = createOrderSchema.parse(body);
 
-    // Generate order number
     const date = new Date();
     const dateStr = date.toISOString().slice(0, 10).replace(/-/g, "");
     const count = await db.order.count();
     const orderNumber = `ORD-${dateStr}-${String(count + 1).padStart(4, "0")}`;
 
-    // Offline payment methods (skip real payment processing)
     const isDeferredPayment = validated.paymentMethod === "BANK_TRANSFER" || validated.paymentMethod === "MERCANTIL";
     let paymentTransactionId: string | null = null;
     let mercantilRedirectUrl: string | undefined;
 
     if (validated.paymentMethod === "MERCANTIL") {
-      const txData: MercantilTransactionData = {
-        amount: Number(validated.total),
-        customerName: `${validated.firstName} ${validated.lastName}`,
-        returnUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/orders?order=${orderNumber}`,
-        merchantId: process.env.MERCHANT_RIF || '',
-        invoiceNumber: {
-          number: orderNumber,
-          invoiceCreationDate: new Date().toISOString().slice(0, 10),
-        },
-        contract: {
-          contractNumber: `contract_${orderNumber}`,
-          contractDate: new Date().toISOString().slice(0, 10),
-        },
-        trxType: "compra",
-        currency: "ves",
-        paymentConcepts: ["b2b", "c2p", "tdd"],
-      };
+      const settings = await db.settings.findFirst();
+      const redirectEnabled = settings?.mercantilRedirectEnabled ?? false;
 
-      const mercantilResult = await generateMercantilRedirect(txData);
-      if (!mercantilResult.success) {
-        return NextResponse.json(
-          { success: false, error: mercantilResult.error || "Failed to generate Mercantil payment" },
-          { status: 500 }
-        );
+      if (redirectEnabled) {
+        const txData: MercantilTransactionData = {
+          amount: Number(validated.total),
+          customerName: `${validated.firstName} ${validated.lastName}`,
+          returnUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/orders?order=${orderNumber}`,
+          merchantId: process.env.MERCHANT_RIF || '',
+          invoiceNumber: {
+            number: orderNumber,
+            invoiceCreationDate: new Date().toISOString().slice(0, 10),
+          },
+          contract: {
+            contractNumber: `contract_${orderNumber}`,
+            contractDate: new Date().toISOString().slice(0, 10),
+          },
+          trxType: "compra",
+          currency: "ves",
+          paymentConcepts: ["b2b", "c2p", "tdd"],
+        };
+
+        const mercantilResult = await generateMercantilRedirect(txData);
+        if (!mercantilResult.success) {
+          return NextResponse.json(
+            { success: false, error: mercantilResult.error || "Failed to generate Mercantil payment" },
+            { status: 500 }
+          );
+        }
+        mercantilRedirectUrl = mercantilResult.redirectUrl;
       }
-      mercantilRedirectUrl = mercantilResult.redirectUrl;
     } else if (!isDeferredPayment) {
       const payment = await processPayment({
-        amount: Math.round(validated.total * 100), // Convert to cents
+        amount: Math.round(validated.total * 100),
         currency: "usd",
         method: validated.paymentMethod,
         orderId: orderNumber,
@@ -102,7 +96,6 @@ export async function POST(request: NextRequest) {
       paymentTransactionId = payment.transactionId;
     }
 
-    // Create order in database
     const order = await db.order.create({
       data: {
         orderNumber,
@@ -125,7 +118,6 @@ export async function POST(request: NextRequest) {
               });
               if (!product) throw new Error(`Product ${item.productId} not found`);
 
-              // Deduct stock
               await db.product.update({
                 where: { id: item.productId },
                 data: { stock: { decrement: item.quantity } },
@@ -147,7 +139,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Send confirmation email
     const emailTemplate = orderConfirmationEmail({
       customerName: validated.firstName,
       orderNumber,
@@ -162,7 +153,6 @@ export async function POST(request: NextRequest) {
     emailTemplate.to = validated.email;
     await sendEmail(emailTemplate);
 
-    // Send SMS if phone provided
     if (validated.phone) {
       const smsTemplate = orderConfirmationSms({
         orderNumber,
@@ -203,7 +193,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET handler - returns orders
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -214,7 +203,6 @@ export async function GET(request: NextRequest) {
     const session = await auth();
     const userRole = (session?.user as { role?: string })?.role;
 
-    // Admins can see all orders, regular users see only their own
     const isAdmin = userRole === "ADMIN";
 
     if (!session?.user && !isAdmin) {
@@ -224,7 +212,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // If fetching a single order by ID or orderNumber
     if (orderId) {
       const where: Record<string, unknown> = isAdmin
         ? { OR: [{ id: orderId }, { orderNumber: orderId }] }
@@ -250,7 +237,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data: order });
     }
 
-    // Fetch orders - admins see all, users see only their own
     const userEmail = session?.user?.email;
     const orders = await db.order.findMany({
       where: isAdmin ? {} : { customerEmail: userEmail || "" },

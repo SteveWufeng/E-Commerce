@@ -8,9 +8,22 @@ import { Footer } from "@/components/layout/footer";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { OrderSummary } from "@/components/checkout/order-summary";
 import { useLocale } from "@/hooks/use-locale";
-import Image from "next/image";
 
 type PaymentOption = "BANK_TRANSFER" | "MERCANTIL";
+type CardType = "tdc" | "tdd";
+
+interface CardFormData {
+  cardNumber: string;
+  expirationDate: string;
+  cvv: string;
+  customerId: string;
+  cardType: CardType;
+}
+
+interface OrderResult {
+  orderId: string;
+  orderNumber: string;
+}
 
 export default function CheckoutPage() {
   const { t } = useLocale();
@@ -31,11 +44,21 @@ export default function CheckoutPage() {
     phone: string;
   } | null>(null);
   const [bankTransferEnabled, setBankTransferEnabled] = useState(false);
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentOption>("MERCANTIL");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const clearCart = useCartStore((state) => state.clearCart);
+
+  const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
+  const [cardStep, setCardStep] = useState<"form" | "otp" | "done">("form");
+  const [cardData, setCardData] = useState<CardFormData>({
+    cardNumber: "",
+    expirationDate: "",
+    cvv: "",
+    customerId: "",
+    cardType: "tdc",
+  });
+  const [otp, setOtp] = useState("");
 
   useEffect(() => {
     if (items.length === 0) {
@@ -55,7 +78,6 @@ export default function CheckoutPage() {
         if (settingsData.data) {
           setBankTransferEnabled(settingsData.data.bankTransferEnabled);
         }
-        setSettingsLoaded(true);
 
         const sessionData = await sessionRes.json();
         if (sessionData?.user) {
@@ -72,13 +94,13 @@ export default function CheckoutPage() {
           }
         }
       } catch {
-        setSettingsLoaded(true);
+        // silent
       }
     }
     loadData();
   }, []);
 
-  async function handleReceiptUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleReceiptUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
       setReceiptFile(file);
@@ -88,7 +110,7 @@ export default function CheckoutPage() {
     }
   }
 
-  async function handleSubmit(formData: {
+  async function handleOrderSubmit(formData: {
     firstName: string;
     lastName: string;
     email: string;
@@ -135,14 +157,22 @@ export default function CheckoutPage() {
 
       clearCart();
 
-      if (paymentMethod === "MERCANTIL" && result.data?.redirectUrl) {
+      if (paymentMethod === "BANK_TRANSFER") {
+        const orderId = result.data?.orderNumber || result.data?.orderId;
+        const email = encodeURIComponent(formData.email);
+        router.push(`/orders?id=${orderId}&email=${email}`);
+        return;
+      }
+
+      if (result.data?.redirectUrl) {
         window.location.href = result.data.redirectUrl;
         return;
       }
 
-      const orderId = result.data?.orderNumber || result.data?.orderId;
-      const email = encodeURIComponent(formData.email);
-      router.push(`/orders?id=${orderId}&email=${email}`);
+      setOrderResult({
+        orderId: result.data.orderId,
+        orderNumber: result.data.orderNumber,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
@@ -150,7 +180,209 @@ export default function CheckoutPage() {
     }
   }
 
+  async function handleCardPay() {
+    if (!orderResult) return;
+    setError(null);
+
+    try {
+      const authRes = await fetch("/api/payments/mercantil/getauth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cardNumber: cardData.cardNumber,
+          customerId: cardData.customerId,
+          paymentMethod: cardData.cardType,
+          orderId: orderResult.orderId,
+        }),
+      });
+
+      const authResult = await authRes.json();
+      if (!authRes.ok) {
+        throw new Error(authResult.error || "Failed to request OTP");
+      }
+
+      setCardStep("otp");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to start payment");
+    }
+  }
+
+  async function handleOtpConfirm() {
+    if (!orderResult) return;
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const payRes = await fetch("/api/payments/mercantil/pay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cardNumber: cardData.cardNumber,
+          expirationDate: cardData.expirationDate,
+          cvv: cardData.cvv,
+          customerId: cardData.customerId,
+          paymentMethod: cardData.cardType,
+          otp,
+          amount: total,
+          currency: "ves",
+          invoiceNumber: orderResult.orderNumber,
+          orderId: orderResult.orderId,
+        }),
+      });
+
+      const payResult = await payRes.json();
+      if (!payRes.ok) {
+        throw new Error(payResult.error || "Payment failed");
+      }
+
+      setCardStep("done");
+      router.push(`/orders?id=${orderResult.orderNumber}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Payment failed");
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
   if (items.length === 0) return null;
+
+  if (orderResult) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 max-w-lg mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">{t("proceedToCheckout")}</h1>
+
+          {error && (
+            <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div className="card">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Card Payment
+            </h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Order: {orderResult.orderNumber}
+            </p>
+
+            {cardStep === "form" && (
+              <div className="space-y-4">
+                <div>
+                  <label className="label">Card Type</label>
+                  <div className="flex gap-4 mt-1">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="cardType"
+                        value="tdc"
+                        checked={cardData.cardType === "tdc"}
+                        onChange={() => setCardData({ ...cardData, cardType: "tdc" })}
+                      />
+                      Credit Card
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="cardType"
+                        value="tdd"
+                        checked={cardData.cardType === "tdd"}
+                        onChange={() => setCardData({ ...cardData, cardType: "tdd" })}
+                      />
+                      Debit Card
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="label">Card Number</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="4532 3100 5303 2530"
+                    value={cardData.cardNumber}
+                    onChange={(e) => setCardData({ ...cardData, cardNumber: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Expiry (MM/YY)</label>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="12/25"
+                      value={cardData.expirationDate}
+                      onChange={(e) => setCardData({ ...cardData, expirationDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="label">CVV</label>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="924"
+                      value={cardData.cvv}
+                      onChange={(e) => setCardData({ ...cardData, cvv: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="label">Customer ID (Cédula)</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="V-10780248"
+                    value={cardData.customerId}
+                    onChange={(e) => setCardData({ ...cardData, customerId: e.target.value })}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleCardPay}
+                  className="btn-primary w-full py-3 text-base"
+                >
+                  Pay {new Intl.NumberFormat("es-VE", { style: "currency", currency: "VES" }).format(total)}
+                </button>
+              </div>
+            )}
+
+            {cardStep === "otp" && (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  An OTP has been sent to your phone. Enter it below to confirm the payment.
+                </p>
+                <div>
+                  <label className="label">OTP Code</label>
+                  <input
+                    type="text"
+                    className="input text-2xl tracking-widest text-center"
+                    placeholder="_ _ _ _ _ _"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    maxLength={6}
+                    autoFocus
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOtpConfirm}
+                  disabled={isProcessing || otp.length === 0}
+                  className="btn-primary w-full py-3 text-base disabled:opacity-50"
+                >
+                  {isProcessing ? "Processing..." : "Confirm Payment"}
+                </button>
+              </div>
+            )}
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -168,12 +400,11 @@ export default function CheckoutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             <CheckoutForm
-              onSubmit={handleSubmit}
+              onSubmit={handleOrderSubmit}
               isProcessing={isProcessing}
               prefillData={prefillData}
             />
 
-            {/* Payment Method Selection */}
             <div className="card">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 {t("paymentMethod")}
@@ -195,10 +426,12 @@ export default function CheckoutPage() {
                     onChange={() => setPaymentMethod("MERCANTIL")}
                     className="accent-primary-500"
                   />
-                  <span className="text-xl">💳</span>
+                  <span className="text-xl">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                  </span>
                   <div>
                     <p className="text-sm font-medium text-gray-900">{t("mercantilPayment")}</p>
-                    <p className="text-xs text-gray-500 mt-1">{t("payViaMercantil")}</p>
+                    <p className="text-xs text-gray-500 mt-1">Credit / Debit Card</p>
                   </div>
                 </label>
 
@@ -227,7 +460,6 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              {/* Receipt Upload — only for bank transfer */}
               {paymentMethod === "BANK_TRANSFER" && (
                 <div className="mt-4">
                   <label className="label">{t("uploadReceiptOptional")}</label>
@@ -245,25 +477,6 @@ export default function CheckoutPage() {
                       <span className="text-sm text-gray-600">{receiptFile.name}</span>
                     )}
                   </div>
-                  {receiptPreview && (
-                    <div className="mt-3 relative w-32 h-32 rounded-lg overflow-hidden border">
-                      <Image
-                        src={receiptPreview}
-                        alt={t("uploadReceipt")}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  )}
-                  {receiptPreview && (
-                    <button
-                      type="button"
-                      onClick={() => { setReceiptFile(null); setReceiptPreview(null); }}
-                      className="mt-2 text-xs text-red-600 hover:underline"
-                    >
-                      {t("remove")}
-                    </button>
-                  )}
                   <p className="mt-2 text-xs text-gray-400">{t("uploadLaterHint")}</p>
                 </div>
               )}
