@@ -29,6 +29,7 @@ export default function CheckoutPage() {
   const { t } = useLocale();
   const router = useRouter();
   const items = useCartStore((state) => state.items);
+  const hydrated = useCartStore((state) => state.hydrated);
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const taxRate = 0.08;
@@ -61,10 +62,10 @@ export default function CheckoutPage() {
   const [otp, setOtp] = useState("");
 
   useEffect(() => {
-    if (items.length === 0) {
+    if (hydrated && items.length === 0) {
       router.push("/cart");
     }
-  }, [items.length, router]);
+  }, [hydrated, items.length, router]);
 
   useEffect(() => {
     async function loadData() {

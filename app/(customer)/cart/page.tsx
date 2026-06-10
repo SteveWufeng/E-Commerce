@@ -13,6 +13,7 @@ import Link from "next/link";
 export default function CartPage() {
   const { t } = useLocale();
   const items = useCartStore((state) => state.items);
+  const hydrated = useCartStore((state) => state.hydrated);
   const { removeItem, updateQuantity, clearCart } = useCartStore();
 
   const subtotal = items.reduce(
@@ -22,6 +23,21 @@ export default function CartPage() {
   const taxRate = 0.08;
   const tax = subtotal * taxRate;
   const total = subtotal + tax;
+
+  if (!hydrated) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center py-16">
+            <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-gray-500">{t("loading")}</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
