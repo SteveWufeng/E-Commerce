@@ -166,9 +166,8 @@ export default function CheckoutPage() {
 
         clearCart();
 
-        const orderId = result.data?.orderNumber || result.data?.orderId;
         const email = encodeURIComponent(formData.email);
-        router.push(`/orders?id=${orderId}&email=${email}`);
+        router.push(`/orders/${result.data.orderId}?orderNumber=${result.data.orderNumber}&email=${email}`);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An unexpected error occurred");
       } finally {
@@ -215,7 +214,7 @@ export default function CheckoutPage() {
     return raw.trim().replace(/[\s-]+/g, "");
   }
 
-  async function createOrderAfterPayment(transactionId: string) {
+  async function createOrderAfterPayment(transactionId: string, cardLastFour?: string) {
     if (!checkoutData) return;
     const orderRes = await fetch("/api/orders", {
       method: "POST",
@@ -235,6 +234,7 @@ export default function CheckoutPage() {
         tax: checkoutData.tax,
         total: checkoutData.total,
         paymentTransactionId: transactionId,
+        ...(cardLastFour ? { cardLastFour } : {}),
       }),
     });
 
@@ -244,7 +244,7 @@ export default function CheckoutPage() {
     }
 
     clearCart();
-    router.push(`/orders?id=${orderResult.data.orderNumber}`);
+    router.push(`/orders/${orderResult.data.orderId}?orderNumber=${orderResult.data.orderNumber}`);
   }
 
   async function handleCardPay() {
@@ -255,11 +255,13 @@ export default function CheckoutPage() {
     try {
       if (cardData.cardType === "tdc") {
         const invoiceNumber = `INV-${Date.now().toString(36)}`;
+        const cleanedCard = cleanCardNumber(cardData.cardNumber);
+        const cardLastFour = cleanedCard.slice(-4);
         const payRes = await fetch("/api/payments/mercantil/pay", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            cardNumber: cleanCardNumber(cardData.cardNumber),
+            cardNumber: cleanedCard,
             expirationDate: convertExpiry(cardData.expirationDate),
             cvv: cardData.cvv,
             customerId: cleanCustomerId(cardData.customerId),
@@ -275,13 +277,15 @@ export default function CheckoutPage() {
           throw new Error(payResult.error || "Payment failed");
         }
 
-        await createOrderAfterPayment(payResult.data?.transactionId);
+        await createOrderAfterPayment(payResult.data?.transactionId, cardLastFour);
       } else {
+        const cleanedCard = cleanCardNumber(cardData.cardNumber);
+        const cardLastFour = cleanedCard.slice(-4);
         const authRes = await fetch("/api/payments/mercantil/getauth", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            cardNumber: cleanCardNumber(cardData.cardNumber),
+            cardNumber: cleanedCard,
             customerId: cleanCustomerId(cardData.customerId),
             paymentMethod: "tdd",
           }),
@@ -308,11 +312,13 @@ export default function CheckoutPage() {
 
     try {
       const invoiceNumber = `INV-${Date.now().toString(36)}`;
+      const cleanedCard = cleanCardNumber(cardData.cardNumber);
+      const cardLastFour = cleanedCard.slice(-4);
       const payRes = await fetch("/api/payments/mercantil/pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          cardNumber: cleanCardNumber(cardData.cardNumber),
+          cardNumber: cleanedCard,
           expirationDate: convertExpiry(cardData.expirationDate),
           cvv: cardData.cvv,
           customerId: cleanCustomerId(cardData.customerId),
@@ -329,7 +335,7 @@ export default function CheckoutPage() {
         throw new Error(payResult.error || "Payment failed");
       }
 
-      await createOrderAfterPayment(payResult.data?.transactionId);
+      await createOrderAfterPayment(payResult.data?.transactionId, cardLastFour);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Payment failed");
     } finally {

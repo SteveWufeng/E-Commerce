@@ -211,6 +211,12 @@ export default function OrderDetailPage() {
               <p className="text-gray-500">{t("paymentMethod")}</p>
               <p className="font-medium">{order.paymentMethod.replace(/_/g, " ")}</p>
             </div>
+            {order.cardLastFour && (
+              <div>
+                <p className="text-gray-500">Card ending in</p>
+                <p className="font-medium">•••• {order.cardLastFour}</p>
+              </div>
+            )}
           </div>
         </div>
 

@@ -30,6 +30,7 @@ const createOrderSchema = z.object({
   notes: z.string().optional(),
   receiptImage: z.string().optional(),
   paymentTransactionId: z.string().optional(),
+  cardLastFour: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -167,6 +168,8 @@ export async function POST(request: NextRequest) {
           total: validated.total,
           paymentMethod: validated.paymentMethod,
           paymentStatus: paymentTransactionId ? "COMPLETED" : isDeferredPayment ? "PENDING" : "COMPLETED",
+          paymentIntentId: paymentTransactionId,
+          cardLastFour: validated.cardLastFour || null,
           receiptImage: validated.receiptImage || null,
           notes: validated.notes || null,
           items: {
