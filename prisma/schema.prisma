@@ -140,7 +140,8 @@ model Order {
   // Payment info
   paymentMethod   PaymentMethod
   paymentStatus   PaymentStatus @default(PENDING)
-  paymentIntentId String?       // Stripe intent ID for future integration
+  paymentIntentId String?       // Stripe intent ID or Mercantil transaction ID
+  cardLastFour    String?       // Last 4 digits of card used (Mercantil/TDC/TDD)
   receiptImage    String?       // URL of bank transfer receipt uploaded by customer
   rejectionReason String?       // admin's reason if receipt is rejected
 

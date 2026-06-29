@@ -89,6 +89,7 @@ export interface Order {
   total: number;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
+  cardLastFour: string | null;
   receiptImage: string | null;
   rejectionReason: string | null;
   customerEmail: string;
