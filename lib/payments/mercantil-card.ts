@@ -136,7 +136,7 @@ export async function confirmPayment(data: CardPayRequest): Promise<CardPayRespo
   try {
     const transaction: Record<string, unknown> = {
       trx_type: "compra",
-      payment_method: data.paymentMethod,
+      payment_method: "tdc",
       customer_id: data.customerId,
       card_number: data.cardNumber,
       expiration_date: data.expirationDate,
