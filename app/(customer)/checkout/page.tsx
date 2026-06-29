@@ -212,7 +212,7 @@ export default function CheckoutPage() {
   }
 
   function cleanCustomerId(raw: string): string {
-    return raw.trim().replace(/\s+/g, " ");
+    return raw.trim().replace(/\s+/g, " ").replace(/^[VEJPG]\s*/i, "");
   }
 
   async function createOrderAfterPayment(transactionId: string) {
