@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
+      console.error("Mercantil pay error:", result.error);
       return NextResponse.json(
         { success: false, error: result.error || "Payment failed" },
         { status: 400 }
