@@ -136,7 +136,7 @@ export async function confirmPayment(data: CardPayRequest): Promise<CardPayRespo
   try {
     const transaction: Record<string, unknown> = {
       trx_type: "compra",
-      payment_method: "tdc",
+      payment_method: data.paymentMethod,
       customer_id: data.customerId,
       card_number: data.cardNumber,
       expiration_date: data.expirationDate,
@@ -147,7 +147,7 @@ export async function confirmPayment(data: CardPayRequest): Promise<CardPayRespo
     };
 
     if (data.paymentMethod === "tdd") {
-      transaction.account_type = data.accountType || "cc";
+      transaction.account_type = (data.accountType || "cc").toUpperCase();
     }
 
     if (data.otp) {
