@@ -254,7 +254,7 @@ export default function CheckoutPage() {
 
     try {
       if (cardData.cardType === "tdc") {
-        const invoiceNumber = `INV-${Date.now()}`.slice(0, 15);
+        const invoiceNumber = `INV-${Date.now().toString(36)}`;
         const payRes = await fetch("/api/payments/mercantil/pay", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -307,7 +307,7 @@ export default function CheckoutPage() {
     setError(null);
 
     try {
-      const invoiceNumber = `INV-${Date.now()}`.slice(0, 15);
+      const invoiceNumber = `INV-${Date.now().toString(36)}`;
       const payRes = await fetch("/api/payments/mercantil/pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
