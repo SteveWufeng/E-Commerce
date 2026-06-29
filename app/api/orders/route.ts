@@ -42,6 +42,34 @@ export async function POST(request: NextRequest) {
     const count = await db.order.count();
     const orderNumber = `ORD-${dateStr}-${String(count + 1).padStart(4, "0")}`;
 
+    const productIds = validated.items.map((item) => item.productId);
+    const products = await db.product.findMany({
+      where: { id: { in: productIds } },
+    });
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    const unavailableItems: string[] = [];
+
+    for (const item of validated.items) {
+      const product = productMap.get(item.productId);
+      if (!product || !product.isActive) {
+        unavailableItems.push(`Product "${item.productId}" is no longer available`);
+      } else if (product.stock < item.quantity) {
+        unavailableItems.push(
+          `"${product.name}" only has ${product.stock} in stock (you requested ${item.quantity})`
+        );
+      }
+    }
+
+    if (unavailableItems.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Some items are no longer available: ${unavailableItems.join("; ")}`,
+        },
+        { status: 409 }
+      );
+    }
+
     const isDeferredPayment = validated.paymentMethod === "BANK_TRANSFER" || validated.paymentMethod === "MERCANTIL";
     let paymentTransactionId: string | null = null;
     let mercantilRedirectUrl: string | undefined;
@@ -101,47 +129,54 @@ export async function POST(request: NextRequest) {
       paymentTransactionId = payment.transactionId;
     }
 
-    const order = await db.order.create({
-      data: {
-        orderNumber,
-        customerEmail: validated.email,
-        customerFirstName: validated.firstName,
-        customerLastName: validated.lastName,
-        customerPhone: validated.phone || null,
-        subtotal: validated.subtotal,
-        tax: validated.tax,
-        total: validated.total,
-        paymentMethod: validated.paymentMethod,
-        paymentStatus: paymentTransactionId ? "COMPLETED" : isDeferredPayment ? "PENDING" : "COMPLETED",
-        receiptImage: validated.receiptImage || null,
-        notes: validated.notes || null,
-        items: {
-          create: await Promise.all(
-            validated.items.map(async (item) => {
-              const product = await db.product.findUnique({
-                where: { id: item.productId },
-              });
-              if (!product) throw new Error(`Product ${item.productId} not found`);
+    const order = await db.$transaction(async (tx) => {
+      const itemsData = await Promise.all(
+        validated.items.map(async (item) => {
+          const product = await tx.product.findUnique({
+            where: { id: item.productId },
+          });
+          if (!product) throw new Error(`Product ${item.productId} not found`);
+          if (product.stock < item.quantity) {
+            throw new Error(`Insufficient stock for ${product.name}`);
+          }
 
-              await db.product.update({
-                where: { id: item.productId },
-                data: { stock: { decrement: item.quantity } },
-              });
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { decrement: item.quantity } },
+          });
 
-              return {
-                productId: item.productId,
-                productName: product.name,
-                productPrice: product.price,
-                productCost: product.cost,
-                quantity: item.quantity,
-              };
-            })
-          ),
+          return {
+            productId: item.productId,
+            productName: product.name,
+            productPrice: product.price,
+            productCost: product.cost,
+            quantity: item.quantity,
+          };
+        })
+      );
+
+      return tx.order.create({
+        data: {
+          orderNumber,
+          customerEmail: validated.email,
+          customerFirstName: validated.firstName,
+          customerLastName: validated.lastName,
+          customerPhone: validated.phone || null,
+          subtotal: validated.subtotal,
+          tax: validated.tax,
+          total: validated.total,
+          paymentMethod: validated.paymentMethod,
+          paymentStatus: paymentTransactionId ? "COMPLETED" : isDeferredPayment ? "PENDING" : "COMPLETED",
+          receiptImage: validated.receiptImage || null,
+          notes: validated.notes || null,
+          items: {
+            create: itemsData,
+          },
         },
-      },
-      include: {
-        items: true,
-      },
+        include: {
+          items: true,
+        },
+      });
     });
 
     const emailTemplate = orderConfirmationEmail({
