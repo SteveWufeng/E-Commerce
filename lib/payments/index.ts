@@ -16,12 +16,10 @@
  * 3. Implement Stripe webhook handler in /api/payments/webhook
  */
 
-import type { PaymentMethod } from "@/types";
-
 export interface PaymentRequest {
   amount: number; // in cents
   currency: string;
-  method: PaymentMethod;
+  method: string;
   orderId: string;
   customerEmail: string;
 }
@@ -115,6 +113,6 @@ async function processStripePayment(
 /**
  * Validate that a payment method string is supported.
  */
-export function isValidPaymentMethod(method: string): method is PaymentMethod {
+export function isValidPaymentMethod(method: string): boolean {
   return ["CREDIT_CARD", "GOOGLE_PAY", "PAYPAL", "CASH_ON_PICKUP", "BANK_TRANSFER", "MERCANTIL"].includes(method);
 }
