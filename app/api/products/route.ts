@@ -23,6 +23,7 @@ const productSchema = z.object({
   comparePrice: z.number().positive().optional(),
   cost: z.number().positive().optional(),
   sku: z.string().optional(),
+  barcode: z.string().optional(),
   stock: z.number().int().min(0),
   categoryId: z.string().min(1),
   tags: z.array(z.string()).default([]),
@@ -35,6 +36,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("q");
+    const barcode = searchParams.get("barcode");
     const category = searchParams.get("category");
     const featured = searchParams.get("featured");
     const sort = searchParams.get("sort") || "createdAt";
@@ -43,11 +45,17 @@ export async function GET(request: NextRequest) {
 
     const where: Record<string, unknown> = { isActive: true };
 
+    if (barcode) {
+      where.barcode = barcode;
+      delete where.isActive;
+    }
+
     if (query) {
       where.OR = [
         { name: { contains: query, mode: "insensitive" } },
         { tags: { has: query } },
         { description: { contains: query, mode: "insensitive" } },
+        { barcode: { contains: query, mode: "insensitive" } },
       ];
     }
 
