@@ -459,6 +459,23 @@ async function main() {
   }
   console.log(`✅ ${slotCount} pickup slots created`);
 
+  // ── Default Payment Method Definitions ─────────────────────
+  const bankTransfer = await prisma.paymentMethodDefinition.upsert({
+    where: { name: "Bank Transfer" },
+    update: {},
+    create: {
+      name: "Bank Transfer",
+      description: "Pay via bank transfer. Upload your payment receipt after placing the order.",
+      isActive: true,
+      sortOrder: 1,
+      proofType: "IMAGE",
+      proofLabel: "Upload your payment receipt",
+      proofImageRequired: true,
+      requiresTransactionId: true,
+    },
+  });
+  console.log(`✅ Default payment method created: ${bankTransfer.name}`);
+
   console.log("🌱 Database seeded successfully!");
 }
 

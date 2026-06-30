@@ -92,8 +92,9 @@ export interface Order {
   subtotal: number;
   tax: number;
   total: number;
-  paymentMethod: PaymentMethod;
+  paymentMethod: string;
   paymentStatus: PaymentStatus;
+  paymentIntentId: string | null;
   cardLastFour: string | null;
   receiptImage: string | null;
   rejectionReason: string | null;
@@ -102,6 +103,8 @@ export interface Order {
   customerLastName: string;
   customerPhone: string | null;
   items: OrderItem[];
+  paymentProofs?: PaymentProof[];
+  paymentMethodDefinition?: PaymentMethodDefinition | null;
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -166,7 +169,47 @@ export interface PaginatedResponse<T> {
 }
 
 // ========================
-// Form Types
+// Payment Method Definition Types
+// ========================
+
+export type ProofType = "NONE" | "IMAGE" | "TEXT" | "IMAGE_AND_TEXT";
+
+export type ProofStatus = "PENDING" | "VERIFIED" | "REJECTED";
+
+export interface PaymentMethodDefinition {
+  id: string;
+  name: string;
+  description: string;
+  iconUrl: string | null;
+  qrCodeUrl: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  proofType: ProofType;
+  proofLabel: string | null;
+  proofImageRequired: boolean;
+  requiresTransactionId: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PaymentProof {
+  id: string;
+  orderId: string;
+  paymentMethodDefinitionId: string;
+  paymentMethodDefinition: PaymentMethodDefinition;
+  transactionId: string | null;
+  amount: number | null;
+  imageUrl: string | null;
+  notes: string | null;
+  status: ProofStatus;
+  verifiedById: string | null;
+  rejectionReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ========================
+// Checkout Types
 // ========================
 
 export interface CheckoutFormData {
@@ -174,8 +217,9 @@ export interface CheckoutFormData {
   lastName: string;
   email: string;
   phone: string;
-  paymentMethod: PaymentMethod;
+  paymentMethod: string;
   notes: string;
+  paymentMethodDefinitionId?: string;
 }
 
 export interface LoginForm {

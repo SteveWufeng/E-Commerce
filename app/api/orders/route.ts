@@ -23,7 +23,8 @@ const createOrderSchema = z.object({
       })
     )
     .min(1),
-  paymentMethod: z.enum(["CREDIT_CARD", "GOOGLE_PAY", "PAYPAL", "CASH_ON_PICKUP", "BANK_TRANSFER", "MERCANTIL"]),
+  paymentMethod: z.string().min(1),
+  paymentMethodDefinitionId: z.string().optional(),
   subtotal: z.number().positive(),
   tax: z.number().min(0),
   total: z.number().positive(),
@@ -31,6 +32,10 @@ const createOrderSchema = z.object({
   receiptImage: z.string().optional(),
   paymentTransactionId: z.string().optional(),
   cardLastFour: z.string().optional(),
+  proofTransactionId: z.string().optional(),
+  proofAmount: z.number().optional(),
+  proofImageUrl: z.string().optional(),
+  proofNotes: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -71,7 +76,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const isDeferredPayment = validated.paymentMethod === "BANK_TRANSFER" || validated.paymentMethod === "MERCANTIL";
+    const hasPaymentMethodDefinition = !!validated.paymentMethodDefinitionId;
+    const isDeferredPayment = hasPaymentMethodDefinition || validated.paymentMethod === "MERCANTIL";
     let paymentTransactionId: string | null = null;
     let mercantilRedirectUrl: string | undefined;
 
@@ -156,6 +162,20 @@ export async function POST(request: NextRequest) {
         })
       );
 
+      const proofData = hasPaymentMethodDefinition && validated.paymentMethodDefinitionId
+        ? {
+            paymentProofs: {
+              create: {
+                paymentMethodDefinitionId: validated.paymentMethodDefinitionId,
+                transactionId: validated.proofTransactionId || null,
+                amount: validated.proofAmount ? Number(validated.proofAmount) : null,
+                imageUrl: validated.proofImageUrl || null,
+                notes: validated.proofNotes || null,
+              },
+            },
+          }
+        : {};
+
       return tx.order.create({
         data: {
           orderNumber,
@@ -166,7 +186,9 @@ export async function POST(request: NextRequest) {
           subtotal: validated.subtotal,
           tax: validated.tax,
           total: validated.total,
-          paymentMethod: validated.paymentMethod,
+          paymentMethod: hasPaymentMethodDefinition
+            ? validated.paymentMethodDefinitionId!
+            : validated.paymentMethod,
           paymentStatus: paymentTransactionId ? "COMPLETED" : isDeferredPayment ? "PENDING" : "COMPLETED",
           paymentIntentId: paymentTransactionId,
           cardLastFour: validated.cardLastFour || null,
@@ -175,9 +197,13 @@ export async function POST(request: NextRequest) {
           items: {
             create: itemsData,
           },
+          ...proofData,
         },
         include: {
           items: true,
+          paymentProofs: {
+            include: { paymentMethodDefinition: true },
+          },
         },
       });
     });
@@ -191,7 +217,11 @@ export async function POST(request: NextRequest) {
         price: `$${Number(item.productPrice).toFixed(2)}`,
       })),
       total: `$${Number(order.total).toFixed(2)}`,
-      paymentMethod: isDeferredPayment ? (validated.paymentMethod === "MERCANTIL" ? "Mercantil Payment" : "Bank Transfer") : validated.paymentMethod.replace(/_/g, " "),
+      paymentMethod: hasPaymentMethodDefinition
+        ? (order.paymentProofs?.[0]?.paymentMethodDefinition?.name || "Custom Payment")
+        : isDeferredPayment
+          ? "Mercantil Payment"
+          : validated.paymentMethod.replace(/_/g, " "),
     });
     emailTemplate.to = validated.email;
     await sendEmail(emailTemplate);
@@ -267,6 +297,10 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           items: true,
+          paymentProofs: {
+            include: { paymentMethodDefinition: true },
+            orderBy: { createdAt: "desc" },
+          },
         },
       });
 
@@ -285,6 +319,10 @@ export async function GET(request: NextRequest) {
       where: isAdmin ? {} : { customerEmail: userEmail || "" },
       include: {
         items: true,
+        paymentProofs: {
+          include: { paymentMethodDefinition: true },
+          orderBy: { createdAt: "desc" },
+        },
       },
       orderBy: {
         createdAt: "desc",

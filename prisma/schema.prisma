@@ -28,6 +28,7 @@ model User {
 
   orders        Order[]
   cart          Cart?         // authenticated user's cart
+  verifiedProofs PaymentProof[] @relation("ProofVerifiedBy")
 
   @@index([email])
   @@index([role])
@@ -129,6 +130,62 @@ model CartItem {
   @@unique([cartId, productId])
 }
 
+model PaymentMethodDefinition {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  description     String
+  iconUrl         String?
+  qrCodeUrl       String?
+  isActive        Boolean   @default(true)
+  sortOrder       Int       @default(0)
+  proofType       ProofType @default(IMAGE)
+  proofLabel      String?
+  proofImageRequired Boolean @default(false)
+  requiresTransactionId Boolean @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  paymentProofs   PaymentProof[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model PaymentProof {
+  id                String      @id @default(cuid())
+  orderId           String
+  order             Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  paymentMethodDefinitionId String
+  paymentMethodDefinition   PaymentMethodDefinition @relation(fields: [paymentMethodDefinitionId], references: [id])
+  transactionId     String?
+  amount            Decimal?    @db.Decimal(10, 2)
+  imageUrl          String?
+  notes             String?
+  status            ProofStatus @default(PENDING)
+  verifiedById      String?
+  verifiedBy        User?       @relation("ProofVerifiedBy", fields: [verifiedById], references: [id])
+  rejectionReason   String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([orderId])
+  @@index([status])
+  @@index([paymentMethodDefinitionId])
+}
+
+enum ProofType {
+  NONE
+  IMAGE
+  TEXT
+  IMAGE_AND_TEXT
+}
+
+enum ProofStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
 model Order {
   id              String        @id @default(cuid())
   orderNumber     String        @unique // human-readable: ORD-20260404-0001
@@ -138,11 +195,11 @@ model Order {
   total           Decimal       @db.Decimal(10, 2)
 
   // Payment info
-  paymentMethod   PaymentMethod
+  paymentMethod   String        // Stores PaymentMethodDefinition ID or "MERCANTIL"
   paymentStatus   PaymentStatus @default(PENDING)
   paymentIntentId String?       // Stripe intent ID or Mercantil transaction ID
   cardLastFour    String?       // Last 4 digits of card used (Mercantil/TDC/TDD)
-  receiptImage    String?       // URL of bank transfer receipt uploaded by customer
+  receiptImage    String?       // URL of bank transfer receipt uploaded by customer (legacy)
   rejectionReason String?       // admin's reason if receipt is rejected
 
   // Customer info (snapshot at checkout — not FK to allow guest checkout)
@@ -155,6 +212,7 @@ model Order {
   user            User?         @relation(fields: [userId], references: [id])
 
   items           OrderItem[]
+  paymentProofs   PaymentProof[]
 
   notes           String?       // customer notes
   adminNotes      String?       // internal admin notes
@@ -273,7 +331,6 @@ model Settings {
   currencyCode        String   @default("USD")
   currencySymbol      String   @default("$")
   conversionRate      Float    @default(1)
-  bankTransferEnabled      Boolean  @default(false)
   mercantilRedirectEnabled Boolean  @default(false)
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
