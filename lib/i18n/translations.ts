@@ -294,7 +294,6 @@ export type TranslationKey =
   | "scanHistory"
   | "stockAdjustment"
   | "adjustStock"
-  | "productFound"
   | "productNotFound"
   | "startScanning"
   | "stopScanning"
@@ -596,7 +595,6 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     scanHistory: "Historial de Escaneo",
     stockAdjustment: "Ajuste de Stock",
     adjustStock: "Ajustar Stock",
-    productFound: "Producto encontrado",
     productNotFound: "Producto no encontrado",
     startScanning: "Iniciar Escáner",
     stopScanning: "Detener Escáner",
@@ -898,7 +896,6 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     scanHistory: "Scan History",
     stockAdjustment: "Stock Adjustment",
     adjustStock: "Adjust Stock",
-    productFound: "Product found",
     productNotFound: "Product not found",
     startScanning: "Start Scanner",
     stopScanning: "Stop Scanner",
