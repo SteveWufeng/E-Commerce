@@ -44,6 +44,7 @@ const updateProductSchema = z.object({
   comparePrice: z.number().positive().nullable().optional(),
   cost: z.number().positive().optional(),
   sku: z.string().optional(),
+  barcode: z.string().nullable().optional(),
   stock: z.number().int().min(0).optional(),
   categoryId: z.string().min(1).optional(),
   tags: z.array(z.string()).optional(),

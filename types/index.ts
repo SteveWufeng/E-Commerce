@@ -16,11 +16,16 @@ export interface Product {
   description: string | null;
   price: number;
   comparePrice: number | null;
+  cost: number | null;
+  sku: string | null;
+  barcode: string | null;
   stock: number;
+  lowStockThreshold: number;
   images: string[];
   tags: string[];
   isFeatured: boolean;
   isActive: boolean;
+  weight: number | null;
   category: Category | null;
   createdAt: Date;
   updatedAt: Date;

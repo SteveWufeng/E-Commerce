@@ -239,7 +239,33 @@ export type TranslationKey =
 
   // Currency display
   | "localCurrency"
-  | "usdEquivalent";
+  | "usdEquivalent"
+
+  // Barcode Scanner
+  | "barcode"
+  | "scanBarcode"
+  | "scanning"
+  | "scanProduct"
+  | "scanMode"
+  | "scannerMode"
+  | "barcodeScanner"
+  | "manualEntry"
+  | "scanFailed"
+  | "scanSuccess"
+  | "addStock"
+  | "removeStock"
+  | "viewEdit"
+  | "setPrice"
+  | "scanHistory"
+  | "stockAdjustment"
+  | "adjustStock"
+  | "productFound"
+  | "productNotFound"
+  | "startScanning"
+  | "stopScanning"
+  | "pointCameraAtBarcode"
+  | "scanComplete"
+  | "bulkOperations";
 
 export const translations: Record<Locale, Record<TranslationKey, string>> = {
   es: {
@@ -481,6 +507,32 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     // Currency display
     localCurrency: "Moneda Local",
     usdEquivalent: "Equivalente en USD",
+
+    // Barcode Scanner
+    barcode: "Código de Barras",
+    scanBarcode: "Escanear Código",
+    scanning: "Escaneando...",
+    scanProduct: "Escanear Producto",
+    scanMode: "Modo Escáner",
+    scannerMode: "Modo Escáner",
+    barcodeScanner: "Escáner de Código de Barras",
+    manualEntry: "Entrada Manual",
+    scanFailed: "Error al escanear",
+    scanSuccess: "Escaneo exitoso",
+    addStock: "Agregar Stock",
+    removeStock: "Quitar Stock",
+    viewEdit: "Ver/Editar",
+    setPrice: "Fijar Precio",
+    scanHistory: "Historial de Escaneo",
+    stockAdjustment: "Ajuste de Stock",
+    adjustStock: "Ajustar Stock",
+    productFound: "Producto encontrado",
+    productNotFound: "Producto no encontrado",
+    startScanning: "Iniciar Escáner",
+    stopScanning: "Detener Escáner",
+    pointCameraAtBarcode: "Apunte la cámara hacia un código de barras",
+    scanComplete: "Escaneo completado",
+    bulkOperations: "Operaciones Masivas",
   },
 
   en: {
@@ -722,5 +774,31 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     // Currency display
     localCurrency: "Local Currency",
     usdEquivalent: "USD Equivalent",
+
+    // Barcode Scanner
+    barcode: "Barcode",
+    scanBarcode: "Scan Barcode",
+    scanning: "Scanning...",
+    scanProduct: "Scan Product",
+    scanMode: "Scan Mode",
+    scannerMode: "Scanner Mode",
+    barcodeScanner: "Barcode Scanner",
+    manualEntry: "Manual Entry",
+    scanFailed: "Scan failed",
+    scanSuccess: "Scan successful",
+    addStock: "Add Stock",
+    removeStock: "Remove Stock",
+    viewEdit: "View/Edit",
+    setPrice: "Set Price",
+    scanHistory: "Scan History",
+    stockAdjustment: "Stock Adjustment",
+    adjustStock: "Adjust Stock",
+    productFound: "Product found",
+    productNotFound: "Product not found",
+    startScanning: "Start Scanner",
+    stopScanning: "Stop Scanner",
+    pointCameraAtBarcode: "Point camera at a barcode",
+    scanComplete: "Scan complete",
+    bulkOperations: "Bulk Operations",
   },
 };
