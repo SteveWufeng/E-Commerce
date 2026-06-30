@@ -10,6 +10,7 @@ import {
   Tags,
   Settings,
   Store,
+  CreditCard,
 } from "lucide-react";
 import { useLocale } from "@/hooks/use-locale";
 
@@ -30,6 +31,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     { href: "/admin/products", label: t("products"), icon: Package },
     { href: "/admin/orders", label: t("orders"), icon: ShoppingBag },
     { href: "/admin/categories", label: t("categories"), icon: Tags },
+    { href: "/admin/payment-methods", label: t("paymentMethods"), icon: CreditCard },
     { href: "/admin/settings", label: t("settings"), icon: Settings },
   ];
 

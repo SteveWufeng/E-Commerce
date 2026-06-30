@@ -15,6 +15,8 @@ export default function AdminOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [rejectOrderId, setRejectOrderId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [proofRejectId, setProofRejectId] = useState<string | null>(null);
+  const [proofRejectReason, setProofRejectReason] = useState("");
 
   useEffect(() => {
     async function loadOrders() {
@@ -73,6 +75,25 @@ export default function AdminOrdersPage() {
     await updateStatus(rejectOrderId, "REJECTED", { rejectionReason: rejectReason.trim() });
     setRejectOrderId(null);
     setRejectReason("");
+  }
+
+  async function refreshOrders() {
+    const res = await fetch("/api/orders?limit=100");
+    const data = await res.json();
+    setOrders(data.data || []);
+    setSelectedOrder(data.data?.find((o: any) => o.id === selectedOrder?.id) || null);
+  }
+
+  async function handleProofReject() {
+    if (!proofRejectId || !proofRejectReason.trim()) return;
+    await fetch(`/api/admin/proofs/${proofRejectId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "REJECTED", rejectionReason: proofRejectReason.trim() }),
+    });
+    setProofRejectId(null);
+    setProofRejectReason("");
+    await refreshOrders();
   }
 
   async function undoOrder(orderId: string) {
@@ -350,6 +371,75 @@ export default function AdminOrdersPage() {
                 </div>
               </div>
 
+              {selectedOrder.paymentProofs && selectedOrder.paymentProofs.length > 0 && selectedOrder.paymentProofs.map((proof: any) => (
+                <div key={proof.id} className="border-t pt-4">
+                  <p className="text-gray-500 text-sm mb-2">{t("proofDetails")}</p>
+                  <div className="space-y-2 text-sm">
+                    {proof.paymentMethodDefinition && (
+                      <p><span className="text-gray-500">{t("paymentMethod")}:</span> {proof.paymentMethodDefinition.name}</p>
+                    )}
+                    {proof.transactionId && (
+                      <p><span className="text-gray-500">{t("transactionId")}:</span> {proof.transactionId}</p>
+                    )}
+                    {proof.amount && (
+                      <p><span className="text-gray-500">{t("totalLabel")}:</span> ${Number(proof.amount).toFixed(2)}</p>
+                    )}
+                    {proof.notes && (
+                      <p><span className="text-gray-500">{t("proofNotes")}:</span> {proof.notes}</p>
+                    )}
+                    {proof.status && (
+                      <p>
+                        <span className="text-gray-500">{t("proofStatus")}:</span>{" "}
+                        <span className={`badge ${proof.status === "VERIFIED" ? "badge-success" : proof.status === "REJECTED" ? "badge-danger" : "badge-warning"}`}>
+                          {proof.status.toLowerCase()}
+                        </span>
+                      </p>
+                    )}
+                    {proof.imageUrl && (
+                      <div>
+                        <a
+                          href={proof.imageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary-600 hover:underline"
+                        >
+                          {t("proofImage")} →
+                        </a>
+                      </div>
+                    )}
+                    {proof.rejectionReason && (
+                      <div className="bg-red-50 rounded-lg p-3 mt-2">
+                        <p className="text-red-600 text-xs font-medium">{t("rejectionReasonLabel")}</p>
+                        <p className="text-sm">{proof.rejectionReason}</p>
+                      </div>
+                    )}
+                    {proof.status === "PENDING" && (
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={async () => {
+                            await fetch(`/api/admin/proofs/${proof.id}`, {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ status: "VERIFIED" }),
+                            });
+                            await refreshOrders();
+                          }}
+                          className="btn-primary text-xs py-1.5 px-3"
+                        >
+                          {t("verify")}
+                        </button>
+                        <button
+                          onClick={() => setProofRejectId(proof.id)}
+                          className="text-xs py-1.5 px-3 text-red-600 hover:text-red-700 border border-red-300 rounded-lg"
+                        >
+                          {t("reject")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+
               {selectedOrder.receiptImage && (
                 <div className="border-t pt-4">
                   <p className="text-gray-500 text-sm mb-2">{t("receiptImage")}</p>
@@ -402,6 +492,40 @@ export default function AdminOrdersPage() {
                   <p className="text-sm">{selectedOrder.notes}</p>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Proof Rejection Modal */}
+      {proofRejectId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+            <h2 className="text-lg font-semibold mb-2">{t("rejectionReasonLabel")}</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              {t("reject")}
+            </p>
+            <textarea
+              value={proofRejectReason}
+              onChange={(e) => setProofRejectReason(e.target.value)}
+              rows={4}
+              className="input w-full resize-none"
+              placeholder="The proof is invalid. Please submit a clearer image with the correct reference number."
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => { setProofRejectId(null); setProofRejectReason(""); }}
+                className="btn-secondary text-sm py-2 px-4"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={handleProofReject}
+                disabled={!proofRejectReason.trim()}
+                className="btn-primary text-sm py-2 px-4 bg-red-600 hover:bg-red-700"
+              >
+                {t("reject")}
+              </button>
             </div>
           </div>
         </div>

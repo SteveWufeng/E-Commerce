@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { useLocale } from "@/hooks/use-locale";
 
@@ -11,7 +12,6 @@ interface StoreSettings {
   currencyCode: string;
   currencySymbol: string;
   conversionRate: number;
-  bankTransferEnabled: boolean;
   mercantilRedirectEnabled: boolean;
 }
 
@@ -35,7 +35,6 @@ export default function AdminSettingsPage() {
     currencyCode: "USD",
     currencySymbol: "$",
     conversionRate: 1,
-    bankTransferEnabled: false,
     mercantilRedirectEnabled: false,
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -210,22 +209,17 @@ export default function AdminSettingsPage() {
                 onChange={(e) => setSettings({ ...settings, mercantilRedirectEnabled: e.target.checked })}
               />
             </label>
-            <label className="flex items-center justify-between p-3 rounded-lg border border-gray-200 cursor-pointer hover:border-gray-300">
-              <div>
-                <p className="text-sm font-medium text-gray-900">Bank Transfer</p>
-                <p className="text-xs text-gray-500">Receipt upload after ordering</p>
-              </div>
-              <input
-                type="checkbox"
-                className="w-5 h-5 accent-primary-500 rounded"
-                checked={settings.bankTransferEnabled}
-                onChange={(e) => setSettings({ ...settings, bankTransferEnabled: e.target.checked })}
-              />
-            </label>
+            <div className="p-3 rounded-lg border border-gray-200">
+              <p className="text-sm font-medium text-gray-900">
+                <Link href="/admin/payment-methods" className="text-primary-600 hover:underline">
+                  {t("paymentMethods")} →
+                </Link>
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Manage all payment methods including Bank Transfer from the payment methods section.
+              </p>
+            </div>
           </div>
-          <p className="mt-3 text-xs text-gray-500">
-            Mercantil is always available. Bank Transfer can be toggled for customers who prefer manual transfers.
-          </p>
         </div>
       </div>
 
