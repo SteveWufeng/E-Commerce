@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { useLocale } from "@/hooks/use-locale";
+import { Upload, X, ImageIcon } from "lucide-react";
 
 interface PaymentMethodForm {
   id?: string;
@@ -41,6 +42,10 @@ export default function AdminPaymentMethodsPage() {
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [uploadingIcon, setUploadingIcon] = useState(false);
+  const [uploadingQr, setUploadingQr] = useState(false);
+  const iconFileRef = useRef<HTMLInputElement>(null);
+  const qrFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadMethods();
@@ -142,6 +147,48 @@ export default function AdminPaymentMethodsPage() {
       await loadMethods();
     } catch (error) {
       console.error("Failed to toggle:", error);
+    }
+  }
+
+  async function handleIconUpload(file: File) {
+    if (!file.type.startsWith("image/")) return;
+    setUploadingIcon(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.success) {
+        if (form.iconUrl && form.iconUrl.startsWith("https://")) {
+          fetch("/api/upload", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: form.iconUrl }) }).catch(() => {});
+        }
+        setForm({ ...form, iconUrl: data.url });
+      }
+    } catch (e) {
+      console.error("Icon upload failed:", e);
+    } finally {
+      setUploadingIcon(false);
+    }
+  }
+
+  async function handleQrUpload(file: File) {
+    if (!file.type.startsWith("image/")) return;
+    setUploadingQr(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.success) {
+        if (form.qrCodeUrl && form.qrCodeUrl.startsWith("https://")) {
+          fetch("/api/upload", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: form.qrCodeUrl }) }).catch(() => {});
+        }
+        setForm({ ...form, qrCodeUrl: data.url });
+      }
+    } catch (e) {
+      console.error("QR upload failed:", e);
+    } finally {
+      setUploadingQr(false);
     }
   }
 
@@ -257,23 +304,111 @@ export default function AdminPaymentMethodsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="label">{t("paymentMethodIcon")}</label>
+                  {form.iconUrl ? (
+                    <div className="relative group aspect-video rounded-lg overflow-hidden border border-gray-200 bg-gray-50 mb-2">
+                      <img
+                        src={form.iconUrl}
+                        alt="Icon"
+                        className="w-full h-full object-contain p-2"
+                        onError={(e) => { (e.target as HTMLImageElement).src = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23f3f4f6' width='100' height='100'/><text x='50' y='55' text-anchor='middle' fill='%239ca3af' font-size='10'>Broken</text></svg>"; }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (form.iconUrl.startsWith("https://")) {
+                            fetch("/api/upload", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: form.iconUrl }) }).catch(() => {});
+                          }
+                          setForm({ ...form, iconUrl: "" });
+                        }}
+                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleIconUpload(f); }}
+                      onDragOver={(e) => e.preventDefault()}
+                      className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center text-gray-400 text-sm mb-2 cursor-pointer hover:border-primary-300 hover:bg-primary-50 transition-colors"
+                      onClick={() => iconFileRef.current?.click()}
+                    >
+                      <ImageIcon className="w-6 h-6 mx-auto mb-1" />
+                      {uploadingIcon ? "Uploading..." : "Drop or click to upload"}
+                    </div>
+                  )}
                   <input
-                    type="text"
-                    className="input"
-                    value={form.iconUrl}
-                    onChange={(e) => setForm({ ...form, iconUrl: e.target.value })}
-                    placeholder="https://..."
+                    ref={iconFileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingIcon}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleIconUpload(f); e.target.value = ""; }}
                   />
+                  {!form.iconUrl && (
+                    <button
+                      type="button"
+                      onClick={() => iconFileRef.current?.click()}
+                      disabled={uploadingIcon}
+                      className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
+                    >
+                      <Upload className="w-3 h-3" />
+                      {uploadingIcon ? "Uploading..." : "Upload Icon"}
+                    </button>
+                  )}
                 </div>
                 <div>
                   <label className="label">{t("paymentMethodQrCode")}</label>
+                  {form.qrCodeUrl ? (
+                    <div className="relative group aspect-video rounded-lg overflow-hidden border border-gray-200 bg-gray-50 mb-2">
+                      <img
+                        src={form.qrCodeUrl}
+                        alt="QR Code"
+                        className="w-full h-full object-contain p-2"
+                        onError={(e) => { (e.target as HTMLImageElement).src = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23f3f4f6' width='100' height='100'/><text x='50' y='55' text-anchor='middle' fill='%239ca3af' font-size='10'>Broken</text></svg>"; }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (form.qrCodeUrl.startsWith("https://")) {
+                            fetch("/api/upload", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: form.qrCodeUrl }) }).catch(() => {});
+                          }
+                          setForm({ ...form, qrCodeUrl: "" });
+                        }}
+                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleQrUpload(f); }}
+                      onDragOver={(e) => e.preventDefault()}
+                      className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center text-gray-400 text-sm mb-2 cursor-pointer hover:border-primary-300 hover:bg-primary-50 transition-colors"
+                      onClick={() => qrFileRef.current?.click()}
+                    >
+                      <ImageIcon className="w-6 h-6 mx-auto mb-1" />
+                      {uploadingQr ? "Uploading..." : "Drop or click to upload"}
+                    </div>
+                  )}
                   <input
-                    type="text"
-                    className="input"
-                    value={form.qrCodeUrl}
-                    onChange={(e) => setForm({ ...form, qrCodeUrl: e.target.value })}
-                    placeholder="https://..."
+                    ref={qrFileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingQr}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleQrUpload(f); e.target.value = ""; }}
                   />
+                  {!form.qrCodeUrl && (
+                    <button
+                      type="button"
+                      onClick={() => qrFileRef.current?.click()}
+                      disabled={uploadingQr}
+                      className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
+                    >
+                      <Upload className="w-3 h-3" />
+                      {uploadingQr ? "Uploading..." : "Upload QR Code"}
+                    </button>
+                  )}
                 </div>
               </div>
 

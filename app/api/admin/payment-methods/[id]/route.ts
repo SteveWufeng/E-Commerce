@@ -4,6 +4,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/session";
 import db from "@/lib/db";
 import { z } from "zod";
+import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
+
+const R2 = new S3Client({
+  region: "auto",
+  endpoint: process.env.R2_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+  },
+});
+
+const BUCKET = process.env.R2_BUCKET_NAME || "ecommerce";
+const PUBLIC_URL = process.env.R2_PUBLIC_URL || "";
+
+async function deleteR2File(url: string | null | undefined) {
+  if (!url || !url.startsWith(PUBLIC_URL)) return;
+  const key = url.replace(PUBLIC_URL + "/", "");
+  if (!key) return;
+  try {
+    await R2.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
+  } catch {
+    // Non-critical
+  }
+}
 
 const updateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -31,6 +55,19 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     const validated = updateSchema.parse(body);
+
+    if (validated.iconUrl !== undefined || validated.qrCodeUrl !== undefined) {
+      const existing = await db.paymentMethodDefinition.findUnique({
+        where: { id },
+        select: { iconUrl: true, qrCodeUrl: true },
+      });
+      if (existing) {
+        await Promise.all([
+          validated.iconUrl !== undefined && deleteR2File(existing.iconUrl),
+          validated.qrCodeUrl !== undefined && deleteR2File(existing.qrCodeUrl),
+        ]);
+      }
+    }
 
     const method = await db.paymentMethodDefinition.update({
       where: { id },
@@ -77,7 +114,16 @@ export async function DELETE(
       );
     }
 
+    const method = await db.paymentMethodDefinition.findUnique({
+      where: { id },
+      select: { iconUrl: true, qrCodeUrl: true },
+    });
+
     await db.paymentMethodDefinition.delete({ where: { id } });
+
+    if (method) {
+      await Promise.all([deleteR2File(method.iconUrl), deleteR2File(method.qrCodeUrl)]);
+    }
 
     return NextResponse.json({ success: true, message: "Payment method deleted" });
   } catch (error) {
