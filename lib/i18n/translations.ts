@@ -237,6 +237,43 @@ export type TranslationKey =
   | "paymentNoticeDescription"
   | "paymentNoticeAction"
 
+  // Payment Methods Admin
+  | "addPaymentMethod"
+  | "editPaymentMethod"
+  | "paymentMethodName"
+  | "paymentMethodDescription"
+  | "paymentMethodIcon"
+  | "paymentMethodQrCode"
+  | "proofType"
+  | "proofLabel"
+  | "proofImageRequired"
+  | "requiresTransactionId"
+  | "sortOrder"
+  | "confirmDeletePaymentMethod"
+  | "deletePaymentMethodBlocked"
+  | "noPaymentMethods"
+  | "active"
+  | "inactive"
+  | "paymentMethodSaved"
+  | "paymentMethodDeleted"
+  | "paymentMethodsDescription"
+  | "proofDetails"
+  | "verifyProof"
+  | "proofVerified"
+  | "proofRejected"
+  | "proofStatus"
+  | "noProofRequired"
+  | "uploadProof"
+  | "updateProof"
+  | "proofImage"
+  | "proofNotes"
+  | "transactionId"
+  | "paymentProof"
+  | "proofSubmittedAwaiting"
+  | "proofRejectedMessage"
+  | "verify"
+  | "paymentInfo"
+
   // Currency display
   | "localCurrency"
   | "usdEquivalent"
@@ -504,6 +541,43 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     paymentNoticeDescription: "Su pedido NO se procesará hasta que realice el pago mediante transferencia bancaria y suba el comprobante de pago.",
     paymentNoticeAction: "Use el botón de abajo para subir el comprobante de su transferencia.",
 
+    // Payment Methods Admin
+    addPaymentMethod: "Añadir Método de Pago",
+    editPaymentMethod: "Editar Método de Pago",
+    paymentMethodName: "Nombre del Método",
+    paymentMethodDescription: "Descripción",
+    paymentMethodIcon: "URL del Icono",
+    paymentMethodQrCode: "URL del Código QR",
+    proofType: "Tipo de Comprobante",
+    proofLabel: "Etiqueta del Comprobante",
+    proofImageRequired: "Requiere imagen de comprobante",
+    requiresTransactionId: "Requiere ID de transacción",
+    sortOrder: "Orden",
+    confirmDeletePaymentMethod: "¿Está seguro de que desea eliminar este método de pago?",
+    deletePaymentMethodBlocked: "No se puede eliminar porque hay pedidos que lo referencian.",
+    noPaymentMethods: "Aún no hay métodos de pago. ¡Añada su primer método!",
+    active: "Activo",
+    inactive: "Inactivo",
+    paymentMethodSaved: "Método de pago guardado",
+    paymentMethodDeleted: "Método de pago eliminado",
+    paymentMethodsDescription: "Configure los métodos de pago disponibles para sus clientes.",
+    proofDetails: "Detalles del Comprobante",
+    verifyProof: "Verificar Comprobante",
+    proofVerified: "Comprobante Verificado",
+    proofRejected: "Comprobante Rechazado",
+    proofStatus: "Estado del Comprobante",
+    noProofRequired: "No requiere comprobante",
+    uploadProof: "Subir Comprobante de Pago",
+    updateProof: "Actualizar Comprobante",
+    proofImage: "Imagen del Comprobante",
+    proofNotes: "Notas del Comprobante",
+    transactionId: "ID de Transacción",
+    paymentProof: "Comprobante de Pago",
+    proofSubmittedAwaiting: "Comprobante enviado — esperando confirmación del administrador.",
+    proofRejectedMessage: "Comprobante Rechazado",
+    verify: "Verificar",
+    paymentInfo: "Información de Pago",
+
     // Currency display
     localCurrency: "Moneda Local",
     usdEquivalent: "Equivalente en USD",
@@ -770,6 +844,43 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     paymentNoticeTitle: "⏳ Payment Pending",
     paymentNoticeDescription: "Your order will NOT be processed until you complete the bank transfer and upload the payment receipt.",
     paymentNoticeAction: "Use the button below to upload your transfer receipt.",
+
+    // Payment Methods Admin
+    addPaymentMethod: "Add Payment Method",
+    editPaymentMethod: "Edit Payment Method",
+    paymentMethodName: "Method Name",
+    paymentMethodDescription: "Description",
+    paymentMethodIcon: "Icon URL",
+    paymentMethodQrCode: "QR Code URL",
+    proofType: "Proof Type",
+    proofLabel: "Proof Label",
+    proofImageRequired: "Requires proof image",
+    requiresTransactionId: "Requires transaction ID",
+    sortOrder: "Sort Order",
+    confirmDeletePaymentMethod: "Are you sure you want to delete this payment method?",
+    deletePaymentMethodBlocked: "Cannot delete because orders reference this payment method.",
+    noPaymentMethods: "No payment methods yet. Add your first method!",
+    active: "Active",
+    inactive: "Inactive",
+    paymentMethodSaved: "Payment method saved",
+    paymentMethodDeleted: "Payment method deleted",
+    paymentMethodsDescription: "Configure the payment methods available to your customers.",
+    proofDetails: "Proof Details",
+    verifyProof: "Verify Proof",
+    proofVerified: "Proof Verified",
+    proofRejected: "Proof Rejected",
+    proofStatus: "Proof Status",
+    noProofRequired: "No proof required",
+    uploadProof: "Upload Payment Proof",
+    updateProof: "Update Proof",
+    proofImage: "Proof Image",
+    proofNotes: "Proof Notes",
+    transactionId: "Transaction ID",
+    paymentProof: "Payment Proof",
+    proofSubmittedAwaiting: "Proof submitted — awaiting admin confirmation.",
+    proofRejectedMessage: "Proof Rejected",
+    verify: "Verify",
+    paymentInfo: "Payment Info",
 
     // Currency display
     localCurrency: "Local Currency",

@@ -9,8 +9,22 @@ import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { OrderSummary } from "@/components/checkout/order-summary";
 import { useLocale } from "@/hooks/use-locale";
 
-type PaymentOption = "BANK_TRANSFER" | "MERCANTIL";
+type PaymentOption = "MERCANTIL" | "CUSTOM";
 type CardType = "tdc" | "tdd";
+
+interface PaymentMethodDefinition {
+  id: string;
+  name: string;
+  description: string;
+  iconUrl: string | null;
+  qrCodeUrl: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  proofType: string;
+  proofLabel: string | null;
+  proofImageRequired: boolean;
+  requiresTransactionId: boolean;
+}
 
 interface CardFormData {
   cardNumber: string;
@@ -51,11 +65,14 @@ export default function CheckoutPage() {
     email: string;
     phone: string;
   } | null>(null);
-  const [bankTransferEnabled, setBankTransferEnabled] = useState(false);
   const [currencySymbol, setCurrencySymbol] = useState("$");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentOption>("MERCANTIL");
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [paymentOption, setPaymentOption] = useState<PaymentOption>("MERCANTIL");
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethodDefinition | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodDefinition[]>([]);
+  const [transactionId, setTransactionId] = useState("");
+  const [proofNotes, setProofNotes] = useState("");
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
 
   const [showingCard, setShowingCard] = useState(false);
   const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null);
@@ -78,17 +95,22 @@ export default function CheckoutPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [sessionRes, settingsRes] = await Promise.all([
+        const [sessionRes, settingsRes, methodsRes] = await Promise.all([
           fetch("/api/auth/session"),
           fetch("/api/settings"),
+          fetch("/api/payment-methods"),
         ]);
 
         const settingsData = await settingsRes.json();
         if (settingsData.data) {
-          setBankTransferEnabled(settingsData.data.bankTransferEnabled);
           if (settingsData.data.currencySymbol) {
             setCurrencySymbol(settingsData.data.currencySymbol);
           }
+        }
+
+        const methodsData = await methodsRes.json();
+        if (methodsData.data) {
+          setPaymentMethods(methodsData.data);
         }
 
         const sessionData = await sessionRes.json();
@@ -112,12 +134,12 @@ export default function CheckoutPage() {
     loadData();
   }, []);
 
-  function handleReceiptUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleProofUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
-      setReceiptFile(file);
+      setProofFile(file);
       const reader = new FileReader();
-      reader.onload = () => setReceiptPreview(reader.result as string);
+      reader.onload = () => setProofPreview(reader.result as string);
       reader.readAsDataURL(file);
     }
   }
@@ -131,17 +153,17 @@ export default function CheckoutPage() {
   }) {
     setError(null);
 
-    if (paymentMethod === "BANK_TRANSFER") {
+    if (paymentOption === "CUSTOM" && selectedMethod) {
       setIsProcessing(true);
       try {
-        let receiptImage: string | undefined;
-        if (receiptFile) {
+        let proofImageUrl: string | undefined;
+        if (proofFile) {
           const fd = new FormData();
-          fd.append("file", receiptFile);
+          fd.append("file", proofFile);
           const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
           const uploadData = await uploadRes.json();
-          if (!uploadRes.ok) throw new Error(uploadData.error || "Failed to upload receipt");
-          receiptImage = uploadData.url;
+          if (!uploadRes.ok) throw new Error(uploadData.error || "Failed to upload proof");
+          proofImageUrl = uploadData.url;
         }
 
         const response = await fetch("/api/orders", {
@@ -153,11 +175,14 @@ export default function CheckoutPage() {
               productId: item.productId,
               quantity: item.quantity,
             })),
-            paymentMethod,
+            paymentMethod: selectedMethod.name,
+            paymentMethodDefinitionId: selectedMethod.id,
             subtotal: Math.max(0.01, subtotal),
             tax: Math.max(0, tax),
             total: Math.max(0.01, total),
-            ...(receiptImage ? { receiptImage } : {}),
+            ...(proofImageUrl ? { proofImageUrl } : {}),
+            ...(transactionId ? { proofTransactionId: transactionId } : {}),
+            ...(proofNotes ? { proofNotes } : {}),
           }),
         });
 
@@ -165,7 +190,6 @@ export default function CheckoutPage() {
         if (!response.ok) throw new Error(result.error || "Failed to place order");
 
         clearCart();
-
         const email = encodeURIComponent(formData.email);
         router.push(`/orders/${result.data.orderId}?orderNumber=${result.data.orderNumber}&email=${email}`);
       } catch (err) {
@@ -343,6 +367,10 @@ export default function CheckoutPage() {
     }
   }
 
+  function hasProofRequired(method: PaymentMethodDefinition): boolean {
+    return method.proofType !== "NONE";
+  }
+
   if (items.length === 0 && !showingCard) return null;
 
   if (showingCard) {
@@ -510,19 +538,23 @@ export default function CheckoutPage() {
               </h2>
 
               <div className="space-y-3">
+                {/* Mercantil — always available */}
                 <label
                   className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                    paymentMethod === "MERCANTIL"
+                    paymentOption === "MERCANTIL"
                       ? "border-primary-500 bg-primary-50"
                       : "border-gray-200 hover:border-gray-300"
                   }`}
                 >
                   <input
                     type="radio"
-                    name="paymentMethod"
+                    name="paymentOption"
                     value="MERCANTIL"
-                    checked={paymentMethod === "MERCANTIL"}
-                    onChange={() => setPaymentMethod("MERCANTIL")}
+                    checked={paymentOption === "MERCANTIL"}
+                    onChange={() => {
+                      setPaymentOption("MERCANTIL");
+                      setSelectedMethod(null);
+                    }}
                     className="accent-primary-500"
                   />
                   <span className="text-xl">
@@ -534,49 +566,103 @@ export default function CheckoutPage() {
                   </div>
                 </label>
 
-                {bankTransferEnabled && (
+                {/* Dynamic payment methods */}
+                {paymentMethods.map((method) => (
                   <label
+                    key={method.id}
                     className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                      paymentMethod === "BANK_TRANSFER"
+                      paymentOption === "CUSTOM" && selectedMethod?.id === method.id
                         ? "border-primary-500 bg-primary-50"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
                     <input
                       type="radio"
-                      name="paymentMethod"
-                      value="BANK_TRANSFER"
-                      checked={paymentMethod === "BANK_TRANSFER"}
-                      onChange={() => setPaymentMethod("BANK_TRANSFER")}
+                      name="paymentOption"
+                      value={method.id}
+                      checked={paymentOption === "CUSTOM" && selectedMethod?.id === method.id}
+                      onChange={() => {
+                        setPaymentOption("CUSTOM");
+                        setSelectedMethod(method);
+                      }}
                       className="accent-primary-500"
                     />
-                    <span className="text-xl">🏦</span>
+                    {method.iconUrl ? (
+                      <img src={method.iconUrl} alt={method.name} className="w-8 h-8 object-contain" />
+                    ) : (
+                      <span className="text-xl">🏦</span>
+                    )}
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{t("bankTransfer")}</p>
-                      <p className="text-xs text-gray-500 mt-1">{t("payViaBankTransfer")}</p>
+                      <p className="text-sm font-medium text-gray-900">{method.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">{method.description}</p>
                     </div>
                   </label>
-                )}
+                ))}
               </div>
 
-              {paymentMethod === "BANK_TRANSFER" && (
-                <div className="mt-4">
-                  <label className="label">{t("uploadReceiptOptional")}</label>
-                  <div className="mt-2 flex items-center gap-4">
-                    <label className="cursor-pointer btn-secondary text-sm py-2 px-4 rounded-lg">
-                      {t("chooseFile")}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleReceiptUpload}
-                        className="hidden"
+              {/* Proof submission for custom payment methods */}
+              {paymentOption === "CUSTOM" && selectedMethod && hasProofRequired(selectedMethod) && (
+                <div className="mt-4 space-y-4">
+                  {selectedMethod.qrCodeUrl && (
+                    <div className="flex justify-center">
+                      <img
+                        src={selectedMethod.qrCodeUrl}
+                        alt={`${selectedMethod.name} QR`}
+                        className="w-48 h-48 object-contain"
                       />
-                    </label>
-                    {receiptFile && (
-                      <span className="text-sm text-gray-600">{receiptFile.name}</span>
-                    )}
-                  </div>
-                  <p className="mt-2 text-xs text-gray-400">{t("uploadLaterHint")}</p>
+                    </div>
+                  )}
+
+                  {selectedMethod.requiresTransactionId && (
+                    <div>
+                      <label className="label">{t("transactionId")}</label>
+                      <input
+                        type="text"
+                        className="input"
+                        value={transactionId}
+                        onChange={(e) => setTransactionId(e.target.value)}
+                        placeholder="Transaction reference number"
+                      />
+                    </div>
+                  )}
+
+                  {(selectedMethod.proofType === "IMAGE" || selectedMethod.proofType === "IMAGE_AND_TEXT") && (
+                    <div>
+                      <label className="label">
+                        {selectedMethod.proofLabel || t("uploadProof")}
+                        {selectedMethod.proofImageRequired ? "" : ` (${t("uploadReceiptOptional")})`}
+                      </label>
+                      <div className="mt-2 flex items-center gap-4">
+                        <label className="cursor-pointer btn-secondary text-sm py-2 px-4 rounded-lg">
+                          {t("chooseFile")}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleProofUpload}
+                            className="hidden"
+                          />
+                        </label>
+                        {proofFile && (
+                          <span className="text-sm text-gray-600">{proofFile.name}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {(selectedMethod.proofType === "TEXT" || selectedMethod.proofType === "IMAGE_AND_TEXT") && (
+                    <div>
+                      <label className="label">{t("proofNotes")}</label>
+                      <textarea
+                        className="input resize-none"
+                        rows={3}
+                        value={proofNotes}
+                        onChange={(e) => setProofNotes(e.target.value)}
+                        placeholder="Enter payment reference or notes..."
+                      />
+                    </div>
+                  )}
+
+                  <p className="text-xs text-gray-400">{t("uploadLaterHint")}</p>
                 </div>
               )}
             </div>

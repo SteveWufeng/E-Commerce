@@ -19,12 +19,16 @@ export default function OrderDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [proofTransactionId, setProofTransactionId] = useState("");
+  const [proofNotes, setProofNotes] = useState("");
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
   const isOwner = !!(currentUserEmail && order && currentUserEmail === order.customerEmail);
+  const isCustomPayment = order?.paymentMethod !== "MERCANTIL";
+  const latestProof = order?.paymentProofs?.[0] || null;
 
   useEffect(() => {
     async function loadOrder() {
@@ -69,35 +73,49 @@ export default function OrderDetailPage() {
     loadSession();
   }, [orderId, email]);
 
-  async function handleUploadReceipt() {
-    if (!receiptFile || !order) return;
+  async function handleUploadProof() {
+    if (!proofFile || !order) return;
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", receiptFile);
-      const uploadRes = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const uploadData = await uploadRes.json();
-      if (!uploadRes.ok) throw new Error(uploadData.error || "Failed to upload receipt");
+      let imageUrl: string | undefined;
+      if (proofFile) {
+        const formData = new FormData();
+        formData.append("file", proofFile);
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadData.error || "Failed to upload proof");
+        imageUrl = uploadData.url;
+      }
 
-      const res = await fetch(`/api/orders/${order.id}/receipt`, {
+      const body: Record<string, any> = {
+        orderId: order.id,
+        paymentMethodDefinitionId: latestProof?.paymentMethodDefinitionId || order.paymentMethod,
+      };
+      if (imageUrl) body.imageUrl = imageUrl;
+      if (proofTransactionId) body.transactionId = proofTransactionId;
+      if (proofNotes) body.notes = proofNotes;
+
+      const res = await fetch(`/api/proofs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ receiptImage: uploadData.url }),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save receipt");
+      if (!res.ok) throw new Error(data.error || "Failed to save proof");
 
-      setOrder(data.data);
-      setReceiptFile(null);
-      setReceiptPreview(null);
+      setOrder((prev) => prev ? { ...prev, paymentProofs: data.data.paymentProofs } : prev);
+      setProofFile(null);
+      setProofPreview(null);
+      setProofTransactionId("");
+      setProofNotes("");
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload receipt");
+      setError(err instanceof Error ? err.message : "Failed to upload proof");
     } finally {
       setUploading(false);
     }
@@ -166,6 +184,10 @@ export default function OrderDetailPage() {
     );
   }
 
+  const proofStatus = latestProof?.status;
+  const needsProof = isCustomPayment && (!latestProof || proofStatus === "REJECTED");
+  const canSubmitProof = isOwner && needsProof;
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -209,7 +231,9 @@ export default function OrderDetailPage() {
             )}
             <div>
               <p className="text-gray-500">{t("paymentMethod")}</p>
-              <p className="font-medium">{order.paymentMethod.replace(/_/g, " ")}</p>
+              <p className="font-medium">
+                {latestProof?.paymentMethodDefinition?.name || order.paymentMethod.replace(/_/g, " ")}
+              </p>
             </div>
             {order.cardLastFour && (
               <div>
@@ -220,8 +244,8 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        {/* Payment Notice — Bank Transfer, not yet paid */}
-        {order.paymentMethod === "BANK_TRANSFER" && order.status === "PENDING" && (
+        {/* Payment Notice — Custom payment method, not yet verified */}
+        {isCustomPayment && !latestProof && order.status === "PENDING" && (
           <div className="card mb-6 border-2 border-amber-300 bg-amber-50">
             <div className="flex items-start gap-4">
               <span className="text-3xl">🏦</span>
@@ -234,108 +258,175 @@ export default function OrderDetailPage() {
           </div>
         )}
 
-        {/* Rejection Notice */}
-        {order.status === "REJECTED" && order.rejectionReason && (
+        {/* Proof Rejection Notice */}
+        {latestProof?.status === "REJECTED" && latestProof.rejectionReason && (
           <div className="card mb-6 border-2 border-red-300 bg-red-50">
-            <h2 className="text-lg font-semibold text-red-700 mb-2">{t("receiptRejected")}</h2>
-            <p className="text-sm text-red-600 mb-3">{order.rejectionReason}</p>
+            <h2 className="text-lg font-semibold text-red-700 mb-2">{t("proofRejectedMessage")}</h2>
+            <p className="text-sm text-red-600 mb-3">{latestProof.rejectionReason}</p>
             <p className="text-sm text-gray-600">
               {t("uploadReceiptPrompt")}
             </p>
           </div>
         )}
 
-        {/* Receipt Upload Section — Bank Transfer Only, owner only */}
-        {order.paymentMethod === "BANK_TRANSFER" && isOwner && (
-          <div className={`card mb-6 ${order.receiptImage && (order.status === "PENDING" || order.status === "CONFIRMED") ? "border-2 border-dashed border-primary-300 bg-primary-50/50" : order.status === "REJECTED" ? "border-2 border-red-300 bg-red-50" : "border-2 border-dashed border-primary-300 bg-primary-50/50"}`}>
+        {/* Proof Section — Custom payment methods, owner only */}
+        {isCustomPayment && isOwner && (
+          <div className={`card mb-6 ${latestProof?.status === "VERIFIED" ? "border-2 border-green-300 bg-green-50" : latestProof?.status === "REJECTED" ? "border-2 border-red-300 bg-red-50" : "border-2 border-dashed border-primary-300 bg-primary-50/50"}`}>
             <h2 className="text-lg font-semibold mb-2">
-              {order.status === "REJECTED"
-              ? t("uploadReceiptButton")
-              : order.receiptImage
-                ? t("updateReceipt")
-                : t("uploadReceiptButton")}
+              {latestProof?.status === "VERIFIED"
+                ? t("paymentProof")
+                : latestProof?.status === "REJECTED"
+                  ? t("updateProof")
+                  : t("uploadProof")}
             </h2>
 
-            {/* Show current receipt if exists */}
-            {order.receiptImage && (
-              <div className="relative w-full max-w-sm aspect-[4/3] rounded-lg overflow-hidden border mb-4">
-                <Image
-                  src={order.receiptImage}
-                  alt="Payment receipt"
-                  fill
-                  className="object-contain"
-                />
+            {/* Show existing proof details */}
+            {latestProof && (
+              <div className="space-y-3 mb-4">
+                {latestProof.paymentMethodDefinition?.qrCodeUrl && (
+                  <div className="flex justify-center">
+                    <img
+                      src={latestProof.paymentMethodDefinition.qrCodeUrl}
+                      alt="QR"
+                      className="w-32 h-32 object-contain"
+                    />
+                  </div>
+                )}
+                {latestProof.imageUrl && (
+                  <div className="relative w-full max-w-sm aspect-[4/3] rounded-lg overflow-hidden border">
+                    <Image
+                      src={latestProof.imageUrl}
+                      alt="Payment proof"
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                )}
+                {latestProof.transactionId && (
+                  <p className="text-sm"><span className="text-gray-500">{t("transactionId")}:</span> {latestProof.transactionId}</p>
+                )}
+                {latestProof.notes && (
+                  <p className="text-sm"><span className="text-gray-500">{t("proofNotes")}:</span> {latestProof.notes}</p>
+                )}
+                {latestProof.status && (
+                  <p className="text-sm">
+                    <span className="text-gray-500">{t("proofStatus")}:</span>{" "}
+                    <span className={`badge ${latestProof.status === "VERIFIED" ? "badge-success" : latestProof.status === "REJECTED" ? "badge-danger" : "badge-warning"}`}>
+                      {latestProof.status.toLowerCase()}
+                    </span>
+                  </p>
+                )}
               </div>
             )}
 
-            <p className="text-sm text-gray-600 mb-4">
-              {order.status === "REJECTED"
-                ? t("uploadReceiptPrompt")
-                : t("uploadReceiptPrompt")}
-            </p>
+            {canSubmitProof && (
+              <>
+                {latestProof?.paymentMethodDefinition?.requiresTransactionId && (
+                  <div className="mb-3">
+                    <label className="label">{t("transactionId")}</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={proofTransactionId}
+                      onChange={(e) => setProofTransactionId(e.target.value)}
+                      placeholder="Reference number"
+                    />
+                  </div>
+                )}
 
-            <div className="flex items-center gap-4 flex-wrap">
-              <label className="cursor-pointer btn-secondary text-sm py-2 px-4 rounded-lg">
-                {t("chooseFile")}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setReceiptFile(file);
-                      const reader = new FileReader();
-                      reader.onload = () => setReceiptPreview(reader.result as string);
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                  className="hidden"
-                />
-              </label>
-              {receiptFile && (
-                <>
-                  <span className="text-sm text-gray-600">{receiptFile.name}</span>
-                  <button
-                    onClick={handleUploadReceipt}
-                    disabled={uploading}
-                    className="btn-primary text-sm py-2 px-4"
-                  >
-                    {uploading ? t("uploadReceiptButton") : order.receiptImage ? t("updateReceiptButton") : t("uploadReceiptButton")}
-                  </button>
-                </>
-              )}
-            </div>
-            {receiptPreview && (
-              <div className="mt-3 relative w-48 h-48 rounded-lg overflow-hidden border">
-                <Image
-                  src={receiptPreview}
-                  alt="Receipt preview"
-                  fill
-                  className="object-cover"
-                />
-              </div>
+                {(!latestProof?.paymentMethodDefinition?.proofType || latestProof.paymentMethodDefinition.proofType === "IMAGE" || latestProof.paymentMethodDefinition.proofType === "IMAGE_AND_TEXT") && (
+                  <div className="mb-3">
+                    <label className="label">
+                      {latestProof?.paymentMethodDefinition?.proofLabel || t("proofImage")}
+                    </label>
+                    <div className="mt-2 flex items-center gap-4">
+                      <label className="cursor-pointer btn-secondary text-sm py-2 px-4 rounded-lg">
+                        {t("chooseFile")}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setProofFile(file);
+                              const reader = new FileReader();
+                              reader.onload = () => setProofPreview(reader.result as string);
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          className="hidden"
+                        />
+                      </label>
+                      {proofFile && (
+                        <span className="text-sm text-gray-600">{proofFile.name}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {(latestProof?.paymentMethodDefinition?.proofType === "TEXT" || latestProof?.paymentMethodDefinition?.proofType === "IMAGE_AND_TEXT") && (
+                  <div className="mb-3">
+                    <label className="label">{t("proofNotes")}</label>
+                    <textarea
+                      className="input resize-none"
+                      rows={3}
+                      value={proofNotes}
+                      onChange={(e) => setProofNotes(e.target.value)}
+                      placeholder="Enter payment details..."
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-center gap-4 flex-wrap">
+                  {proofFile && (
+                    <>
+                      <button
+                        onClick={handleUploadProof}
+                        disabled={uploading}
+                        className="btn-primary text-sm py-2 px-4"
+                      >
+                        {uploading ? t("uploadReceiptButton") : latestProof ? t("updateProof") : t("uploadProof")}
+                      </button>
+                    </>
+                  )}
+                </div>
+                {proofPreview && (
+                  <div className="mt-3 relative w-48 h-48 rounded-lg overflow-hidden border">
+                    <Image
+                      src={proofPreview}
+                      alt="Proof preview"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+              </>
             )}
+
             {error && (
               <p className="mt-2 text-sm text-red-600">{error}</p>
             )}
           </div>
         )}
 
-        {/* Show uploaded receipt for non-owners */}
-        {order.receiptImage && !isOwner && (
+        {/* Show proof for non-owners */}
+        {latestProof?.imageUrl && !isOwner && (
           <div className="card mb-6">
-            <h2 className="text-lg font-semibold mb-4">{t("paymentReceipt")}</h2>
+            <h2 className="text-lg font-semibold mb-4">{t("paymentProof")}</h2>
             <div className="relative w-full max-w-sm aspect-[4/3] rounded-lg overflow-hidden border">
               <Image
-                src={order.receiptImage}
-                alt={t("paymentReceipt")}
+                src={latestProof.imageUrl}
+                alt={t("paymentProof")}
                 fill
                 className="object-contain"
               />
             </div>
-            <p className="mt-2 text-xs text-gray-400">
-              {t("receiptUploadedAwaiting")}
-            </p>
+            {latestProof.status === "PENDING" && (
+              <p className="mt-2 text-xs text-gray-400">{t("proofSubmittedAwaiting")}</p>
+            )}
+            {latestProof.status === "VERIFIED" && (
+              <p className="mt-2 text-xs text-green-600">✓ {t("proofVerified")}</p>
+            )}
           </div>
         )}
 

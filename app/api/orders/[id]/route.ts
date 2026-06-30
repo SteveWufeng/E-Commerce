@@ -80,7 +80,13 @@ export async function PUT(
       const order = await db.order.update({
         where: { id },
         data: updateData,
-        include: { items: true },
+        include: {
+          items: true,
+          paymentProofs: {
+            include: { paymentMethodDefinition: true },
+            orderBy: { createdAt: "desc" },
+          },
+        },
       });
 
       // Send email notifications on status changes
@@ -158,7 +164,13 @@ export async function PUT(
       const updated = await db.order.update({
         where: { id },
         data: { status: "CANCELLED" },
-        include: { items: true },
+        include: {
+          items: true,
+          paymentProofs: {
+            include: { paymentMethodDefinition: true },
+            orderBy: { createdAt: "desc" },
+          },
+        },
       });
 
       return NextResponse.json({ success: true, data: updated });
@@ -191,7 +203,13 @@ export async function GET(
         OR: [{ id }, { orderNumber: id }],
         ...(isAdmin ? {} : email ? { customerEmail: email } : session?.user?.email ? { customerEmail: session.user.email } : {}),
       },
-      include: { items: true },
+      include: {
+        items: true,
+        paymentProofs: {
+          include: { paymentMethodDefinition: true },
+          orderBy: { createdAt: "desc" },
+        },
+      },
     });
 
     if (!order) {

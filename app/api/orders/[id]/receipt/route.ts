@@ -67,9 +67,11 @@ export async function POST(
       );
     }
 
-    if (order.paymentMethod !== "BANK_TRANSFER") {
+    const isMercantil = order.paymentMethod === "MERCANTIL";
+
+    if (isMercantil) {
       return NextResponse.json(
-        { success: false, error: "Receipt upload is only for bank transfer orders" },
+        { success: false, error: "Receipt upload is not available for this payment method" },
         { status: 400 }
       );
     }
@@ -85,9 +87,9 @@ export async function POST(
         receiptImage,
         paymentStatus: "COMPLETED",
         status: "CONFIRMED",
-        rejectionReason: null, // Clear rejection reason on re-upload
+        rejectionReason: null,
       },
-      include: { items: true },
+      include: { items: true, paymentProofs: { include: { paymentMethodDefinition: true } } },
     });
 
     return NextResponse.json({
