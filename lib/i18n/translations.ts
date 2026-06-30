@@ -252,8 +252,6 @@ export type TranslationKey =
   | "confirmDeletePaymentMethod"
   | "deletePaymentMethodBlocked"
   | "noPaymentMethods"
-  | "active"
-  | "inactive"
   | "paymentMethodSaved"
   | "paymentMethodDeleted"
   | "paymentMethodsDescription"
@@ -556,8 +554,6 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     confirmDeletePaymentMethod: "¿Está seguro de que desea eliminar este método de pago?",
     deletePaymentMethodBlocked: "No se puede eliminar porque hay pedidos que lo referencian.",
     noPaymentMethods: "Aún no hay métodos de pago. ¡Añada su primer método!",
-    active: "Activo",
-    inactive: "Inactivo",
     paymentMethodSaved: "Método de pago guardado",
     paymentMethodDeleted: "Método de pago eliminado",
     paymentMethodsDescription: "Configure los métodos de pago disponibles para sus clientes.",
@@ -860,8 +856,6 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     confirmDeletePaymentMethod: "Are you sure you want to delete this payment method?",
     deletePaymentMethodBlocked: "Cannot delete because orders reference this payment method.",
     noPaymentMethods: "No payment methods yet. Add your first method!",
-    active: "Active",
-    inactive: "Inactive",
     paymentMethodSaved: "Payment method saved",
     paymentMethodDeleted: "Payment method deleted",
     paymentMethodsDescription: "Configure the payment methods available to your customers.",
