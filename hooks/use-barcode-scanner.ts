@@ -59,11 +59,13 @@ export function useBarcodeScanner({ onScan, active = false }: UseBarcodeScannerO
     if (!scanningRef.current || !videoRef.current || !canvasRef.current) return;
 
     try {
-      const { scanImageData } = await import("zbar-wasm");
+      const { Scanner } = await import("@undecaf/zbar-wasm");
+      const scanner = await Scanner.create();
       const video = videoRef.current;
       const canvas = canvasRef.current;
 
       if (video.readyState < 2) {
+        scanner.destroy();
         requestAnimationFrame(scanFrame);
         return;
       }
@@ -72,13 +74,15 @@ export function useBarcodeScanner({ onScan, active = false }: UseBarcodeScannerO
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext("2d");
       if (!ctx) {
+        scanner.destroy();
         requestAnimationFrame(scanFrame);
         return;
       }
 
       ctx.drawImage(video, 0, 0);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const symbols = await scanImageData(imageData);
+      const symbols = await scanner.scan(imageData);
+      scanner.destroy();
 
       if (symbols.length > 0) {
         const symbol = symbols[0];
