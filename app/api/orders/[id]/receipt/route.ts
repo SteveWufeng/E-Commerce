@@ -39,14 +39,7 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { receiptImage } = body;
-
-    if (!receiptImage || typeof receiptImage !== "string") {
-      return NextResponse.json(
-        { success: false, error: "Receipt image URL is required" },
-        { status: 400 }
-      );
-    }
+    const { receiptImage, paymentIntentId } = body;
 
     const order = await db.order.findUnique({ where: { id } });
 
@@ -62,38 +55,56 @@ export async function POST(
     const userEmail = session?.user?.email;
     if (!userEmail || userEmail !== order.customerEmail) {
       return NextResponse.json(
-        { success: false, error: "Only the order owner can upload a receipt" },
+        { success: false, error: "Only the order owner can update payment info" },
         { status: 403 }
       );
     }
 
     if (order.paymentMethod !== "BANK_TRANSFER") {
       return NextResponse.json(
-        { success: false, error: "Receipt upload is only for bank transfer orders" },
+        { success: false, error: "Payment info update is only for bank transfer orders" },
         { status: 400 }
       );
     }
 
-    // Delete old receipt from R2 if it exists
-    if (order.receiptImage) {
-      await deleteFromR2(order.receiptImage).catch(() => {});
+    const updateData: Record<string, unknown> = {};
+
+    if (receiptImage && typeof receiptImage === "string") {
+      // Delete old receipt from R2 if it exists
+      if (order.receiptImage) {
+        await deleteFromR2(order.receiptImage).catch(() => {});
+      }
+      updateData.receiptImage = receiptImage;
+      updateData.paymentStatus = "COMPLETED";
+      updateData.status = "CONFIRMED";
+      updateData.rejectionReason = null;
+    }
+
+    if (paymentIntentId && typeof paymentIntentId === "string") {
+      updateData.paymentIntentId = paymentIntentId;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { success: false, error: "No valid fields to update" },
+        { status: 400 }
+      );
     }
 
     const updated = await db.order.update({
       where: { id },
-      data: {
-        receiptImage,
-        paymentStatus: "COMPLETED",
-        status: "CONFIRMED",
-        rejectionReason: null, // Clear rejection reason on re-upload
-      },
+      data: updateData,
       include: { items: true },
     });
+
+    const message = receiptImage
+      ? "Receipt uploaded. Your order is now pending admin confirmation."
+      : "Transaction number updated.";
 
     return NextResponse.json({
       success: true,
       data: updated,
-      message: "Receipt uploaded. Your order is now pending admin confirmation.",
+      message,
     });
   } catch (error) {
     console.error("Receipt upload error:", error);

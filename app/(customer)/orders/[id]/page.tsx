@@ -23,6 +23,8 @@ export default function OrderDetailPage() {
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [transactionId, setTransactionId] = useState("");
+  const [savingTransaction, setSavingTransaction] = useState(false);
 
   const isOwner = !!(currentUserEmail && order && currentUserEmail === order.customerEmail);
 
@@ -46,6 +48,7 @@ export default function OrderDetailPage() {
         }
 
         setOrder(data.data);
+        setTransactionId(data.data.paymentIntentId || "");
       } catch {
         setError("Failed to load order");
       } finally {
@@ -83,10 +86,15 @@ export default function OrderDetailPage() {
       const uploadData = await uploadRes.json();
       if (!uploadRes.ok) throw new Error(uploadData.error || "Failed to upload receipt");
 
+      const body: Record<string, string> = { receiptImage: uploadData.url };
+      if (transactionId.trim()) {
+        body.paymentIntentId = transactionId.trim();
+      }
+
       const res = await fetch(`/api/orders/${order.id}/receipt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ receiptImage: uploadData.url }),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();
@@ -100,6 +108,33 @@ export default function OrderDetailPage() {
       setError(err instanceof Error ? err.message : "Failed to upload receipt");
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleUpdateTransaction() {
+    if (!order || !isOwner) return;
+    if (!transactionId.trim()) return;
+
+    setSavingTransaction(true);
+    try {
+      const res = await fetch(`/api/orders/${order.id}/receipt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          receiptImage: order.receiptImage,
+          paymentIntentId: transactionId.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update transaction number");
+
+      setOrder(data.data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update transaction number");
+    } finally {
+      setSavingTransaction(false);
     }
   }
 
@@ -217,6 +252,12 @@ export default function OrderDetailPage() {
                 <p className="font-medium">•••• {order.cardLastFour}</p>
               </div>
             )}
+            {order.paymentIntentId && (
+              <div>
+                <p className="text-gray-500">{t("transactionNumber")}</p>
+                <p className="font-medium">{order.paymentIntentId}</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -273,6 +314,30 @@ export default function OrderDetailPage() {
                 ? t("uploadReceiptPrompt")
                 : t("uploadReceiptPrompt")}
             </p>
+
+            {/* Transaction Number Input */}
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg border">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t("transactionNumber")}
+              </label>
+              <p className="text-xs text-gray-500 mb-2">{t("transactionNumberHelp")}</p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  value={transactionId}
+                  onChange={(e) => setTransactionId(e.target.value)}
+                  placeholder={t("transactionNumberPlaceholder")}
+                  className="input flex-1 text-sm"
+                />
+                <button
+                  onClick={handleUpdateTransaction}
+                  disabled={savingTransaction || !transactionId.trim() || transactionId.trim() === (order.paymentIntentId || "")}
+                  className="btn-primary text-sm py-2 px-4"
+                >
+                  {savingTransaction ? t("saving") : t("save")}
+                </button>
+              </div>
+            </div>
 
             <div className="flex items-center gap-4 flex-wrap">
               <label className="cursor-pointer btn-secondary text-sm py-2 px-4 rounded-lg">

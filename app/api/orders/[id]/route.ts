@@ -36,7 +36,9 @@ async function deleteFromR2(url: string) {
 }
 
 const updateStatusSchema = z.object({
-  status: z.enum(["PENDING", "CONFIRMED", "READY_FOR_PICKUP", "PICKED_UP", "CANCELLED", "REJECTED"]),
+  status: z.enum(["PENDING", "CONFIRMED", "READY_FOR_PICKUP", "PICKED_UP", "CANCELLED", "REJECTED"]).optional(),
+  paymentIntentId: z.string().optional(),
+  paymentStatus: z.enum(["PENDING", "COMPLETED", "FAILED", "REFUNDED"]).optional(),
   rejectionReason: z.string().optional(),
 });
 
@@ -55,7 +57,19 @@ export async function PUT(
 
     // Admin can do any status change
     if (userRole === "ADMIN") {
-      const updateData: Record<string, unknown> = { status: validated.status };
+      const updateData: Record<string, unknown> = {};
+
+      if (validated.status) {
+        updateData.status = validated.status;
+      }
+
+      if (validated.paymentIntentId !== undefined) {
+        updateData.paymentIntentId = validated.paymentIntentId;
+      }
+
+      if (validated.paymentStatus !== undefined) {
+        updateData.paymentStatus = validated.paymentStatus;
+      }
 
       if (validated.status === "REJECTED") {
         if (!validated.rejectionReason) {
@@ -75,6 +89,13 @@ export async function PUT(
 
       if (validated.status === "CONFIRMED") {
         updateData.rejectionReason = null;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return NextResponse.json(
+          { success: false, error: "No fields to update" },
+          { status: 400 }
+        );
       }
 
       const order = await db.order.update({
@@ -162,6 +183,10 @@ export async function PUT(
       });
 
       return NextResponse.json({ success: true, data: updated });
+    }
+
+    if (!validated.status && !validated.paymentIntentId && !validated.paymentStatus) {
+      return NextResponse.json({ success: false, error: "No valid fields to update" }, { status: 400 });
     }
 
     return NextResponse.json({ success: false, error: "Admin required" }, { status: 401 });
