@@ -237,6 +237,14 @@ export type TranslationKey =
   | "paymentNoticeDescription"
   | "paymentNoticeAction"
 
+  // Transaction Number
+  | "transactionNumber"
+  | "transactionNumberPlaceholder"
+  | "updateTransactionNumber"
+  | "transactionNumberHelp"
+  | "save"
+  | "saving"
+
   // Currency display
   | "localCurrency"
   | "usdEquivalent";
@@ -478,6 +486,14 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     paymentNoticeDescription: "Su pedido NO se procesará hasta que realice el pago mediante transferencia bancaria y suba el comprobante de pago.",
     paymentNoticeAction: "Use el botón de abajo para subir el comprobante de su transferencia.",
 
+    // Transaction Number
+    transactionNumber: "Número de Transacción",
+    transactionNumberPlaceholder: "Ingrese el número de referencia de la transferencia",
+    updateTransactionNumber: "Actualizar Número de Transacción",
+    transactionNumberHelp: "Ingrese el número de referencia proporcionado por su banco para que podamos verificar el pago.",
+    save: "Guardar",
+    saving: "Guardando...",
+
     // Currency display
     localCurrency: "Moneda Local",
     usdEquivalent: "Equivalente en USD",
@@ -718,6 +734,14 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     paymentNoticeTitle: "⏳ Payment Pending",
     paymentNoticeDescription: "Your order will NOT be processed until you complete the bank transfer and upload the payment receipt.",
     paymentNoticeAction: "Use the button below to upload your transfer receipt.",
+
+    // Transaction Number
+    transactionNumber: "Transaction Number",
+    transactionNumberPlaceholder: "Enter the bank transfer reference number",
+    updateTransactionNumber: "Update Transaction Number",
+    transactionNumberHelp: "Enter the reference number provided by your bank so we can verify the payment.",
+    save: "Save",
+    saving: "Saving...",
 
     // Currency display
     localCurrency: "Local Currency",
