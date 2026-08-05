@@ -6,13 +6,14 @@ import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { LogOut, User, Mail, Phone, Shield } from "lucide-react";
+import { LogOut, User, Mail, Phone, Shield, Send } from "lucide-react";
 
 /**
  * User profile page — view and manage account settings.
  *
  * Features:
  * - Display user information (name, email, phone, role)
+ * - Telegram notifications linking
  * - Sign out button
  * - Link to order history
  * - Admin link if user has ADMIN role
@@ -27,9 +28,15 @@ export default function ProfilePage() {
     lastName: string;
     phone: string | null;
     role: string;
+    telegramChatId: string | null;
+    telegramOptIn: boolean;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [telegramLink, setTelegramLink] = useState<string | null>(null);
+  const [telegramBusy, setTelegramBusy] = useState(false);
+  const [telegramError, setTelegramError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadProfile() {
@@ -57,6 +64,46 @@ export default function ProfilePage() {
     startTransition(async () => {
       await signOut({ callbackUrl: "/" });
     });
+  }
+
+  async function handleLinkTelegram() {
+    setTelegramBusy(true);
+    setTelegramError(null);
+    try {
+      const res = await fetch("/api/telegram/link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTelegramLink(data.data.deepLink);
+      } else {
+        setTelegramError(data.error || "Failed to create link");
+      }
+    } catch {
+      setTelegramError("Failed to create link");
+    } finally {
+      setTelegramBusy(false);
+    }
+  }
+
+  async function handleUnlinkTelegram() {
+    setTelegramBusy(true);
+    setTelegramError(null);
+    try {
+      await fetch("/api/telegram/link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "unlink" }),
+      });
+      setUser((u) => (u ? { ...u, telegramChatId: null, telegramOptIn: false } : u));
+      setTelegramLink(null);
+    } catch {
+      setTelegramError("Failed to unlink");
+    } finally {
+      setTelegramBusy(false);
+    }
   }
 
   if (isLoading) {
@@ -169,6 +216,75 @@ export default function ProfilePage() {
               {isPending ? "Signing out..." : "Sign Out"}
             </button>
           </div>
+        </div>
+
+        {/* Telegram Notifications */}
+        <div className="card mt-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center">
+              <Send className="w-5 h-5 text-sky-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Telegram Notifications</h2>
+              <p className="text-sm text-gray-500">Get real-time updates on your order status.</p>
+            </div>
+          </div>
+
+          {user.telegramChatId ? (
+            <>
+              <p className="text-sm text-gray-700">
+                ✅ Telegram is linked{user.telegramOptIn ? "" : " (notifications off)"}.
+              </p>
+              <button
+                onClick={handleUnlinkTelegram}
+                disabled={telegramBusy}
+                className="btn-danger w-full"
+              >
+                {telegramBusy ? "Working..." : "Unlink Telegram"}
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-600">
+                Link your Telegram account to receive order confirmations, pickup
+                reminders, and cancellation notices.
+              </p>
+
+              {telegramLink ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-700">
+                    Tap the button below to open Telegram and connect your account.
+                    This link expires in 24 hours and can only be used once.
+                  </p>
+                  <a
+                    href={telegramLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-primary w-full flex items-center justify-center gap-2"
+                  >
+                    <Send className="w-4 h-4" />
+                    Open in Telegram
+                  </a>
+                  <p className="text-xs text-gray-500 break-all bg-gray-50 rounded-lg p-2">
+                    {telegramLink}
+                  </p>
+                </div>
+              ) : (
+                <button
+                  onClick={handleLinkTelegram}
+                  disabled={telegramBusy}
+                  className="btn-secondary w-full flex items-center justify-center gap-2"
+                >
+                  <Send className="w-4 h-4" />
+                  {telegramBusy ? "Generating link..." : "Link Telegram Account"}
+                </button>
+              )}
+
+              {telegramError && (
+                <p className="text-sm text-red-600">{telegramError}</p>
+              )}
+            </>
+          )}
         </div>
       </main>
 

@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { notifyOrderStatusChange } from "@/lib/telegram";
 
 const s3 = new S3Client({
   region: "auto",
@@ -98,6 +99,32 @@ export async function POST(
       data: updateData,
       include: { items: true, paymentProofs: { include: { paymentMethodDefinition: true } } },
     });
+
+    if (updated.status === "CONFIRMED") {
+      const settings = await db.settings.findFirst();
+      await notifyOrderStatusChange(
+        {
+          id: updated.id,
+          orderNumber: updated.orderNumber,
+          status: updated.status,
+          total: Number(updated.total),
+          paymentMethod: updated.paymentMethod,
+          customerFirstName: updated.customerFirstName,
+          customerEmail: updated.customerEmail,
+          userId: updated.userId,
+          rejectionReason: null,
+          items: updated.items.map((item) => ({
+            name: item.productName,
+            quantity: item.quantity,
+            price: Number(item.productPrice),
+          })),
+        },
+        {
+          storeName: settings?.storeName ?? "",
+          storeAddress: settings?.storeAddress ?? "",
+        }
+      );
+    }
 
     const message = receiptImage
       ? "Receipt uploaded. Your order is now pending admin confirmation."
