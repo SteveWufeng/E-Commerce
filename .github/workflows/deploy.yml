@@ -34,7 +34,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Deploy to Railway
-        uses: railwayapp/cli-action@v3
+        uses: railwayapp/railway-action@v3
         with:
           railwayToken: ${{ secrets.RAILWAY_TOKEN }}
         env:
