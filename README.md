@@ -433,11 +433,24 @@ Accessible at `/admin` (requires ADMIN role).
 
 ## Testing
 
+Recommended: run the full suite in a Dockerized, reproducible environment
+(image = toolchain only, code bind-mounted, deps in a named volume):
+
 ```bash
-npm test              # Unit + integration tests (Jest)
-npm run test:watch    # Watch mode
-npm run test:e2e      # E2E tests (Playwright)
+npm run test:docker        # Full suite (Jest + build + Playwright E2E)
+npm run test:docker:build  # Force rebuild of the test environment
 ```
+
+Host-only options:
+
+```bash
+npm test                   # Unit + integration tests (Jest)
+npm run test:watch         # Watch mode
+npm run test:e2e           # E2E tests (Playwright)
+```
+
+See **[TESTING.md](TESTING.md)** for the full procedure, how each layer works,
+writing tests, CI, and troubleshooting.
 
 ---
 

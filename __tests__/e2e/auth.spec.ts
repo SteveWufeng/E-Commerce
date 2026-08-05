@@ -12,36 +12,48 @@
 
 import { test, expect } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => {
+  // Force English locale so assertions are deterministic regardless of
+  // the app's default locale (es) or any persisted user preference.
+  await page.addInitScript(() => {
+    window.localStorage.setItem("ecom_locale", "en");
+  });
+});
+
 test.describe("Authentication E2E", () => {
   test.describe("Signup flow", () => {
     test("displays signup form with all fields", async ({ page }) => {
       await page.goto("/signup");
 
-      await expect(page.getByRole("heading", { name: /create account/i })).toBeVisible();
-      await expect(page.getByLabel("First Name")).toBeVisible();
-      await expect(page.getByLabel("Last Name")).toBeVisible();
-      await expect(page.getByLabel("Email")).toBeVisible();
-      await expect(page.getByLabel("Phone")).toBeVisible();
-      await expect(page.getByLabel("Password")).toBeVisible();
-      await expect(page.getByLabel("Confirm Password")).toBeVisible();
-      await expect(page.getByRole("button", { name: /create account/i })).toBeVisible();
+      const form = page.getByRole("main");
+      await expect(form.getByRole("heading", { name: /create account/i })).toBeVisible();
+      await expect(form.getByLabel("First Name")).toBeVisible();
+      await expect(form.getByLabel("Last Name")).toBeVisible();
+      await expect(form.getByLabel("Email")).toBeVisible();
+      await expect(form.getByLabel("Phone")).toBeVisible();
+      await expect(form.getByLabel("Password", { exact: true })).toBeVisible();
+      await expect(form.getByLabel("Confirm Password")).toBeVisible();
+      await expect(form.getByRole("button", { name: /create account/i })).toBeVisible();
     });
 
     test("shows link to login page", async ({ page }) => {
       await page.goto("/signup");
-      await expect(page.getByRole("link", { name: /sign in/i })).toBeVisible();
+      await expect(
+        page.getByRole("main").getByRole("link", { name: /sign in/i })
+      ).toBeVisible();
     });
 
     test("shows validation error for mismatched passwords", async ({ page }) => {
       await page.goto("/signup");
 
-      await page.getByLabel("First Name").fill("John");
-      await page.getByLabel("Last Name").fill("Doe");
-      await page.getByLabel("Email").fill("john@example.com");
-      await page.getByLabel("Password").fill("password123");
-      await page.getByLabel("Confirm Password").fill("different");
+      const form = page.getByRole("main");
+      await form.getByLabel("First Name").fill("John");
+      await form.getByLabel("Last Name").fill("Doe");
+      await form.getByLabel("Email").fill("john@example.com");
+      await form.getByLabel("Password", { exact: true }).fill("password123");
+      await form.getByLabel("Confirm Password").fill("different");
 
-      await page.getByRole("button", { name: /create account/i }).click();
+      await form.getByRole("button", { name: /create account/i }).click();
 
       await expect(page.getByText("Passwords do not match")).toBeVisible();
     });
@@ -49,15 +61,24 @@ test.describe("Authentication E2E", () => {
     test("shows validation error for short password", async ({ page }) => {
       await page.goto("/signup");
 
-      await page.getByLabel("First Name").fill("John");
-      await page.getByLabel("Last Name").fill("Doe");
-      await page.getByLabel("Email").fill("john@example.com");
-      await page.getByLabel("Password").fill("short");
-      await page.getByLabel("Confirm Password").fill("short");
+      const form = page.getByRole("main");
+      await form.getByLabel("First Name").fill("John");
+      await form.getByLabel("Last Name").fill("Doe");
+      await form.getByLabel("Email").fill("john@example.com");
+      await form.getByLabel("Password", { exact: true }).fill("short");
+      await form.getByLabel("Confirm Password").fill("short");
 
-      await page.getByRole("button", { name: /create account/i }).click();
+      await form.getByRole("button", { name: /create account/i }).click();
 
-      await expect(page.getByText("Password must be at least 6 characters")).toBeVisible();
+      // Native HTML minLength validation blocks submission and shows a
+      // constraint error on the password field before the React handler runs.
+      const validationMessage = await form
+        .getByLabel("Password", { exact: true })
+        .evaluate((el) => (el as HTMLInputElement).validationMessage);
+      expect(validationMessage.length).toBeGreaterThan(0);
+      // Submission is blocked: still on /signup, no success state.
+      await expect(page).toHaveURL(/\/signup/);
+      await expect(page.getByText("Check Your Email")).not.toBeVisible();
     });
   });
 
@@ -65,32 +86,41 @@ test.describe("Authentication E2E", () => {
     test("displays login form", async ({ page }) => {
       await page.goto("/login");
 
-      await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
-      await expect(page.getByLabel("Email")).toBeVisible();
-      await expect(page.getByLabel("Password")).toBeVisible();
-      await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
+      const form = page.getByRole("main");
+      await expect(form.getByRole("heading", { name: /sign in/i })).toBeVisible();
+      await expect(form.getByLabel("Email")).toBeVisible();
+      await expect(form.getByLabel("Password", { exact: true })).toBeVisible();
+      await expect(form.getByRole("button", { name: "Sign In", exact: true })).toBeVisible();
     });
 
     test("shows link to signup page", async ({ page }) => {
       await page.goto("/login");
-      await expect(page.getByRole("link", { name: /sign up/i })).toBeVisible();
+      await expect(
+        page.getByRole("main").getByRole("link", { name: /sign up/i })
+      ).toBeVisible();
     });
 
     test("shows guest checkout option", async ({ page }) => {
       await page.goto("/login");
-      await expect(page.getByRole("link", { name: /continue as guest/i })).toBeVisible();
+      await expect(
+        page.getByRole("main").getByRole("link", { name: /continue as guest/i })
+      ).toBeVisible();
     });
   });
 
   test.describe("Header auth state", () => {
     test("shows sign in link when not authenticated", async ({ page }) => {
       await page.goto("/");
-      await expect(page.getByRole("link", { name: /sign in/i, exact: false })).toBeVisible();
+      await expect(
+        page.locator("header").getByRole("link", { name: /sign in/i })
+      ).toBeVisible();
     });
 
     test("shows cart icon on all pages", async ({ page }) => {
       await page.goto("/");
-      await expect(page.getByRole("link", { name: /cart/i })).toBeVisible();
+      await expect(
+        page.locator("header").getByRole("link", { name: /cart/i })
+      ).toBeVisible();
     });
   });
 

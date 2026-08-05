@@ -15,6 +15,9 @@ jest.mock("@/lib/db", () => ({
       findUnique: jest.fn(),
       create: jest.fn(),
     },
+    verificationToken: {
+      create: jest.fn(),
+    },
   },
 }));
 
@@ -77,7 +80,15 @@ describe("Integration: Complete Auth Flow", () => {
       const signupRes = await signupPost(signupReq);
       const signupData = await signupRes.json();
       expect(signupRes.status).toBe(201);
-      expect(signupData.data.email).toBe("john@example.com");
+      expect(signupData.success).toBe(true);
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            email: "john@example.com",
+            role: "CUSTOMER",
+          }),
+        })
+      );
 
       // Step 2: Login (simulate successful auth)
       mockFindUnique.mockResolvedValue({
