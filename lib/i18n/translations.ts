@@ -272,6 +272,14 @@ export type TranslationKey =
   | "verify"
   | "paymentInfo"
 
+  // Transaction Number
+  | "transactionNumber"
+  | "transactionNumberPlaceholder"
+  | "updateTransactionNumber"
+  | "transactionNumberHelp"
+  | "save"
+  | "saving"
+
   // Currency display
   | "localCurrency"
   | "usdEquivalent"
@@ -573,6 +581,14 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     verify: "Verificar",
     paymentInfo: "Información de Pago",
 
+    // Transaction Number
+    transactionNumber: "Número de Transacción",
+    transactionNumberPlaceholder: "Ingrese el número de referencia de la transferencia",
+    updateTransactionNumber: "Actualizar Número de Transacción",
+    transactionNumberHelp: "Ingrese el número de referencia proporcionado por su banco para que podamos verificar el pago.",
+    save: "Guardar",
+    saving: "Guardando...",
+
     // Currency display
     localCurrency: "Moneda Local",
     usdEquivalent: "Equivalente en USD",
@@ -873,6 +889,14 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     proofRejectedMessage: "Proof Rejected",
     verify: "Verify",
     paymentInfo: "Payment Info",
+
+    // Transaction Number
+    transactionNumber: "Transaction Number",
+    transactionNumberPlaceholder: "Enter the bank transfer reference number",
+    updateTransactionNumber: "Update Transaction Number",
+    transactionNumberHelp: "Enter the reference number provided by your bank so we can verify the payment.",
+    save: "Save",
+    saving: "Saving...",
 
     // Currency display
     localCurrency: "Local Currency",
