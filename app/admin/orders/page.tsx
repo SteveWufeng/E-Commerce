@@ -17,6 +17,8 @@ export default function AdminOrdersPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [proofRejectId, setProofRejectId] = useState<string | null>(null);
   const [proofRejectReason, setProofRejectReason] = useState("");
+  const [editTransactionId, setEditTransactionId] = useState("");
+  const [savingTransaction, setSavingTransaction] = useState(false);
 
   useEffect(() => {
     async function loadOrders() {
@@ -96,6 +98,29 @@ export default function AdminOrdersPage() {
     await refreshOrders();
   }
 
+  async function handleSaveTransactionId() {
+    if (!selectedOrder) return;
+    setSavingTransaction(true);
+    try {
+      const res = await fetch(`/api/orders/${selectedOrder.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentIntentId: editTransactionId.trim() }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setOrders((prev) =>
+          prev.map((o) => (o.id === selectedOrder.id ? updated.data : o))
+        );
+        setSelectedOrder(updated.data);
+      }
+    } catch (error) {
+      console.error("Failed to update transaction ID:", error);
+    } finally {
+      setSavingTransaction(false);
+    }
+  }
+
   async function undoOrder(orderId: string) {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
@@ -167,7 +192,10 @@ export default function AdminOrdersPage() {
                   <tr key={order.id} className={`border-b border-gray-100 hover:bg-gray-50 ${order.status === "REJECTED" ? "bg-red-50" : ""}`}>
                     <td className="py-3 px-4">
                       <button 
-                        onClick={() => setSelectedOrder(order)}
+                        onClick={() => {
+                          setSelectedOrder(order);
+                          setEditTransactionId(order.paymentIntentId || "");
+                        }}
                         className="font-medium text-primary-600 hover:underline"
                       >
                         {order.orderNumber}
@@ -369,6 +397,12 @@ export default function AdminOrdersPage() {
                   <p className="text-gray-500">{t("date")}</p>
                   <p className="font-medium">{formatDateTime(selectedOrder.createdAt)}</p>
                 </div>
+                {selectedOrder.paymentIntentId && (
+                  <div>
+                    <p className="text-gray-500">{t("transactionNumber")}</p>
+                    <p className="font-medium">{selectedOrder.paymentIntentId}</p>
+                  </div>
+                )}
               </div>
 
               {selectedOrder.paymentProofs && selectedOrder.paymentProofs.length > 0 && selectedOrder.paymentProofs.map((proof: any) => (
@@ -453,6 +487,27 @@ export default function AdminOrdersPage() {
                   </a>
                 </div>
               )}
+
+              {/* Transaction Number — Editable by admin */}
+              <div className="border-t pt-4">
+                <p className="text-gray-500 text-sm mb-1">{t("transactionNumber")}</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={editTransactionId}
+                    onChange={(e) => setEditTransactionId(e.target.value)}
+                    placeholder={t("transactionNumberPlaceholder")}
+                    className="input flex-1 text-sm"
+                  />
+                  <button
+                    onClick={handleSaveTransactionId}
+                    disabled={savingTransaction || editTransactionId === (selectedOrder.paymentIntentId || "")}
+                    className="btn-primary text-xs py-1.5 px-3"
+                  >
+                    {savingTransaction ? t("saving") : t("save")}
+                  </button>
+                </div>
+              </div>
 
               {selectedOrder.rejectionReason && (
                 <div className="border-t pt-4">
