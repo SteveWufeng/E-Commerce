@@ -37,6 +37,8 @@ export async function GET(request: NextRequest) {
         role: true,
         isVerified: true,
         createdAt: true,
+        telegramChatId: true,
+        telegramOptIn: true,
       },
     });
 
@@ -52,6 +54,8 @@ export async function GET(request: NextRequest) {
           role: true,
           isVerified: true,
           createdAt: true,
+          telegramChatId: true,
+          telegramOptIn: true,
         },
       });
     }

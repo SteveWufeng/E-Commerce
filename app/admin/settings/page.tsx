@@ -15,6 +15,12 @@ interface StoreSettings {
   mercantilRedirectEnabled: boolean;
 }
 
+interface TelegramConfig {
+  enabled: boolean;
+  botUsername: string;
+  hasBotToken: boolean;
+}
+
 /**
  * Admin settings page — store configuration.
  *
@@ -40,6 +46,16 @@ export default function AdminSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // Telegram bot config state
+  const [telegram, setTelegram] = useState<TelegramConfig>({
+    enabled: false,
+    botUsername: "",
+    hasBotToken: false,
+  });
+  const [telegramToken, setTelegramToken] = useState("");
+  const [telegramMsg, setTelegramMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [telegramSaving, setTelegramSaving] = useState(false);
+
   useEffect(() => {
     fetch("/api/settings")
       .then((res) => res.json())
@@ -50,6 +66,75 @@ export default function AdminSettingsPage() {
       })
       .catch(console.error);
   }, []);
+
+  useEffect(() => {
+    fetch("/api/admin/telegram")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.data) {
+          setTelegram({
+            enabled: data.data.enabled,
+            botUsername: data.data.botUsername || "",
+            hasBotToken: data.data.hasBotToken,
+          });
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  async function handleSaveTelegram() {
+    setTelegramSaving(true);
+    setTelegramMsg(null);
+    try {
+      const res = await fetch("/api/admin/telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enabled: telegram.enabled,
+          botUsername: telegram.botUsername,
+          botToken: telegramToken || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTelegram({
+          enabled: data.data.enabled,
+          botUsername: data.data.botUsername || "",
+          hasBotToken: data.data.hasBotToken,
+        });
+        setTelegramToken("");
+        setTelegramMsg({ ok: true, text: "Telegram settings saved!" });
+      } else {
+        setTelegramMsg({ ok: false, text: data.error || "Failed to save" });
+      }
+    } catch {
+      setTelegramMsg({ ok: false, text: "Failed to save" });
+    } finally {
+      setTelegramSaving(false);
+    }
+  }
+
+  async function handleTestTelegram() {
+    setTelegramSaving(true);
+    setTelegramMsg(null);
+    try {
+      const res = await fetch("/api/admin/telegram/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ botToken: telegramToken || undefined }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTelegramMsg({ ok: true, text: `Connected! Bot: @${data.data.botUsername}` });
+      } else {
+        setTelegramMsg({ ok: false, text: data.error || "Connection failed" });
+      }
+    } catch {
+      setTelegramMsg({ ok: false, text: "Connection failed" });
+    } finally {
+      setTelegramSaving(false);
+    }
+  }
 
   async function handleSave() {
     setIsSaving(true);
@@ -218,6 +303,87 @@ export default function AdminSettingsPage() {
               <p className="text-xs text-gray-500 mt-1">
                 Manage all payment methods including Bank Transfer from the payment methods section.
               </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Telegram Notifications */}
+        <div className="card md:col-span-2">
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">
+            Telegram Bot Notifications
+          </h2>
+          <p className="text-xs text-gray-500 mb-4">
+            Send customers real-time order updates via Telegram. Credentials are encrypted at rest.
+          </p>
+
+          <div className="space-y-4">
+            <label className="flex items-center justify-between p-3 rounded-lg border border-gray-200 cursor-pointer hover:border-gray-300">
+              <div>
+                <p className="text-sm font-medium text-gray-900">Enable Telegram notifications</p>
+                <p className="text-xs text-gray-500">Store-wide toggle — when off, no messages are sent.</p>
+              </div>
+              <input
+                type="checkbox"
+                className="w-5 h-5 accent-primary-500 rounded"
+                checked={telegram.enabled}
+                onChange={(e) => setTelegram({ ...telegram, enabled: e.target.checked })}
+              />
+            </label>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="label">Bot Token</label>
+                <input
+                  type="password"
+                  className="input"
+                  value={telegramToken}
+                  onChange={(e) => setTelegramToken(e.target.value)}
+                  placeholder={telegram.hasBotToken ? "•••••••••••••• (saved)" : "123456:ABC-DEF..."}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {telegram.hasBotToken
+                    ? "A token is already saved. Leave blank to keep it."
+                    : "Get one from @BotFather. Left blank, falls back to TELEGRAM_BOT_TOKEN env."}
+                </p>
+              </div>
+              <div>
+                <label className="label">Bot Username</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={telegram.botUsername}
+                  onChange={(e) => setTelegram({ ...telegram, botUsername: e.target.value })}
+                  placeholder="@MyStoreBot"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Used to build customer linking links (e.g. t.me/MyStoreBot).
+                </p>
+              </div>
+            </div>
+
+            {telegramMsg && (
+              <p className={`text-sm ${telegramMsg.ok ? "text-green-600" : "text-red-600"}`}>
+                {telegramMsg.text}
+              </p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleTestTelegram}
+                disabled={telegramSaving}
+                className="btn-secondary"
+              >
+                {telegramSaving ? "Testing..." : "Test Connection"}
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveTelegram}
+                disabled={telegramSaving}
+                className="btn-primary"
+              >
+                {telegramSaving ? "Saving..." : "Save Telegram Settings"}
+              </button>
             </div>
           </div>
         </div>

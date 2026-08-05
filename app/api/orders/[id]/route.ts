@@ -13,6 +13,7 @@ import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { sendEmail, orderConfirmationEmail, orderReadyEmail } from "@/lib/email";
+import { notifyOrderStatusChange } from "@/lib/telegram";
 
 const s3 = new S3Client({
   region: "auto",
@@ -158,6 +159,33 @@ export async function PUT(
         sendEmail(emailTpl).catch(() => {});
       }
 
+      // Telegram notification on status change
+      if (validated.status && ["CONFIRMED", "READY_FOR_PICKUP", "PICKED_UP", "CANCELLED", "REJECTED"].includes(validated.status)) {
+        const settings = await db.settings.findFirst();
+        await notifyOrderStatusChange(
+          {
+            id: order.id,
+            orderNumber: order.orderNumber,
+            status: order.status,
+            total: Number(order.total),
+            paymentMethod: order.paymentMethod,
+            customerFirstName: order.customerFirstName,
+            customerEmail: order.customerEmail,
+            userId: order.userId,
+            rejectionReason: order.rejectionReason,
+            items: order.items.map((item) => ({
+              name: item.productName,
+              quantity: item.quantity,
+              price: Number(item.productPrice),
+            })),
+          },
+          {
+            storeName: settings?.storeName ?? "",
+            storeAddress: settings?.storeAddress ?? "",
+          }
+        );
+      }
+
       return NextResponse.json({ success: true, data: order });
     }
 
@@ -193,6 +221,30 @@ export async function PUT(
           },
         },
       });
+
+      const settings = await db.settings.findFirst();
+      await notifyOrderStatusChange(
+        {
+          id: updated.id,
+          orderNumber: updated.orderNumber,
+          status: updated.status,
+          total: Number(updated.total),
+          paymentMethod: updated.paymentMethod,
+          customerFirstName: updated.customerFirstName,
+          customerEmail: updated.customerEmail,
+          userId: updated.userId,
+          rejectionReason: null,
+          items: updated.items.map((item) => ({
+            name: item.productName,
+            quantity: item.quantity,
+            price: Number(item.productPrice),
+          })),
+        },
+        {
+          storeName: settings?.storeName ?? "",
+          storeAddress: settings?.storeAddress ?? "",
+        }
+      );
 
       return NextResponse.json({ success: true, data: updated });
     }

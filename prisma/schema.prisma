@@ -30,8 +30,27 @@ model User {
   cart          Cart?         // authenticated user's cart
   verifiedProofs PaymentProof[] @relation("ProofVerifiedBy")
 
+  // Telegram notifications
+  telegramChatId  String?
+  telegramOptIn   Boolean   @default(false)
+  telegramLinkTokens TelegramLinkToken[]
+
   @@index([email])
   @@index([role])
+  @@index([telegramChatId])
+}
+
+model TelegramLinkToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
 }
 
 model VerificationToken {
@@ -332,6 +351,12 @@ model Settings {
   currencySymbol      String   @default("$")
   conversionRate      Float    @default(1)
   mercantilRedirectEnabled Boolean  @default(false)
+
+  // Telegram bot integration
+  telegramEnabled     Boolean  @default(false)
+  telegramBotToken    String?  // AES-256-GCM encrypted at rest
+  telegramBotUsername String?
+
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 }
