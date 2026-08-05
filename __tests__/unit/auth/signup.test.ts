@@ -20,6 +20,9 @@ jest.mock("@/lib/db", () => ({
       findUnique: jest.fn(),
       create: jest.fn(),
     },
+    verificationToken: {
+      create: jest.fn(),
+    },
   },
 }));
 
@@ -64,9 +67,18 @@ describe("POST /api/auth/signup", () => {
 
     expect(response.status).toBe(201);
     expect(data.success).toBe(true);
-    expect(data.data.email).toBe("test@example.com");
-    expect(data.data.role).toBe("CUSTOMER");
-    expect(data.data).not.toHaveProperty("passwordHash");
+    expect(data.message).toContain("check your email");
+    expect(mockCreate).toHaveBeenCalledWith({
+      data: {
+        firstName: "John",
+        lastName: "Doe",
+        email: "test@example.com",
+        phone: null,
+        passwordHash: "$2b$12$mockedhashedpassword1234567890abcdef",
+        role: "CUSTOMER",
+        isVerified: false,
+      },
+    });
   });
 
   it("rejects duplicate email with 409", async () => {
@@ -287,7 +299,8 @@ describe("POST /api/auth/signup", () => {
     const response = await POST(request);
     const data = await response.json();
 
-    expect(data.data).not.toHaveProperty("passwordHash");
-    expect(data.data).not.toHaveProperty("password");
+    expect(data).not.toHaveProperty("passwordHash");
+    expect(data).not.toHaveProperty("password");
+    expect(JSON.stringify(data)).not.toContain("$2b$12$");
   });
 });

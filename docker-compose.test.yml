@@ -1,0 +1,57 @@
+# Test environment — runs the full test suite in Docker.
+#
+# Usage:
+#   npm run test:docker            # run (builds image on first run)
+#   npm run test:docker:build      # force rebuild of the environment image
+#
+# The codebase is bind-mounted (live edits are picked up without rebuilding).
+# node_modules lives in a named volume: persistent, but never touches the
+# host's local dependencies.
+#
+# Runs: Prisma migrations + Jest (unit/integration) + Playwright (E2E)
+# against a disposable Postgres.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ecommerce
+      POSTGRES_PASSWORD: testsecret
+      POSTGRES_DB: ecommerce_mvp_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecommerce -d ecommerce_mvp_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  tests:
+    build:
+      context: .
+      dockerfile: docker/test.Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://ecommerce:testsecret@postgres:5432/ecommerce_mvp_test?schema=public
+      NEXTAUTH_SECRET: test-secret-only-for-ci
+      NEXTAUTH_URL: http://localhost:3000
+      MOCK_PAYMENTS: "true"
+    volumes:
+      # Bind-mount the live codebase — code edits need no image rebuild.
+      - .:/app
+      # Persist installed deps between runs without using the host's node_modules.
+      - test_node_modules:/app/node_modules
+      # Keep build + test artifacts out of the host filesystem.
+      - test_next:/app/.next
+      - test_results:/app/test-results
+      - test_playwright_report:/app/playwright-report
+    ports:
+      - "3000:3000"
+    stdin_open: true
+    tty: true
+
+volumes:
+  test_node_modules:
+  test_next:
+  test_results:
+  test_playwright_report:

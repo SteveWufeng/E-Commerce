@@ -185,7 +185,7 @@ export default function OrderDetailPage() {
   }
 
   const proofStatus = latestProof?.status;
-  const needsProof = isCustomPayment && (!latestProof || proofStatus === "REJECTED");
+  const needsProof = isCustomPayment && (!latestProof || proofStatus === "PENDING" || proofStatus === "REJECTED");
   const canSubmitProof = isOwner && needsProof;
 
   return (
