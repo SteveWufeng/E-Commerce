@@ -251,6 +251,92 @@ export function buildOrderButtons(orderNumber: string): TelegramButton[] {
 }
 
 /**
+ * Build a help message listing the commands the bot understands.
+ */
+export function buildHelpMessage(storeName: string, forAdmin = false): string {
+  let msg =
+    `🤖 <b>${storeName}</b> assistant\n\n` +
+    `Here's what I can do:\n` +
+    `/orders — ${forAdmin ? "recent orders across the store" : "your recent orders and their status"}\n` +
+    `/help — show this message`;
+
+  if (forAdmin) {
+    msg += `\n/order <order number> — status of any order (admin)`;
+  }
+
+  msg += `\n\nOrder updates (confirmed, ready for pickup, and more) are sent here automatically.`;
+  return msg;
+}
+
+/**
+ * Build a message summarising a customer's most recent orders.
+ */
+export function buildOrdersListMessage(
+  orders: {
+    orderNumber: string;
+    status: string;
+    total: number | string | { toString(): string };
+    createdAt: Date | string;
+  }[],
+  currencySymbol = "$",
+  heading = "Your recent orders"
+): string {
+  const lines = orders.map((order) => {
+    const date = new Date(order.createdAt).toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+    const status = order.status.replace(/_/g, " ").toLowerCase();
+    return `• <code>${order.orderNumber}</code>\n  ${status} — ${currencySymbol}${Number(order.total).toFixed(2)} · ${date}`;
+  });
+  return `📦 <b>${heading}</b>\n\n${lines.join("\n\n")}`;
+}
+
+/**
+ * Build a detailed status report for a single order.
+ */
+export function buildOrderStatusMessage(
+  order: {
+    orderNumber: string;
+    status: string;
+    paymentStatus: string;
+    total: number | string | { toString(): string };
+    createdAt: Date | string;
+    customerFirstName?: string;
+    items?: { productName: string; productPrice: number | string | { toString(): string }; quantity: number }[];
+  },
+  opts: { currencySymbol?: string; forAdmin?: boolean } = {}
+): string {
+  const currency = opts.currencySymbol ?? "$";
+  const fmtDate = (value: Date | string) =>
+    new Date(value).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+  const money = (value: number | string | { toString(): string }) => `${currency}${Number(value).toFixed(2)}`;
+
+  const lines = [`📦 <b>${order.orderNumber}</b>`, ""];
+  if (opts.forAdmin && order.customerFirstName) {
+    lines.push(`Customer: ${order.customerFirstName}`);
+  }
+  lines.push(`Status: <b>${order.status.replace(/_/g, " ").toLowerCase()}</b>`);
+  lines.push(`Payment: ${order.paymentStatus.replace(/_/g, " ").toLowerCase()}`);
+  lines.push(`Total: ${money(order.total)}`);
+  lines.push(`Placed: ${fmtDate(order.createdAt)}`);
+
+  const items = order.items ?? [];
+  if (items.length > 0) {
+    lines.push("", "<b>Items:</b>");
+    for (const item of items.slice(0, 5)) {
+      lines.push(`• ${item.productName} ×${item.quantity} — ${money(item.productPrice)}`);
+    }
+    if (items.length > 5) {
+      lines.push(`…and ${items.length - 5} more`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+/**
  * Notify a customer about an order status change via Telegram.
  *
  * Resolves the customer's chat id (via userId or email match), checks the
