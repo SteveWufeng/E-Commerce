@@ -8,7 +8,6 @@ import { useLocale } from "@/hooks/use-locale";
 interface StoreSettings {
   storeName: string;
   storeAddress: string;
-  taxRate: number;
   currencyCode: string;
   currencySymbol: string;
   conversionRate: number;
@@ -20,7 +19,6 @@ interface StoreSettings {
  *
  * Features:
  * - Store name and address
- * - Tax rate configuration
  * - Currency and conversion rate
  * - Notification settings (email, SMS)
  * - Payment method toggles
@@ -31,7 +29,6 @@ export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<StoreSettings>({
     storeName: "",
     storeAddress: "",
-    taxRate: 8,
     currencyCode: "USD",
     currencySymbol: "$",
     conversionRate: 1,
@@ -97,27 +94,6 @@ export default function AdminSettingsPage() {
                 value={settings.storeAddress}
                 onChange={(e) => setSettings({ ...settings, storeAddress: e.target.value })}
                 placeholder="123 Main St"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Tax Settings */}
-        <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            {t("taxSettings")}
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <label className="label">Tax Rate (%)</label>
-              <input
-                type="number"
-                className="input"
-                value={settings.taxRate}
-                onChange={(e) => setSettings({ ...settings, taxRate: parseFloat(e.target.value) || 0 })}
-                step={0.1}
-                min={0}
-                max={100}
               />
             </div>
           </div>
