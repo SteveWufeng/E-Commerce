@@ -8,12 +8,10 @@ import type { CartItem } from "@/types";
 export function OrderSummary({
   items,
   subtotal,
-  tax,
   total,
 }: {
   items: CartItem[];
   subtotal: number;
-  tax: number;
   total: number;
 }) {
   const { t } = useLocale();
@@ -42,10 +40,6 @@ export function OrderSummary({
         <div className="flex justify-between text-gray-600">
           <span>{t("subtotal")}</span>
           <span>{formatCurrency(subtotal)}</span>
-        </div>
-        <div className="flex justify-between text-gray-600">
-          <span>{t("tax")}</span>
-          <span>{formatCurrency(tax)}</span>
         </div>
         <div className="border-t border-gray-200 pt-2 flex justify-between font-semibold text-gray-900 text-base">
           <span>{t("total")}</span>
