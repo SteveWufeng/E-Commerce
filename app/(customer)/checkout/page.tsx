@@ -41,7 +41,6 @@ interface CheckoutData {
   phone: string;
   notes?: string;
   subtotal: number;
-  tax: number;
   total: number;
 }
 
@@ -53,9 +52,7 @@ export default function CheckoutPage() {
   const clearCart = useCartStore((state) => state.clearCart);
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const taxRate = 0.08;
-  const tax = subtotal * taxRate;
-  const total = subtotal + tax;
+  const total = subtotal;
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -178,7 +175,7 @@ export default function CheckoutPage() {
             paymentMethod: selectedMethod.name,
             paymentMethodDefinitionId: selectedMethod.id,
             subtotal: Math.max(0.01, subtotal),
-            tax: Math.max(0, tax),
+            tax: 0,
             total: Math.max(0.01, total),
             ...(proofImageUrl ? { proofImageUrl } : {}),
             ...(transactionId ? { proofTransactionId: transactionId } : {}),
@@ -207,7 +204,6 @@ export default function CheckoutPage() {
       phone: formData.phone || "",
       notes: formData.notes,
       subtotal: Math.max(0.01, subtotal),
-      tax: Math.max(0, tax),
       total: Math.max(0.01, total),
     });
     setShowingCard(true);
@@ -255,7 +251,7 @@ export default function CheckoutPage() {
         })),
         paymentMethod: "MERCANTIL",
         subtotal: checkoutData.subtotal,
-        tax: checkoutData.tax,
+        tax: 0,
         total: checkoutData.total,
         paymentTransactionId: transactionId,
         ...(cardLastFour ? { cardLastFour } : {}),
@@ -672,7 +668,6 @@ export default function CheckoutPage() {
             <OrderSummary
               items={items}
               subtotal={subtotal}
-              tax={tax}
               total={total}
             />
           </div>

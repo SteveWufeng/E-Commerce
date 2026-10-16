@@ -20,9 +20,7 @@ export default function CartPage() {
     (sum, item) => sum + item.price * item.quantity,
     0
   );
-  const taxRate = 0.08;
-  const tax = subtotal * taxRate;
-  const total = subtotal + tax;
+  const total = subtotal;
 
   if (!hydrated) {
     return (
@@ -95,7 +93,6 @@ export default function CartPage() {
           <div className="lg:col-span-1">
             <CartSummary
               subtotal={subtotal}
-              tax={tax}
               total={total}
               itemCount={items.length}
             />
