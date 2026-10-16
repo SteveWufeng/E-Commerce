@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
       data: {
         storeName: body.storeName ?? current.storeName,
         storeAddress: body.storeAddress ?? current.storeAddress,
-        taxRate: body.taxRate ?? current.taxRate,
         currencyCode: body.currencyCode ?? current.currencyCode,
         currencySymbol: body.currencySymbol ?? current.currencySymbol,
         conversionRate: body.conversionRate ?? current.conversionRate,

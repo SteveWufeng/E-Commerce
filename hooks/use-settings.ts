@@ -3,7 +3,6 @@ import { create } from "zustand";
 interface Settings {
   storeName: string;
   storeAddress: string;
-  taxRate: number;
   currencyCode: string;
   currencySymbol: string;
   conversionRate: number;
