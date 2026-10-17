@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { X } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
@@ -25,6 +26,16 @@ export default function OrderDetailPage() {
   const [proofNotes, setProofNotes] = useState("");
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!enlargedImage) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setEnlargedImage(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [enlargedImage]);
 
   const isOwner = !!(currentUserEmail && order && currentUserEmail === order.customerEmail);
   const isCustomPayment = order?.paymentMethod !== "MERCANTIL";
@@ -285,22 +296,34 @@ export default function OrderDetailPage() {
               <div className="space-y-3 mb-4">
                 {latestProof.paymentMethodDefinition?.qrCodeUrl && (
                   <div className="flex justify-center">
-                    <img
-                      src={latestProof.paymentMethodDefinition.qrCodeUrl}
-                      alt="QR"
-                      className="w-32 h-32 object-contain"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => setEnlargedImage(latestProof.paymentMethodDefinition!.qrCodeUrl)}
+                      className="rounded-lg overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-zoom-in"
+                      aria-label={t("viewLarger")}
+                    >
+                      <img
+                        src={latestProof.paymentMethodDefinition.qrCodeUrl}
+                        alt="QR"
+                        className="w-32 h-32 object-contain hover:opacity-90 transition-opacity"
+                      />
+                    </button>
                   </div>
                 )}
                 {latestProof.imageUrl && (
-                  <div className="relative w-full max-w-sm aspect-[4/3] rounded-lg overflow-hidden border">
+                  <button
+                    type="button"
+                    onClick={() => setEnlargedImage(latestProof.imageUrl!)}
+                    className="relative w-full max-w-sm aspect-[4/3] rounded-lg overflow-hidden border block cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    aria-label={t("viewLarger")}
+                  >
                     <Image
                       src={latestProof.imageUrl}
                       alt="Payment proof"
                       fill
                       className="object-contain"
                     />
-                  </div>
+                  </button>
                 )}
                 {latestProof.transactionId && (
                   <p className="text-sm"><span className="text-gray-500">{t("transactionId")}:</span> {latestProof.transactionId}</p>
@@ -483,6 +506,30 @@ export default function OrderDetailPage() {
           </div>
         </div>
       </main>
+
+      {enlargedImage && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          onClick={() => setEnlargedImage(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <button
+            type="button"
+            onClick={() => setEnlargedImage(null)}
+            className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white"
+            aria-label={t("close")}
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={enlargedImage}
+            alt="Enlarged"
+            className="max-h-[85vh] max-w-[90vw] rounded-lg bg-white object-contain p-3"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       <Footer />
     </div>
