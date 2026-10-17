@@ -15,7 +15,7 @@ const baseOrder = {
     { name: "Widget", quantity: 2, price: "$10.00" },
     { name: "Gadget", quantity: 1, price: "$5.00" },
   ],
-  storeName: "Super Todos",
+  storeName: "Buhoya",
   storeAddress: "123 Main St",
 };
 
@@ -35,7 +35,7 @@ describe("buildOrderMessage", () => {
 
     expect(msg).toContain("Ready for Pickup");
     expect(msg).toContain("ORD-20260805-0001");
-    expect(msg).toContain("Super Todos");
+    expect(msg).toContain("Buhoya");
     expect(msg).toContain("123 Main St");
   });
 
@@ -83,9 +83,9 @@ describe("buildOrderButtons", () => {
 
 describe("buildHelpMessage", () => {
   it("lists the /orders and /help commands", () => {
-    const msg = buildHelpMessage("Super Todos");
+    const msg = buildHelpMessage("Buhoya");
 
-    expect(msg).toContain("Super Todos");
+    expect(msg).toContain("Buhoya");
     expect(msg).toContain("/orders");
     expect(msg).toContain("/help");
   });
@@ -127,7 +127,7 @@ describe("buildOrdersListMessage", () => {
 
 describe("buildHelpMessage", () => {
   it("adds the /order command for admins", () => {
-    const msg = buildHelpMessage("Super Todos", true);
+    const msg = buildHelpMessage("Buhoya", true);
     expect(msg).toContain("/order");
     expect(msg).toContain("store");
   });

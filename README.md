@@ -1,4 +1,4 @@
-# Super Todos — E-Commerce
+# Buhoya — E-Commerce
 
 A mobile-friendly, **pickup-only** e-commerce store built with Next.js 14
 (App Router) and PostgreSQL. Customers browse products, check out as a guest or
