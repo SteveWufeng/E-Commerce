@@ -22,6 +22,7 @@ export default function AdminOrdersPage() {
   const [proofRejectReason, setProofRejectReason] = useState("");
   const [editTransactionId, setEditTransactionId] = useState("");
   const [savingTransaction, setSavingTransaction] = useState(false);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadOrders() {
@@ -265,12 +266,24 @@ export default function AdminOrdersPage() {
                     <td className="py-3 px-4 text-right">
                       {order.status === "PENDING" && (
                         <>
-                          <button
-                            onClick={() => updateStatus(order.id, "CONFIRMED")}
-                            className="btn-primary text-xs py-1.5 px-3"
-                          >
-                            {t("confirmOrder")}
-                          </button>
+                          {(order.paymentProofs?.length ?? 0) > 0 && order.paymentStatus !== "COMPLETED" ? (
+                            <button
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setEditTransactionId(order.paymentIntentId || "");
+                              }}
+                              className="btn-primary text-xs py-1.5 px-3"
+                            >
+                              {t("reviewPayment")}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => updateStatus(order.id, "CONFIRMED")}
+                              className="btn-primary text-xs py-1.5 px-3"
+                            >
+                              {t("confirmOrder")}
+                            </button>
+                          )}
                           <button
                             onClick={() => updateStatus(order.id, "CANCELLED")}
                             className="ml-2 text-xs py-1.5 px-3 text-red-600 hover:text-red-700"
@@ -482,14 +495,19 @@ export default function AdminOrdersPage() {
                     )}
                     {proof.imageUrl && (
                       <div>
-                        <a
-                          href={proof.imageUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary-600 hover:underline"
+                        <button
+                          type="button"
+                          onClick={() => setEnlargedImage(proof.imageUrl)}
+                          className="block"
+                          title={t("viewLarger")}
                         >
-                          {t("proofImage")} →
-                        </a>
+                          <img
+                            src={proof.imageUrl}
+                            alt={t("proofImage")}
+                            className="max-h-48 rounded-lg border border-gray-200 object-contain hover:opacity-90 cursor-zoom-in"
+                          />
+                        </button>
+                        <p className="text-xs text-gray-400 mt-1">{t("viewLarger")}</p>
                       </div>
                     )}
                     {proof.rejectionReason && (
@@ -528,14 +546,19 @@ export default function AdminOrdersPage() {
               {selectedOrder.receiptImage && (
                 <div className="border-t pt-4">
                   <p className="text-gray-500 text-sm mb-2">{t("receiptImage")}</p>
-                  <a
-                    href={selectedOrder.receiptImage}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block text-sm text-primary-600 hover:underline"
+                  <button
+                    type="button"
+                    onClick={() => setEnlargedImage(selectedOrder.receiptImage)}
+                    className="block"
+                    title={t("viewLarger")}
                   >
-                    {t("receiptImage")} →
-                  </a>
+                    <img
+                      src={selectedOrder.receiptImage}
+                      alt={t("receiptImage")}
+                      className="max-h-64 rounded-lg border border-gray-200 object-contain hover:opacity-90 cursor-zoom-in"
+                    />
+                  </button>
+                  <p className="text-xs text-gray-400 mt-1">{t("viewLarger")}</p>
                 </div>
               )}
 
@@ -645,6 +668,26 @@ export default function AdminOrdersPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* Image lightbox */}
+      {enlargedImage && (
+        <div
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-[70] p-4"
+          onClick={() => setEnlargedImage(null)}
+        >
+          <img
+            src={enlargedImage}
+            alt=""
+            className="max-h-full max-w-full object-contain rounded-lg"
+          />
+          <button
+            onClick={() => setEnlargedImage(null)}
+            className="absolute top-4 right-4 text-white text-3xl leading-none hover:text-gray-300"
+            title={t("close")}
+          >
+            ✕
+          </button>
         </div>
       )}
     </AdminLayout>

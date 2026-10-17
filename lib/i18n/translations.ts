@@ -183,6 +183,7 @@ export type TranslationKey =
   | "noCategories"
   | "allStatuses"
   | "confirmOrder"
+  | "reviewPayment"
   | "pickupReady"
   | "pickedUp"
   | "reject"
@@ -565,6 +566,7 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     noCategories: "Aún no hay categorías.",
     allStatuses: "Todos los Estados",
     confirmOrder: "Confirmar",
+    reviewPayment: "Revisar pago",
     pickupReady: "Listo para Recoger",
     pickedUp: "Recogido",
     reject: "Rechazar",
@@ -948,6 +950,7 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     noCategories: "No categories yet.",
     allStatuses: "All Statuses",
     confirmOrder: "Confirm",
+    reviewPayment: "Review payment",
     pickupReady: "Ready for Pickup",
     pickedUp: "Picked Up",
     reject: "Reject",
