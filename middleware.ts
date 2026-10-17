@@ -2,7 +2,8 @@
  * Next.js middleware for authentication and authorization.
  *
  * Protects routes based on user session state:
- * - /admin/* requires ADMIN role — redirects to /login with error
+ * - /admin/* requires ADMIN or STAFF role — redirects to /login with error
+ * - /admin/settings, /admin/payment-methods, /admin/users require ADMIN only
  * - /profile requires authenticated session — redirects to /login
  * - /login and /signup redirect to / if already authenticated
  *
@@ -16,8 +17,15 @@ import { auth } from "@/lib/auth";
 // Routes that require authentication
 const PROTECTED_ROUTES = ["/profile", "/profile/"];
 
-// Routes that require admin role
+// Routes that require admin or staff role
 const ADMIN_ROUTES = ["/admin", "/admin/"];
+
+// Admin-only sub-routes (staff cannot access these)
+const ADMIN_ONLY_ROUTES = [
+  "/admin/settings",
+  "/admin/payment-methods",
+  "/admin/users",
+];
 
 // Auth pages (redirect away if already logged in)
 const AUTH_PAGES = ["/login", "/signup"];
@@ -27,7 +35,7 @@ export default auth((req) => {
   const session = req.auth;
   const pathname = url.pathname;
 
-  // --- Admin routes: require ADMIN role ---
+  // --- Admin routes: require ADMIN or STAFF role ---
   if (ADMIN_ROUTES.some((route) => pathname.startsWith(route))) {
     if (!session) {
       url.pathname = "/login";
@@ -36,7 +44,15 @@ export default auth((req) => {
       return NextResponse.redirect(url);
     }
     const userRole = (session.user as { role?: string })?.role;
-    if (userRole !== "ADMIN") {
+    const isAdminOnly = ADMIN_ONLY_ROUTES.some(
+      (route) => pathname === route || pathname.startsWith(`${route}/`)
+    );
+    if (isAdminOnly && userRole !== "ADMIN") {
+      url.pathname = "/";
+      url.searchParams.set("error", "unauthorized");
+      return NextResponse.redirect(url);
+    }
+    if (userRole !== "ADMIN" && userRole !== "STAFF") {
       url.pathname = "/";
       url.searchParams.set("error", "unauthorized");
       return NextResponse.redirect(url);

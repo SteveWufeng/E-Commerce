@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   LayoutDashboard,
   Package,
@@ -12,6 +13,7 @@ import {
   Store,
   CreditCard,
   MessageSquare,
+  Users,
 } from "lucide-react";
 import { useLocale } from "@/hooks/use-locale";
 
@@ -22,20 +24,27 @@ import { useLocale } from "@/hooks/use-locale";
  * - Collapsible sidebar on mobile
  * - Active page highlighting
  * - Quick link back to storefront
+ * - Admin-only nav items hidden from staff
  */
 export function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { t } = useLocale();
+  const { data: session } = useSession();
+  const role = (session?.user as { role?: string } | undefined)?.role;
+  const isAdmin = role === "ADMIN";
 
-  const navItems = [
-    { href: "/admin/dashboard", label: t("dashboard"), icon: LayoutDashboard },
-    { href: "/admin/products", label: t("products"), icon: Package },
-    { href: "/admin/orders", label: t("orders"), icon: ShoppingBag },
-    { href: "/admin/messages", label: t("messages"), icon: MessageSquare },
-    { href: "/admin/categories", label: t("categories"), icon: Tags },
-    { href: "/admin/payment-methods", label: t("paymentMethods"), icon: CreditCard },
-    { href: "/admin/settings", label: t("settings"), icon: Settings },
+  const allNavItems = [
+    { href: "/admin/dashboard", label: t("dashboard"), icon: LayoutDashboard, adminOnly: false },
+    { href: "/admin/products", label: t("products"), icon: Package, adminOnly: false },
+    { href: "/admin/orders", label: t("orders"), icon: ShoppingBag, adminOnly: false },
+    { href: "/admin/messages", label: t("messages"), icon: MessageSquare, adminOnly: false },
+    { href: "/admin/categories", label: t("categories"), icon: Tags, adminOnly: false },
+    { href: "/admin/payment-methods", label: t("paymentMethods"), icon: CreditCard, adminOnly: true },
+    { href: "/admin/users", label: t("users"), icon: Users, adminOnly: true },
+    { href: "/admin/settings", label: t("settings"), icon: Settings, adminOnly: true },
   ];
+
+  const navItems = allNavItems.filter((item) => isAdmin || !item.adminOnly);
 
   return (
     <div className="min-h-screen flex">

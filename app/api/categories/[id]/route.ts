@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/session";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -16,9 +16,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json({ success: false, error: "Admin required" }, { status: 401 });
+    const staff = await requireStaff();
+    if (!staff) {
+      return NextResponse.json({ success: false, error: "Admin or staff required" }, { status: 401 });
     }
 
     const { id } = await params;
@@ -58,9 +58,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json({ success: false, error: "Admin required" }, { status: 401 });
+    const staff = await requireStaff();
+    if (!staff) {
+      return NextResponse.json({ success: false, error: "Admin or staff required" }, { status: 401 });
     }
 
     const { id } = await params;

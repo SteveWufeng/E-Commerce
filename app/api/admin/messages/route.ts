@@ -10,13 +10,13 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/session";
 
 export async function GET() {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json({ success: false, error: "Admin required" }, { status: 401 });
+    const staff = await requireStaff();
+    if (!staff) {
+      return NextResponse.json({ success: false, error: "Admin or staff required" }, { status: 401 });
     }
 
     const messages = await db.message.findMany({

@@ -41,6 +41,15 @@ export async function isAdmin() {
 }
 
 /**
+ * Check if the current user can access the operations admin area.
+ * True for both ADMIN and STAFF.
+ */
+export async function isStaffOrAdmin() {
+  const user = await getCurrentUser();
+  return user?.role === "ADMIN" || user?.role === "STAFF";
+}
+
+/**
  * Require authentication in a server component or route handler.
  * Returns the session if authenticated, otherwise throws a redirect error.
  *
@@ -64,5 +73,20 @@ export async function requireAdmin() {
   if (!session?.user) return null;
   const role = (session.user as { role?: string })?.role;
   if (role !== "ADMIN") return null;
+  return session;
+}
+
+/**
+ * Require staff-level access (ADMIN or STAFF) in a server component or route
+ * handler. Returns the session if the user is staff or admin, otherwise null.
+ *
+ * Staff members can use the operations admin area (orders, products,
+ * categories, messages) but cannot manage users or store settings.
+ */
+export async function requireStaff() {
+  const session = await getSession();
+  if (!session?.user) return null;
+  const role = (session.user as { role?: string })?.role;
+  if (role !== "ADMIN" && role !== "STAFF") return null;
   return session;
 }

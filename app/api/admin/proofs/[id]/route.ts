@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/session";
 import db from "@/lib/db";
 import { z } from "zod";
 
@@ -15,9 +15,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json({ success: false, error: "Admin required" }, { status: 401 });
+    const staff = await requireStaff();
+    if (!staff) {
+      return NextResponse.json({ success: false, error: "Admin or staff required" }, { status: 401 });
     }
 
     const { id } = await params;
@@ -36,7 +36,7 @@ export async function PUT(
       return NextResponse.json({ success: false, error: "Proof not found" }, { status: 404 });
     }
 
-    const userId = (admin.user as { id: string }).id;
+    const userId = (staff.user as { id: string }).id;
 
     const updated = await db.paymentProof.update({
       where: { id },

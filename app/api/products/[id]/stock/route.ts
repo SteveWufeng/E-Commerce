@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/session";
 
 const stockSchema = z.object({
   adjustment: z.number().int().min(-999999).max(999999),
@@ -22,10 +22,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
+    const staff = await requireStaff();
+    if (!staff) {
       return NextResponse.json(
-        { success: false, error: "Admin authentication required" },
+        { success: false, error: "Admin or staff authentication required" },
         { status: 401 }
       );
     }

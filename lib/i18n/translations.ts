@@ -209,6 +209,26 @@ export type TranslationKey =
   | "saturday"
   | "sunday"
   | "pickupHoursSettings"
+  | "users"
+  | "manageUsers"
+  | "searchUsersPlaceholder"
+  | "noUsers"
+  | "role"
+  | "roleCustomer"
+  | "roleStaff"
+  | "roleAdmin"
+  | "verified"
+  | "unverified"
+  | "telegram"
+  | "telegramNotBound"
+  | "bindTelegram"
+  | "unbindTelegram"
+  | "telegramChatIdLabel"
+  | "editUser"
+  | "nameLabel"
+  | "deleteOrder"
+  | "confirmDeleteOrder"
+  | "updateFailed"
 
   // Auth
   | "signInHeading"
@@ -529,6 +549,26 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     saturday: "Sábado",
     sunday: "Domingo",
     pickupHoursSettings: "Horario de Recogida",
+    users: "Usuarios",
+    manageUsers: "Gestiona el acceso, los roles y los vínculos de Telegram de los usuarios.",
+    searchUsersPlaceholder: "Buscar usuarios...",
+    noUsers: "No se encontraron usuarios.",
+    role: "Rol",
+    roleCustomer: "Cliente",
+    roleStaff: "Personal",
+    roleAdmin: "Administrador",
+    verified: "Verificado",
+    unverified: "Sin verificar",
+    telegram: "Telegram",
+    telegramNotBound: "Sin vincular",
+    bindTelegram: "Vincular",
+    unbindTelegram: "Desvincular",
+    telegramChatIdLabel: "ID de chat de Telegram",
+    editUser: "Editar Usuario",
+    nameLabel: "Nombre",
+    deleteOrder: "Eliminar Pedido",
+    confirmDeleteOrder: "¿Eliminar este pedido permanentemente? Esta acción no se puede deshacer.",
+    updateFailed: "No se pudo actualizar. Inténtalo de nuevo.",
 
     // Auth
     signInHeading: "Iniciar Sesión",
@@ -849,6 +889,26 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     saturday: "Saturday",
     sunday: "Sunday",
     pickupHoursSettings: "Pickup Hours",
+    users: "Users",
+    manageUsers: "Manage user access, roles and Telegram links.",
+    searchUsersPlaceholder: "Search users...",
+    noUsers: "No users found.",
+    role: "Role",
+    roleCustomer: "Customer",
+    roleStaff: "Staff",
+    roleAdmin: "Admin",
+    verified: "Verified",
+    unverified: "Unverified",
+    telegram: "Telegram",
+    telegramNotBound: "Not bound",
+    bindTelegram: "Bind",
+    unbindTelegram: "Unbind",
+    telegramChatIdLabel: "Telegram chat ID",
+    editUser: "Edit User",
+    nameLabel: "Name",
+    deleteOrder: "Delete Order",
+    confirmDeleteOrder: "Permanently delete this order? This action cannot be undone.",
+    updateFailed: "Update failed. Please try again.",
 
     // Auth
     signInHeading: "Sign In",

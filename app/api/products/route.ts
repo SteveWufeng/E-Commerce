@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/session";
 
 const productSchema = z.object({
   name: z.string().min(1).max(200),
@@ -99,10 +99,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
+    const staff = await requireStaff();
+    if (!staff) {
       return NextResponse.json(
-        { success: false, error: "Admin access required" },
+        { success: false, error: "Admin or staff access required" },
         { status: 401 }
       );
     }

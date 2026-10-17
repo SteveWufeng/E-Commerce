@@ -30,7 +30,7 @@ const s3 = new S3Client({
 
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || "";
 
-async function deleteFromR2(url: string) {
+export async function deleteFromR2(url: string) {
   if (!R2_PUBLIC_URL || !url.startsWith(R2_PUBLIC_URL)) return;
   const key = url.replace(R2_PUBLIC_URL, "").replace(/^\//, "");
   if (!key) return;

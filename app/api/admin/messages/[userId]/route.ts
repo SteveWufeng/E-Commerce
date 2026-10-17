@@ -5,14 +5,14 @@
  *   Returns the full thread for a customer and marks their messages as read.
  * POST /api/admin/messages/[userId]
  *   Sends an admin reply: persists it and delivers it to the customer's
- *   Telegram. ADMIN only.
+ *   Telegram. Admin or staff only.
  */
 
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/session";
 import { sendTelegramToUser, buildAdminReplyMessage } from "@/lib/telegram";
 import { z } from "zod";
 
@@ -25,9 +25,9 @@ export async function GET(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json({ success: false, error: "Admin required" }, { status: 401 });
+    const staff = await requireStaff();
+    if (!staff) {
+      return NextResponse.json({ success: false, error: "Admin or staff required" }, { status: 401 });
     }
 
     const { userId } = await params;
@@ -83,9 +83,9 @@ export async function POST(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json({ success: false, error: "Admin required" }, { status: 401 });
+    const staff = await requireStaff();
+    if (!staff) {
+      return NextResponse.json({ success: false, error: "Admin or staff required" }, { status: 401 });
     }
 
     const { userId } = await params;
@@ -111,8 +111,8 @@ export async function POST(
     });
 
     const adminName =
-      (admin.user as { name?: string })?.name ||
-      (admin.user as { email?: string })?.email ||
+      (staff.user as { name?: string })?.name ||
+      (staff.user as { email?: string })?.email ||
       "Store team";
 
     const delivered = await sendTelegramToUser(

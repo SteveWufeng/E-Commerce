@@ -1,8 +1,9 @@
 /**
- * Order ID API — Update or get a specific order.
+ * Order ID API — Update, delete or get a specific order.
  *
  * GET    /api/orders/[id]  — Get single order
- * PUT    /api/orders/[id]  — Update order status (admin only)
+ * PUT    /api/orders/[id]  — Update order status (admin or staff)
+ * DELETE /api/orders/[id]  — Permanently delete an order (admin only)
  */
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
-import { changeOrderStatus } from "@/lib/orders/status";
+import { changeOrderStatus, deleteFromR2 } from "@/lib/orders/status";
 import { notifyAdmins, buildAdminCancellationMessage } from "@/lib/telegram";
 
 const updateStatusSchema = z.object({
@@ -34,8 +35,8 @@ export async function PUT(
     const body = await request.json();
     const validated = updateStatusSchema.parse(body);
 
-    // Admin can do any status change
-    if (userRole === "ADMIN") {
+    // Admin and staff can do any status change
+    if (userRole === "ADMIN" || userRole === "STAFF") {
       // Non-status fields are updated directly.
       const updateData: Record<string, unknown> = {};
       if (validated.paymentIntentId !== undefined) {
@@ -182,5 +183,58 @@ export async function GET(
   } catch (error) {
     console.error("Order GET error:", error);
     return NextResponse.json({ success: false, error: "Failed to fetch order" }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const userRole = (session.user as { role?: string })?.role;
+    if (userRole !== "ADMIN") {
+      return NextResponse.json(
+        { success: false, error: "Admin required" },
+        { status: 403 }
+      );
+    }
+
+    const { id } = await params;
+
+    const order = await db.order.findFirst({
+      where: { OR: [{ id }, { orderNumber: id }] },
+      select: {
+        id: true,
+        receiptImage: true,
+        paymentProofs: { select: { imageUrl: true } },
+      },
+    });
+
+    if (!order) {
+      return NextResponse.json({ success: false, error: "Order not found" }, { status: 404 });
+    }
+
+    // Best-effort cleanup of uploaded receipt / proof images.
+    const files = [
+      order.receiptImage,
+      ...order.paymentProofs.map((proof) => proof.imageUrl),
+    ].filter((url): url is string => Boolean(url));
+    await Promise.all(files.map((url) => deleteFromR2(url).catch(() => {})));
+
+    // Cascades to OrderItem and PaymentProof rows; Message.orderId is set null.
+    await db.order.delete({ where: { id: order.id } });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Order DELETE error:", error);
+    return NextResponse.json({ success: false, error: "Failed to delete order" }, { status: 500 });
   }
 }

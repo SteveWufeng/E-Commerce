@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/session";
 
 const categorySchema = z.object({
   name: z.string().min(1).max(100),
@@ -27,9 +27,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
-      return NextResponse.json({ success: false, error: "Admin required" }, { status: 401 });
+    const staff = await requireStaff();
+    if (!staff) {
+      return NextResponse.json({ success: false, error: "Admin or staff required" }, { status: 401 });
     }
 
     const body = await request.json();

@@ -15,6 +15,7 @@
 
 describe("Authentication middleware logic", () => {
   const ADMIN_ROUTES = ["/admin", "/admin/"];
+  const ADMIN_ONLY_ROUTES = ["/admin/settings", "/admin/payment-methods", "/admin/users"];
   const PROTECTED_ROUTES = ["/profile", "/profile/"];
   const AUTH_PAGES = ["/login", "/signup"];
 
@@ -22,12 +23,19 @@ describe("Authentication middleware logic", () => {
     pathname: string,
     session: { user: { role: string } } | null
   ): { action: "allow" | "redirect"; target: string } {
-    // Admin routes
+    // Admin/staff routes
     if (ADMIN_ROUTES.some((route) => pathname.startsWith(route))) {
       if (!session) {
         return { action: "redirect", target: "/login" };
       }
-      if (session.user.role !== "ADMIN") {
+      const role = session.user.role;
+      const isAdminOnly = ADMIN_ONLY_ROUTES.some(
+        (route) => pathname === route || pathname.startsWith(`${route}/`)
+      );
+      if (isAdminOnly && role !== "ADMIN") {
+        return { action: "redirect", target: "/" };
+      }
+      if (role !== "ADMIN" && role !== "STAFF") {
         return { action: "redirect", target: "/" };
       }
       return { action: "allow", target: pathname };
@@ -80,6 +88,60 @@ describe("Authentication middleware logic", () => {
       const result = evaluateRoute("/admin/dashboard", null);
       expect(result.action).toBe("redirect");
       expect(result.target).toBe("/login");
+    });
+  });
+
+  describe("Staff route protection", () => {
+    it("allows staff to access /admin/dashboard", () => {
+      const result = evaluateRoute("/admin/dashboard", { user: { role: "STAFF" } });
+      expect(result.action).toBe("allow");
+    });
+
+    it("allows staff to access /admin/orders", () => {
+      const result = evaluateRoute("/admin/orders", { user: { role: "STAFF" } });
+      expect(result.action).toBe("allow");
+    });
+
+    it("allows staff to access /admin/products", () => {
+      const result = evaluateRoute("/admin/products", { user: { role: "STAFF" } });
+      expect(result.action).toBe("allow");
+    });
+
+    it("allows staff to access /admin/messages", () => {
+      const result = evaluateRoute("/admin/messages", { user: { role: "STAFF" } });
+      expect(result.action).toBe("allow");
+    });
+
+    it("redirects staff away from /admin/users", () => {
+      const result = evaluateRoute("/admin/users", { user: { role: "STAFF" } });
+      expect(result.action).toBe("redirect");
+      expect(result.target).toBe("/");
+    });
+
+    it("redirects staff away from /admin/settings", () => {
+      const result = evaluateRoute("/admin/settings", { user: { role: "STAFF" } });
+      expect(result.action).toBe("redirect");
+      expect(result.target).toBe("/");
+    });
+
+    it("redirects staff away from /admin/payment-methods", () => {
+      const result = evaluateRoute("/admin/payment-methods", { user: { role: "STAFF" } });
+      expect(result.action).toBe("redirect");
+      expect(result.target).toBe("/");
+    });
+
+    it("allows admin to access admin-only routes", () => {
+      expect(evaluateRoute("/admin/users", { user: { role: "ADMIN" } }).action).toBe("allow");
+      expect(evaluateRoute("/admin/settings", { user: { role: "ADMIN" } }).action).toBe("allow");
+      expect(
+        evaluateRoute("/admin/payment-methods", { user: { role: "ADMIN" } }).action
+      ).toBe("allow");
+    });
+
+    it("redirects a customer away from admin-only routes", () => {
+      const result = evaluateRoute("/admin/users", { user: { role: "CUSTOMER" } });
+      expect(result.action).toBe("redirect");
+      expect(result.target).toBe("/");
     });
   });
 

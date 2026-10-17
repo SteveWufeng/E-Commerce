@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/session";
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 const R2 = new S3Client({
@@ -88,11 +88,11 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Require admin authentication
-    const admin = await requireAdmin();
-    if (!admin) {
+    // Require staff (or admin) authentication
+    const staff = await requireStaff();
+    if (!staff) {
       return NextResponse.json(
-        { success: false, error: "Admin authentication required" },
+        { success: false, error: "Admin or staff authentication required" },
         { status: 401 }
       );
     }
@@ -166,11 +166,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Require admin authentication
-    const admin = await requireAdmin();
-    if (!admin) {
+    // Require staff (or admin) authentication
+    const staff = await requireStaff();
+    if (!staff) {
       return NextResponse.json(
-        { success: false, error: "Admin authentication required" },
+        { success: false, error: "Admin or staff authentication required" },
         { status: 401 }
       );
     }

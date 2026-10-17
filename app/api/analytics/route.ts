@@ -1,5 +1,5 @@
 /**
- * Analytics Dashboard API — Admin-only endpoint for store metrics.
+ * Analytics Dashboard API — Admin and staff endpoint for store metrics.
  *
  * GET /api/analytics/dashboard  — Get aggregated dashboard metrics
  * Query params:
@@ -11,14 +11,14 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDashboardMetrics } from "@/lib/analytics";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/session";
 
 export async function GET(request: NextRequest) {
   try {
-    const admin = await requireAdmin();
-    if (!admin) {
+    const staff = await requireStaff();
+    if (!staff) {
       return NextResponse.json(
-        { success: false, error: "Admin access required" },
+        { success: false, error: "Admin or staff access required" },
         { status: 401 }
       );
     }

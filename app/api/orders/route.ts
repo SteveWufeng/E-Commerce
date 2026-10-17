@@ -354,9 +354,9 @@ export async function GET(request: NextRequest) {
     const session = await auth();
     const userRole = (session?.user as { role?: string })?.role;
 
-    const isAdmin = userRole === "ADMIN";
+    const canManageOrders = userRole === "ADMIN" || userRole === "STAFF";
 
-    if (!session?.user && !isAdmin) {
+    if (!session?.user && !canManageOrders) {
       return NextResponse.json(
         { success: false, error: "Authentication required" },
         { status: 401 }
@@ -364,7 +364,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (orderId) {
-      const where: Record<string, unknown> = isAdmin
+      const where: Record<string, unknown> = canManageOrders
         ? { OR: [{ id: orderId }, { orderNumber: orderId }] }
         : {
             OR: [{ id: orderId }, { orderNumber: orderId }],
@@ -394,7 +394,7 @@ export async function GET(request: NextRequest) {
 
     const userEmail = session?.user?.email;
     const orders = await db.order.findMany({
-      where: isAdmin ? {} : { customerEmail: userEmail || "" },
+      where: canManageOrders ? {} : { customerEmail: userEmail || "" },
       include: {
         items: true,
         paymentProofs: {

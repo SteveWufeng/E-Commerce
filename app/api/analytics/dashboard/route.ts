@@ -11,15 +11,15 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDashboardMetrics } from "@/lib/analytics";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/session";
 
 export async function GET(request: NextRequest) {
   try {
-    // Require admin authentication
-    const admin = await requireAdmin();
-    if (!admin) {
+    // Require admin or staff authentication
+    const staff = await requireStaff();
+    if (!staff) {
       return NextResponse.json(
-        { success: false, error: "Admin authentication required" },
+        { success: false, error: "Admin or staff authentication required" },
         { status: 401 }
       );
     }

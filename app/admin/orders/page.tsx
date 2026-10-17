@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { useLocale } from "@/hooks/use-locale";
 
 export default function AdminOrdersPage() {
   const { t } = useLocale();
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role === "ADMIN";
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -136,6 +139,23 @@ export default function AdminOrdersPage() {
     const newStatus = undoMap[order.status];
     if (newStatus) {
       await updateStatus(orderId, newStatus);
+    }
+  }
+
+  async function handleDeleteOrder(orderId: string) {
+    if (!confirm(t("confirmDeleteOrder"))) return;
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, { method: "DELETE" });
+      if (res.ok) {
+        setOrders((prev) => prev.filter((o) => o.id !== orderId));
+        if (selectedOrder?.id === orderId) setSelectedOrder(null);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || t("updateFailed"));
+      }
+    } catch (error) {
+      console.error("Failed to delete order:", error);
+      alert(t("updateFailed"));
     }
   }
 
@@ -304,6 +324,14 @@ export default function AdminOrdersPage() {
                           className="btn-secondary text-xs py-1.5 px-3"
                         >
                           {t("restore")}
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleDeleteOrder(order.id)}
+                          className="ml-2 text-xs py-1.5 px-3 text-red-600 hover:text-red-700 border border-red-300 rounded-lg"
+                        >
+                          {t("deleteOrder")}
                         </button>
                       )}
                     </td>
@@ -545,6 +573,17 @@ export default function AdminOrdersPage() {
                 <div className="border-t pt-4">
                   <p className="text-gray-500 text-sm">{t("orderNotes")}</p>
                   <p className="text-sm">{selectedOrder.notes}</p>
+                </div>
+              )}
+
+              {isAdmin && (
+                <div className="border-t pt-4">
+                  <button
+                    onClick={() => handleDeleteOrder(selectedOrder.id)}
+                    className="text-sm py-2 px-4 text-red-600 hover:text-red-700 border border-red-300 rounded-lg"
+                  >
+                    {t("deleteOrder")}
+                  </button>
                 </div>
               )}
             </div>
