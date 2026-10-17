@@ -8,6 +8,13 @@ import type { MercantilTransactionData } from "@/lib/payments/mercantil";
 import { sendEmail, orderConfirmationEmail } from "@/lib/email";
 import { sendSms, orderConfirmationSms } from "@/lib/sms";
 import { auth } from "@/lib/auth";
+import {
+  sendTelegramToUser,
+  notifyAdmins,
+  buildOrderSubmittedMessage,
+  buildNewOrderAdminMessage,
+  adminOrderUrl,
+} from "@/lib/telegram";
 import { z } from "zod";
 
 const createOrderSchema = z.object({
@@ -42,6 +49,35 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validated = createOrderSchema.parse(body);
+
+    // Hard gate: checkout requires a signed-in account with Telegram linked.
+    const session = await auth();
+    const sessionUser = session?.user as { id?: string; email?: string } | undefined;
+    if (!sessionUser?.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: "TELEGRAM_REQUIRED",
+          error: "Please sign in and link Telegram to place an order.",
+        },
+        { status: 403 }
+      );
+    }
+
+    const dbUser = await db.user.findUnique({
+      where: { id: sessionUser.id },
+      select: { id: true, telegramChatId: true, telegramOptIn: true },
+    });
+    if (!dbUser?.telegramChatId || !dbUser.telegramOptIn) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: "TELEGRAM_REQUIRED",
+          error: "Link your Telegram account before placing an order.",
+        },
+        { status: 403 }
+      );
+    }
 
     const date = new Date();
     const dateStr = date.toISOString().slice(0, 10).replace(/-/g, "");
@@ -179,6 +215,7 @@ export async function POST(request: NextRequest) {
       return tx.order.create({
         data: {
           orderNumber,
+          userId: dbUser.id,
           customerEmail: validated.email,
           customerFirstName: validated.firstName,
           customerLastName: validated.lastName,
@@ -233,6 +270,47 @@ export async function POST(request: NextRequest) {
       smsTemplate.to = validated.phone;
       await sendSms(smsTemplate);
     }
+
+    // Telegram: confirm to the customer and alert the admins.
+    const settings = await db.settings.findFirst({
+      select: { currencySymbol: true, storeName: true },
+    });
+    const currency = settings?.currencySymbol ?? "$";
+    const displayPaymentMethod = hasPaymentMethodDefinition
+      ? order.paymentProofs?.[0]?.paymentMethodDefinition?.name || "Custom Payment"
+      : isDeferredPayment
+        ? "Mercantil Payment"
+        : validated.paymentMethod.replace(/_/g, " ");
+
+    sendTelegramToUser(
+      dbUser.id,
+      buildOrderSubmittedMessage({ orderNumber: order.orderNumber, total: Number(order.total) }, currency)
+    ).catch(() => {});
+
+    notifyAdmins(
+      buildNewOrderAdminMessage(
+        {
+          orderNumber: order.orderNumber,
+          status: order.status,
+          paymentStatus: order.paymentStatus,
+          total: Number(order.total),
+          paymentMethod: displayPaymentMethod,
+          createdAt: order.createdAt,
+          customerFirstName: order.customerFirstName,
+          customerLastName: order.customerLastName,
+          customerEmail: order.customerEmail,
+          customerPhone: order.customerPhone,
+          notes: order.notes,
+          items: order.items.map((item) => ({
+            productName: item.productName,
+            productPrice: Number(item.productPrice),
+            quantity: item.quantity,
+          })),
+        },
+        { currencySymbol: currency }
+      ),
+      [{ text: "📋 View in dashboard", url: adminOrderUrl(order.orderNumber) }]
+    ).catch(() => {});
 
     return NextResponse.json(
       {

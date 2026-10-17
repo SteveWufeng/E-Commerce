@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { X } from "lucide-react";
 import { useCartStore } from "@/hooks/use-cart";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -70,6 +72,10 @@ export default function CheckoutPage() {
   const [proofNotes, setProofNotes] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [enlargedQr, setEnlargedQr] = useState<string | null>(null);
+  const [telegramLinked, setTelegramLinked] = useState<boolean | null>(null);
+  const [isAuthed, setIsAuthed] = useState(false);
+  const telegramBlocked = telegramLinked === false;
 
   const [showingCard, setShowingCard] = useState(false);
   const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null);
@@ -82,6 +88,15 @@ export default function CheckoutPage() {
     cardType: "tdc",
   });
   const [otp, setOtp] = useState("");
+
+  useEffect(() => {
+    if (!enlargedQr) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setEnlargedQr(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [enlargedQr]);
 
   useEffect(() => {
     if (hydrated && items.length === 0 && !showingCard) {
@@ -112,6 +127,7 @@ export default function CheckoutPage() {
 
         const sessionData = await sessionRes.json();
         if (sessionData?.user) {
+          setIsAuthed(true);
           const profileRes = await fetch("/api/auth/me");
           if (profileRes.ok) {
             const profileData = await profileRes.json();
@@ -122,7 +138,13 @@ export default function CheckoutPage() {
               email: profile.email,
               phone: profile.phone || "",
             });
+            setTelegramLinked(!!profile.telegramChatId && !!profile.telegramOptIn);
+          } else {
+            setTelegramLinked(false);
           }
+        } else {
+          setIsAuthed(false);
+          setTelegramLinked(false);
         }
       } catch {
         // silent
@@ -522,10 +544,36 @@ export default function CheckoutPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
+            {telegramBlocked && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+                <p className="font-semibold text-amber-900">
+                  {t("telegramRequiredTitle")}
+                </p>
+                <p className="mt-1 text-sm text-amber-800">
+                  {t("telegramRequiredBody")}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  {isAuthed ? (
+                    <Link href="/profile" className="btn-primary px-4 py-2 text-sm">
+                      {t("linkTelegram")}
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/login?callbackUrl=/checkout"
+                      className="btn-primary px-4 py-2 text-sm"
+                    >
+                      {t("signIn")}
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+
             <CheckoutForm
               onSubmit={handleOrderSubmit}
               isProcessing={isProcessing}
               prefillData={prefillData}
+              disabled={telegramBlocked}
             />
 
             <div className="card">
@@ -600,12 +648,22 @@ export default function CheckoutPage() {
               {paymentOption === "CUSTOM" && selectedMethod && hasProofRequired(selectedMethod) && (
                 <div className="mt-4 space-y-4">
                   {selectedMethod.qrCodeUrl && (
-                    <div className="flex justify-center">
-                      <img
-                        src={selectedMethod.qrCodeUrl}
-                        alt={`${selectedMethod.name} QR`}
-                        className="w-48 h-48 object-contain"
-                      />
+                    <div className="flex flex-col items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setEnlargedQr(selectedMethod.qrCodeUrl)}
+                        className="group relative rounded-xl border border-gray-200 bg-white p-2 transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        aria-label={`${selectedMethod.name} — ${t("viewLarger")}`}
+                      >
+                        <img
+                          src={selectedMethod.qrCodeUrl}
+                          alt={`${selectedMethod.name} QR`}
+                          className="w-64 h-64 object-contain sm:w-80 sm:h-80 group-hover:opacity-90"
+                        />
+                        <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-black/0 text-xs font-medium text-white opacity-0 transition-opacity group-hover:bg-black/40 group-hover:opacity-100">
+                          {t("viewLarger")}
+                        </span>
+                      </button>
                     </div>
                   )}
 
@@ -673,6 +731,30 @@ export default function CheckoutPage() {
           </div>
         </div>
       </main>
+
+      {enlargedQr && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setEnlargedQr(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <button
+            type="button"
+            onClick={() => setEnlargedQr(null)}
+            className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white"
+            aria-label={t("close")}
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={enlargedQr}
+            alt="QR code enlarged"
+            className="max-h-[85vh] max-w-[90vw] rounded-lg bg-white object-contain p-3"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       <Footer />
     </div>

@@ -190,6 +190,10 @@ export type TranslationKey =
   | "noReceipt"
   | "cancelRejection"
   | "close"
+  | "viewLarger"
+  | "telegramRequiredTitle"
+  | "telegramRequiredBody"
+  | "linkTelegram"
   | "monday"
   | "tuesday"
   | "wednesday"
@@ -498,6 +502,10 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     noReceipt: "Sin comprobante",
     cancelRejection: "Cancelar Rechazo",
     close: "Cerrar",
+    viewLarger: "Ampliar",
+    telegramRequiredTitle: "Vincula Telegram para continuar",
+    telegramRequiredBody: "Debes vincular tu cuenta de Telegram antes de realizar un pedido. Te enviaremos las actualizaciones del pedido allí.",
+    linkTelegram: "Vincular Telegram",
     // Pickup Hours
     monday: "Lunes",
     tuesday: "Martes",
@@ -807,6 +815,10 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     noReceipt: "No receipt",
     cancelRejection: "Cancel Rejection",
     close: "Close",
+    viewLarger: "View larger",
+    telegramRequiredTitle: "Link Telegram to continue",
+    telegramRequiredBody: "You must link your Telegram account before placing an order. We'll send your order updates there.",
+    linkTelegram: "Link Telegram",
     // Pickup Hours
     monday: "Monday",
     tuesday: "Tuesday",

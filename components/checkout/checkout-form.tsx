@@ -29,6 +29,7 @@ export function CheckoutForm({
   onSubmit,
   isProcessing,
   prefillData,
+  disabled,
 }: {
   onSubmit: (data: CheckoutFormData) => void;
   isProcessing: boolean;
@@ -38,6 +39,7 @@ export function CheckoutForm({
     email: string;
     phone: string;
   } | null;
+  disabled?: boolean;
 }) {
   const { t } = useLocale();
 
@@ -159,8 +161,8 @@ export function CheckoutForm({
 
       <button
         type="submit"
-        disabled={isProcessing}
-        className="btn-primary w-full mt-6 py-3 text-base"
+        disabled={isProcessing || disabled}
+        className="btn-primary w-full mt-6 py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isProcessing ? t("processing") : t("placeOrder")}
       </button>
