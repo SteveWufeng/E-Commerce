@@ -26,7 +26,7 @@ import { CurrencyToggle } from "@/components/layout/currency-toggle";
 export function Header() {
   const { t } = useLocale();
   const settings = useSettingsStore((state) => state.settings);
-  const storeName = settings?.storeName || process.env.NEXT_PUBLIC_STORE_NAME || "Super Todos";
+  const storeName = settings?.storeName || process.env.NEXT_PUBLIC_STORE_NAME || "Buhoya";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [cartBounce, setCartBounce] = useState(false);
