@@ -2,7 +2,7 @@
  * Unit tests for the Telegram notification message builder.
  */
 
-import { buildOrderMessage, buildOrderButtons, buildHelpMessage, buildOrdersListMessage, buildOrderStatusMessage } from "@/lib/telegram";
+import { buildOrderMessage, buildOrderButtons, buildHelpMessage, buildOrdersListMessage, buildOrderStatusMessage, buildNewOrderAdminMessage, buildAdminCancellationMessage, buildAdminPaymentUpdateMessage, buildCustomerMessageNotification, buildAdminReplyMessage, buildAdminOrderButtons, statusEmoji, statusLabel } from "@/lib/telegram";
 
 const baseOrder = {
   id: "order-1",
@@ -160,5 +160,106 @@ describe("buildOrderStatusMessage", () => {
   it("includes the customer name in admin mode", () => {
     const msg = buildOrderStatusMessage(order, { forAdmin: true });
     expect(msg).toContain("Customer: Jane");
+  });
+});
+
+describe("admin notification builders", () => {
+  const order = {
+    orderNumber: "ORD-20260805-0009",
+    status: "PENDING",
+    paymentStatus: "PENDING",
+    total: 42.5,
+    paymentMethod: "Mercantil Payment",
+    createdAt: new Date("2026-08-05T12:00:00Z"),
+    customerFirstName: "Jane",
+    customerLastName: "Doe",
+    customerEmail: "jane@example.com",
+    customerPhone: "+580000000",
+    items: [
+      { productName: "Widget", productPrice: 10, quantity: 3 },
+      { productName: "Gadget", productPrice: 12.5, quantity: 1 },
+    ],
+  };
+
+  it("builds a new-order admin message with customer, total and items", () => {
+    const msg = buildNewOrderAdminMessage(order);
+    expect(msg).toContain("New order");
+    expect(msg).toContain("ORD-20260805-0009");
+    expect(msg).toContain("Jane Doe");
+    expect(msg).toContain("jane@example.com");
+    expect(msg).toContain("$42.50");
+    expect(msg).toContain("Widget ×3 — $10.00");
+  });
+
+  it("honours a custom currency symbol in the new-order message", () => {
+    const msg = buildNewOrderAdminMessage(order, { currencySymbol: "Bs." });
+    expect(msg).toContain("Bs.42.50");
+    expect(msg).toContain("Bs.10.00");
+  });
+
+  it("builds a cancellation alert", () => {
+    const msg = buildAdminCancellationMessage(order);
+    expect(msg).toContain("Order cancelled");
+    expect(msg).toContain("ORD-20260805-0009");
+    expect(msg).toContain("Jane");
+  });
+
+  it("builds a payment update alert including the detail", () => {
+    const msg = buildAdminPaymentUpdateMessage(
+      { ...order, paymentStatus: "COMPLETED" },
+      "Payment approved via Mercantil."
+    );
+    expect(msg).toContain("Payment update");
+    expect(msg).toContain("Payment approved via Mercantil.");
+    expect(msg).toContain("Payment: completed");
+  });
+
+  it("builds a customer-message notification with body and reply hint", () => {
+    const msg = buildCustomerMessageNotification("Jane Doe", "Where is my order?", "Reply via dashboard");
+    expect(msg).toContain("New message");
+    expect(msg).toContain("Jane Doe");
+    expect(msg).toContain("Where is my order?");
+    expect(msg).toContain("Reply via dashboard");
+  });
+
+  it("builds an admin reply message for the customer", () => {
+    const msg = buildAdminReplyMessage("Admin Ann", "It ships today.");
+    expect(msg).toContain("Admin Ann");
+    expect(msg).toContain("It ships today.");
+  });
+});
+
+describe("buildAdminOrderButtons", () => {
+  it("offers Confirm and Cancel for a PENDING order", () => {
+    const buttons = buildAdminOrderButtons("ORD-1", "PENDING");
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0].callbackData).toBe("ord:confirm:ORD-1");
+    expect(buttons[1].callbackData).toBe("ord:cancel:ORD-1");
+    expect(buttons[0].url).toBeUndefined();
+  });
+
+  it("offers Ready and Cancel for a CONFIRMED order", () => {
+    const buttons = buildAdminOrderButtons("ORD-1", "CONFIRMED");
+    expect(buttons.map((b) => b.callbackData)).toEqual([
+      "ord:ready:ORD-1",
+      "ord:cancel:ORD-1",
+    ]);
+  });
+
+  it("offers only Picked up for a READY_FOR_PICKUP order", () => {
+    const buttons = buildAdminOrderButtons("ORD-1", "READY_FOR_PICKUP");
+    expect(buttons.map((b) => b.callbackData)).toEqual(["ord:pickedup:ORD-1"]);
+  });
+
+  it("offers no actions for a terminal state", () => {
+    expect(buildAdminOrderButtons("ORD-1", "PICKED_UP")).toEqual([]);
+  });
+});
+
+describe("status helpers", () => {
+  it("maps known statuses to emojis and normalises labels", () => {
+    expect(statusEmoji("CONFIRMED")).toBe("✅");
+    expect(statusEmoji("UNKNOWN")).toBe("ℹ️");
+    expect(statusLabel("READY_FOR_PICKUP")).toBe("ready for pickup");
   });
 });
