@@ -1,5 +1,5 @@
 /**
- * Register the Telegram bot webhook.
+ * Register the Telegram bot webhook and command menu.
  *
  * Usage:
  *   TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_URL=https://your-domain.com/api/telegram/webhook node scripts/set-telegram-webhook.mjs
@@ -18,6 +18,19 @@ if (!token) {
 
 const isDelete = process.argv.includes("--delete");
 const url = process.env.TELEGRAM_WEBHOOK_URL;
+
+// Commands exposed in the Telegram "/" menu.
+const COMMANDS = [
+  { command: "orders", description: "Your recent orders (all orders for admins)" },
+  { command: "order", description: "Status of a specific order" },
+  { command: "help", description: "Show what I can do" },
+  { command: "confirm", description: "Admin: mark an order confirmed" },
+  { command: "ready", description: "Admin: mark an order ready for pickup" },
+  { command: "pickedup", description: "Admin: mark an order picked up" },
+  { command: "cancel", description: "Admin: cancel an order" },
+  { command: "reject", description: "Admin: reject an order with a reason" },
+  { command: "reply", description: "Admin: message that order's customer" },
+];
 
 async function call(method, body) {
   const res = await fetch(`${TELEGRAM_API}/bot${token}/${method}`, {
@@ -45,7 +58,12 @@ if (isDelete) {
   const data = await call("setWebhook", {
     url,
     ...(secretToken ? { secret_token: secretToken } : {}),
-    allowed_updates: ["message"],
+    // callback_query is required for inline buttons to work.
+    allowed_updates: ["message", "callback_query"],
   });
   console.log("Webhook registered:", data.result, "->", url);
+
+  const commands = await call("setMyCommands", { commands: COMMANDS });
+  console.log("Commands registered:", commands.result, `(${COMMANDS.length})`);
 }
+

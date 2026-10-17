@@ -259,18 +259,35 @@ export function buildOrderButtons(orderNumber: string): TelegramButton[] {
  * Build a help message listing the commands the bot understands.
  */
 export function buildHelpMessage(storeName: string, forAdmin = false): string {
-  let msg =
-    `🤖 <b>${storeName}</b> assistant\n\n` +
-    `Here's what I can do:\n` +
-    `/orders — ${forAdmin ? "recent orders across the store" : "your recent orders and their status"}\n` +
-    `/help — show this message`;
-
   if (forAdmin) {
-    msg += `\n/order <order number> — status of any order (admin)`;
+    return (
+      `🤖 <b>${storeName}</b> — admin bot\n\n` +
+      `<b>Browse</b>\n` +
+      `/orders — recent orders across the store\n` +
+      `/order <number> — full status of any order (also /status)\n\n` +
+      `<b>Update an order</b>\n` +
+      `/confirm <number> — mark confirmed\n` +
+      `/ready <number> — mark ready for pickup\n` +
+      `/pickedup <number> — mark picked up\n` +
+      `/cancel <number> — cancel the order\n` +
+      `/reject <number> <reason> — reject with a reason\n\n` +
+      `<b>Message a customer</b>\n` +
+      `/reply <number> <message> — send a message to that order's customer\n\n` +
+      `Or just tap the buttons under an order card to change its status.\n` +
+      `Manage all conversations from the dashboard: ${BASE_URL}/admin/messages\n\n` +
+      `/help — show this message`
+    );
   }
 
-  msg += `\n\nOrder updates (confirmed, ready for pickup, and more) are sent here automatically.`;
-  return msg;
+  return (
+    `🤖 <b>${storeName}</b> assistant\n\n` +
+    `Here's what I can do:\n` +
+    `/orders — your recent orders and their status\n` +
+    `/order <number> — status of a specific order\n` +
+    `/help — show this message\n\n` +
+    `You can also simply <b>send me a message</b> and the store team will reply here.\n\n` +
+    `Order updates (confirmed, ready for pickup, and more) are sent here automatically.`
+  );
 }
 
 /**
