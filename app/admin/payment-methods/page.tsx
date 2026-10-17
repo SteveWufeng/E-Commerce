@@ -44,8 +44,18 @@ export default function AdminPaymentMethodsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [uploadingIcon, setUploadingIcon] = useState(false);
   const [uploadingQr, setUploadingQr] = useState(false);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const iconFileRef = useRef<HTMLInputElement>(null);
   const qrFileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!enlargedImage) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setEnlargedImage(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [enlargedImage]);
 
   useEffect(() => {
     loadMethods();
@@ -359,13 +369,20 @@ export default function AdminPaymentMethodsPage() {
                 <div>
                   <label className="label">{t("paymentMethodQrCode")}</label>
                   {form.qrCodeUrl ? (
-                    <div className="relative group aspect-video rounded-lg overflow-hidden border border-gray-200 bg-gray-50 mb-2">
-                      <img
-                        src={form.qrCodeUrl}
-                        alt="QR Code"
-                        className="w-full h-full object-contain p-2"
-                        onError={(e) => { (e.target as HTMLImageElement).src = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23f3f4f6' width='100' height='100'/><text x='50' y='55' text-anchor='middle' fill='%239ca3af' font-size='10'>Broken</text></svg>"; }}
-                      />
+                    <div className="relative group w-40 mb-2">
+                      <button
+                        type="button"
+                        onClick={() => setEnlargedImage(form.qrCodeUrl)}
+                        className="block aspect-square w-40 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        aria-label={`QR — ${t("viewLarger")}`}
+                      >
+                        <img
+                          src={form.qrCodeUrl}
+                          alt="QR Code"
+                          className="w-full h-full object-contain p-2"
+                          onError={(e) => { (e.target as HTMLImageElement).src = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23f3f4f6' width='100' height='100'/><text x='50' y='55' text-anchor='middle' fill='%239ca3af' font-size='10'>Broken</text></svg>"; }}
+                        />
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
@@ -523,6 +540,29 @@ export default function AdminPaymentMethodsPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {enlargedImage && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          onClick={() => setEnlargedImage(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <button
+            type="button"
+            onClick={() => setEnlargedImage(null)}
+            className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white"
+            aria-label={t("close")}
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={enlargedImage}
+            alt="QR code enlarged"
+            className="max-h-[85vh] max-w-[90vw] rounded-lg bg-white object-contain p-3"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </AdminLayout>
