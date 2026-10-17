@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { requestAuth } from "@/lib/payments/mercantil-card";
+import db from "@/lib/db";
 import { z } from "zod";
 
 const getauthSchema = z.object({
@@ -13,6 +14,14 @@ const getauthSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const settings = await db.settings.findFirst();
+    if (settings?.mercantilCardEnabled === false) {
+      return NextResponse.json(
+        { success: false, error: "Card payments are currently disabled" },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const validated = getauthSchema.parse(body);
 

@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
         currencySymbol: body.currencySymbol ?? current.currencySymbol,
         conversionRate: body.conversionRate ?? current.conversionRate,
         mercantilRedirectEnabled: body.mercantilRedirectEnabled ?? current.mercantilRedirectEnabled,
+        mercantilCardEnabled: body.mercantilCardEnabled ?? current.mercantilCardEnabled,
       },
     });
 

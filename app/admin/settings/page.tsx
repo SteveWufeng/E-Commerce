@@ -12,6 +12,7 @@ interface StoreSettings {
   currencySymbol: string;
   conversionRate: number;
   mercantilRedirectEnabled: boolean;
+  mercantilCardEnabled: boolean;
 }
 
 interface TelegramConfig {
@@ -39,6 +40,7 @@ export default function AdminSettingsPage() {
     currencySymbol: "$",
     conversionRate: 1,
     mercantilRedirectEnabled: false,
+    mercantilCardEnabled: true,
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -258,6 +260,18 @@ export default function AdminSettingsPage() {
             {t("paymentMethods")}
           </h2>
           <div className="space-y-4">
+            <label className="flex items-center justify-between p-3 rounded-lg border border-gray-200 cursor-pointer hover:border-gray-300">
+              <div>
+                <p className="text-sm font-medium text-gray-900">Credit / Debit Card (Mercantil)</p>
+                <p className="text-xs text-gray-500">Show the card payment option at checkout</p>
+              </div>
+              <input
+                type="checkbox"
+                className="w-5 h-5 accent-primary-500 rounded"
+                checked={settings.mercantilCardEnabled}
+                onChange={(e) => setSettings({ ...settings, mercantilCardEnabled: e.target.checked })}
+              />
+            </label>
             <label className="flex items-center justify-between p-3 rounded-lg border border-gray-200 cursor-pointer hover:border-gray-300">
               <div>
                 <p className="text-sm font-medium text-gray-900">Mercantil — Redirect Button (Legacy)</p>

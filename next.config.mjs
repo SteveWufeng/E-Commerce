@@ -22,8 +22,10 @@ const nextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "origin-when-cross-origin" },
           {
+            // camera=(self) allows the same-origin admin barcode scanner to use
+            // the camera. Microphone/geolocation stay disabled.
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            value: "camera=(self), microphone=(), geolocation=()",
           },
         ],
       },

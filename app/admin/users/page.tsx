@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { KeyRound } from "lucide-react";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { formatDateTime } from "@/lib/utils";
 import { useLocale } from "@/hooks/use-locale";
@@ -49,6 +50,13 @@ export default function AdminUsersPage() {
   const [editPhone, setEditPhone] = useState("");
   const [telegramUser, setTelegramUser] = useState<UserRow | null>(null);
   const [telegramChatId, setTelegramChatId] = useState("");
+
+  const [resetUser, setResetUser] = useState<UserRow | null>(null);
+  const [resetLink, setResetLink] = useState("");
+  const [resetExpiresAt, setResetExpiresAt] = useState("");
+  const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetCopied, setResetCopied] = useState(false);
 
   const loadUsers = useCallback(async (query: string) => {
     try {
@@ -127,6 +135,50 @@ export default function AdminUsersPage() {
 
   async function handleUnbind(user: UserRow) {
     await patchUser(user.id, { telegramChatId: null });
+  }
+
+  function openReset(user: UserRow) {
+    setResetUser(user);
+    setResetLink("");
+    setResetExpiresAt("");
+    setResetEmailSent(false);
+    setResetCopied(false);
+  }
+
+  async function generateResetLink(sendEmail: boolean) {
+    if (!resetUser) return;
+    setResetBusy(true);
+    setResetCopied(false);
+    try {
+      const res = await fetch(`/api/admin/users/${resetUser.id}/password-reset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sendEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.error || t("updateFailed"));
+        return;
+      }
+      setResetLink(data.data.url);
+      setResetExpiresAt(data.data.expiresAt);
+      setResetEmailSent(Boolean(data.data.emailSent));
+    } catch (error) {
+      console.error("Failed to create reset link:", error);
+      alert(t("updateFailed"));
+    } finally {
+      setResetBusy(false);
+    }
+  }
+
+  async function copyResetLink() {
+    if (!resetLink) return;
+    try {
+      await navigator.clipboard.writeText(resetLink);
+      setResetCopied(true);
+    } catch {
+      // Clipboard may be unavailable; the link is still selectable in the input.
+    }
   }
 
   return (
@@ -214,6 +266,13 @@ export default function AdminUsersPage() {
                           className="text-xs py-1.5 px-3 text-primary-600 hover:underline"
                         >
                           {t("editUser")}
+                        </button>
+                        <button
+                          onClick={() => openReset(user)}
+                          className="ml-1 inline-flex items-center gap-1 text-xs py-1.5 px-3 text-gray-600 hover:text-gray-800"
+                        >
+                          <KeyRound className="w-3.5 h-3.5" />
+                          {t("resetPassword")}
                         </button>
                         {user.telegramChatId ? (
                           <button
@@ -319,6 +378,79 @@ export default function AdminUsersPage() {
                 {t("save")}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password reset modal */}
+      {resetUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg mx-4">
+            <h2 className="text-lg font-semibold mb-1">{t("resetPasswordTitle")}</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              {resetUser.firstName} {resetUser.lastName} · {resetUser.email}
+            </p>
+
+            {!resetLink ? (
+              <>
+                <p className="text-sm text-gray-500 mb-4">{t("resetPasswordHint")}</p>
+                <div className="flex flex-wrap justify-end gap-3">
+                  <button
+                    onClick={() => setResetUser(null)}
+                    className="btn-secondary text-sm py-2 px-4"
+                  >
+                    {t("cancel")}
+                  </button>
+                  <button
+                    onClick={() => generateResetLink(false)}
+                    disabled={resetBusy}
+                    className="btn-secondary text-sm py-2 px-4"
+                  >
+                    {resetBusy ? t("saving") : t("generateResetLink")}
+                  </button>
+                  <button
+                    onClick={() => generateResetLink(true)}
+                    disabled={resetBusy}
+                    className="btn-primary text-sm py-2 px-4"
+                  >
+                    {resetBusy ? t("saving") : t("generateAndEmail")}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <label className="block text-sm text-gray-500 mb-1">{t("resetLinkLabel")}</label>
+                <input
+                  type="text"
+                  readOnly
+                  value={resetLink}
+                  onFocus={(e) => e.target.select()}
+                  className="input w-full font-mono text-xs"
+                />
+                {resetExpiresAt && (
+                  <p className="text-xs text-gray-400 mt-2">
+                    {t("resetLinkExpires")}: {formatDateTime(resetExpiresAt)}
+                  </p>
+                )}
+                {resetEmailSent && (
+                  <p className="text-xs text-green-600 mt-2">{t("resetEmailSent")}</p>
+                )}
+                <div className="flex flex-wrap justify-end gap-3 mt-5">
+                  <button
+                    onClick={() => setResetUser(null)}
+                    className="btn-secondary text-sm py-2 px-4"
+                  >
+                    {t("close")}
+                  </button>
+                  <button
+                    onClick={copyResetLink}
+                    className="btn-primary text-sm py-2 px-4"
+                  >
+                    {resetCopied ? t("copied") : t("copyLink")}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -153,6 +153,43 @@ export function verificationEmail(params: {
 }
 
 /**
+ * Generate a password reset email.
+ */
+export function passwordResetEmail(params: {
+  email: string;
+  resetUrl: string;
+  appName: string;
+  expiresInMinutes?: number;
+}): EmailTemplate {
+  const expiresInMinutes = params.expiresInMinutes ?? 60;
+
+  return {
+    to: params.email,
+    subject: `Reset your password — ${params.appName}`,
+    html: `
+      <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;padding:20px">
+        <h2 style="color:#2563eb">Reset Your Password</h2>
+        <p>We received a request to reset your password.</p>
+        <p>Click the button below to choose a new password:</p>
+        <div style="text-align:center;margin:24px 0">
+          <a href="${params.resetUrl}"
+             style="display:inline-block;padding:12px 24px;background-color:#2563eb;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold">
+            Reset Password
+          </a>
+        </div>
+        <p style="color:#6b7280;font-size:14px">
+          Or copy and paste this link into your browser:<br>
+          <span style="font-family:monospace;font-size:12px">${params.resetUrl}</span>
+        </p>
+        <p style="color:#6b7280;font-size:14px;margin-top:16px">
+          This link expires in ${expiresInMinutes} minutes. If you didn't request a password reset, you can ignore this email.
+        </p>
+      </div>
+    `,
+  };
+}
+
+/**
  * Simple HTML-to-text converter for email text fallback.
  */
 function stripHtml(html: string): string {

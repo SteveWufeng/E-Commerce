@@ -66,6 +66,7 @@ export default function CheckoutPage() {
   } | null>(null);
   const [currencySymbol, setCurrencySymbol] = useState("$");
   const [paymentOption, setPaymentOption] = useState<PaymentOption>("MERCANTIL");
+  const [mercantilCardEnabled, setMercantilCardEnabled] = useState(true);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethodDefinition | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodDefinition[]>([]);
   const [transactionId, setTransactionId] = useState("");
@@ -118,11 +119,22 @@ export default function CheckoutPage() {
           if (settingsData.data.currencySymbol) {
             setCurrencySymbol(settingsData.data.currencySymbol);
           }
+          if (settingsData.data.mercantilCardEnabled === false) {
+            setMercantilCardEnabled(false);
+            setPaymentOption("CUSTOM");
+          }
         }
 
         const methodsData = await methodsRes.json();
         if (methodsData.data) {
           setPaymentMethods(methodsData.data);
+          if (
+            settingsData.data?.mercantilCardEnabled === false &&
+            Array.isArray(methodsData.data) &&
+            methodsData.data.length > 0
+          ) {
+            setSelectedMethod(methodsData.data[0]);
+          }
         }
 
         const sessionData = await sessionRes.json();
@@ -171,6 +183,16 @@ export default function CheckoutPage() {
     notes?: string;
   }) {
     setError(null);
+
+    if (paymentOption === "MERCANTIL" && !mercantilCardEnabled) {
+      setError(t("selectPaymentMethod"));
+      return;
+    }
+
+    if (paymentOption === "CUSTOM" && !selectedMethod) {
+      setError(t("selectPaymentMethod"));
+      return;
+    }
 
     if (paymentOption === "CUSTOM" && selectedMethod) {
       setIsProcessing(true);
@@ -582,7 +604,8 @@ export default function CheckoutPage() {
               </h2>
 
               <div className="space-y-3">
-                {/* Mercantil — always available */}
+                {/* Mercantil — toggled via admin Settings */}
+                {mercantilCardEnabled && (
                 <label
                   className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                     paymentOption === "MERCANTIL"
@@ -609,6 +632,7 @@ export default function CheckoutPage() {
                     <p className="text-xs text-gray-500 mt-1">Credit / Debit Card</p>
                   </div>
                 </label>
+                )}
 
                 {/* Dynamic payment methods */}
                 {paymentMethods.map((method) => (

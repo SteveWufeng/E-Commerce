@@ -217,5 +217,10 @@ describe("Authentication middleware logic", () => {
       const result = evaluateRoute("/search", null);
       expect(result.action).toBe("allow");
     });
+
+    it("allows anyone to access /reset-password (public reset link)", () => {
+      const result = evaluateRoute("/reset-password", null);
+      expect(result.action).toBe("allow");
+    });
   });
 });

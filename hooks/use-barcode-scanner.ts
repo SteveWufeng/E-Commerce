@@ -26,6 +26,17 @@ export function useBarcodeScanner({ onScan, active = false }: UseBarcodeScannerO
   const startCamera = useCallback(async () => {
     try {
       setError(null);
+
+      if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+        setError(
+          typeof window !== "undefined" && !window.isSecureContext
+            ? "Camera requires a secure (HTTPS) connection"
+            : "Camera is not available in this browser"
+        );
+        setHasCamera(false);
+        return null;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } },
       });
@@ -35,8 +46,22 @@ export function useBarcodeScanner({ onScan, active = false }: UseBarcodeScannerO
       }
       setHasCamera(true);
       return stream;
-    } catch {
-      setError("Camera access denied or not available");
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : "";
+      let message = "Camera access denied or not available";
+      if (name === "NotAllowedError") {
+        message = "Camera permission denied. Allow camera access for this site in your browser settings, then retry.";
+      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        message = "No camera device was found on this device.";
+      } else if (name === "NotReadableError" || name === "TrackStartError") {
+        message = "The camera is already in use by another application.";
+      } else if (name === "OverconstrainedError") {
+        message = "The requested camera settings are not supported on this device.";
+      } else if (name === "SecurityError") {
+        message = "Camera access is blocked. A secure (HTTPS) connection is required.";
+      }
+      console.error("[BarcodeScanner] getUserMedia failed:", name || err);
+      setError(message);
       setHasCamera(false);
       return null;
     }

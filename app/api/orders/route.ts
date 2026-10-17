@@ -118,10 +118,17 @@ export async function POST(request: NextRequest) {
     let mercantilRedirectUrl: string | undefined;
 
     if (validated.paymentMethod === "MERCANTIL") {
+      const settings = await db.settings.findFirst();
+      if (settings?.mercantilCardEnabled === false) {
+        return NextResponse.json(
+          { success: false, error: "Card payments are currently disabled" },
+          { status: 400 }
+        );
+      }
+
       if (validated.paymentTransactionId) {
         paymentTransactionId = validated.paymentTransactionId;
       } else {
-        const settings = await db.settings.findFirst();
         const redirectEnabled = settings?.mercantilRedirectEnabled ?? false;
 
         if (redirectEnabled) {

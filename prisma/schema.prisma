@@ -38,6 +38,9 @@ model User {
   // Two-way messaging (customer <-> admin)
   messages        Message[]
 
+  // Admin-generated password reset links
+  passwordResetTokens PasswordResetToken[]
+
   @@index([email])
   @@index([role])
   @@index([telegramChatId])
@@ -64,6 +67,18 @@ model VerificationToken {
   createdAt  DateTime @default(now())
 
   @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 enum Role {
@@ -382,6 +397,7 @@ model Settings {
   currencySymbol      String   @default("$")
   conversionRate      Float    @default(1)
   mercantilRedirectEnabled Boolean  @default(false)
+  mercantilCardEnabled Boolean  @default(true)
 
   // Telegram bot integration
   telegramEnabled     Boolean  @default(false)

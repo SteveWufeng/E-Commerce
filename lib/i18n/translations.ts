@@ -59,6 +59,7 @@ export type TranslationKey =
   | "bankTransfer"
   | "payViaBankTransfer"
   | "mercantilPayment"
+  | "selectPaymentMethod"
   | "payViaMercantil"
   | "uploadReceipt"
   | "uploadReceiptOptional"
@@ -229,6 +230,28 @@ export type TranslationKey =
   | "deleteOrder"
   | "confirmDeleteOrder"
   | "updateFailed"
+  | "retry"
+  | "copied"
+  | "copyLink"
+  | "goToLogin"
+  | "resetPassword"
+  | "resetPasswordTitle"
+  | "resetPasswordHint"
+  | "generateResetLink"
+  | "generateAndEmail"
+  | "resetLinkLabel"
+  | "resetLinkExpires"
+  | "resetEmailSent"
+  | "resetPasswordHeading"
+  | "resetPasswordSubtitle"
+  | "resetPasswordButton"
+  | "resettingPassword"
+  | "resetPasswordSuccess"
+  | "resetPasswordSuccessMessage"
+  | "resetPasswordInvalid"
+  | "verifyingResetLink"
+  | "newPasswordLabel"
+  | "confirmNewPasswordLabel"
 
   // Auth
   | "signInHeading"
@@ -398,6 +421,7 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     bankTransfer: "Transferencia Bancaria",
     payViaBankTransfer: "Pague mediante transferencia bancaria. Suba su comprobante de pago después de realizar el pedido.",
     mercantilPayment: "Botón de Pago Mercantil",
+    selectPaymentMethod: "Selecciona un método de pago.",
     payViaMercantil: "Pague con Mercantil Banco — débito inmediato, tarjetas o pagos móviles C2P.",
     uploadReceipt: "Subir Comprobante de Pago",
     uploadReceiptOptional: "Subir comprobante de pago (opcional ahora, requerido después)",
@@ -569,6 +593,28 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     deleteOrder: "Eliminar Pedido",
     confirmDeleteOrder: "¿Eliminar este pedido permanentemente? Esta acción no se puede deshacer.",
     updateFailed: "No se pudo actualizar. Inténtalo de nuevo.",
+    retry: "Reintentar",
+    copied: "¡Copiado!",
+    copyLink: "Copiar enlace",
+    goToLogin: "Ir a iniciar sesión",
+    resetPassword: "Restablecer",
+    resetPasswordTitle: "Restablecer Contraseña",
+    resetPasswordHint: "Genera un enlace de restablecimiento de un solo uso. El enlace caduca pronto; compártelo únicamente con el usuario.",
+    generateResetLink: "Generar enlace",
+    generateAndEmail: "Generar y enviar por correo",
+    resetLinkLabel: "Enlace de restablecimiento",
+    resetLinkExpires: "Caduca",
+    resetEmailSent: "Correo enviado al usuario.",
+    resetPasswordHeading: "Restablecer Contraseña",
+    resetPasswordSubtitle: "Elige una nueva contraseña para tu cuenta.",
+    resetPasswordButton: "Restablecer contraseña",
+    resettingPassword: "Restableciendo...",
+    resetPasswordSuccess: "Tu contraseña se ha restablecido.",
+    resetPasswordSuccessMessage: "Ya puedes iniciar sesión con tu nueva contraseña.",
+    resetPasswordInvalid: "Este enlace de restablecimiento no es válido o ha caducado.",
+    verifyingResetLink: "Verificando enlace...",
+    newPasswordLabel: "Nueva contraseña",
+    confirmNewPasswordLabel: "Confirmar nueva contraseña",
 
     // Auth
     signInHeading: "Iniciar Sesión",
@@ -738,6 +784,7 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     bankTransfer: "Bank Transfer",
     payViaBankTransfer: "Pay via bank transfer. Please upload your payment receipt after placing the order.",
     mercantilPayment: "Mercantil Payment Button",
+    selectPaymentMethod: "Please select a payment method.",
     payViaMercantil: "Pay with Mercantil Banco — debit, credit cards, or mobile payments (C2P).",
     uploadReceipt: "Upload Payment Receipt",
     uploadReceiptOptional: "Upload Payment Receipt (optional now, required later)",
@@ -909,6 +956,28 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     deleteOrder: "Delete Order",
     confirmDeleteOrder: "Permanently delete this order? This action cannot be undone.",
     updateFailed: "Update failed. Please try again.",
+    retry: "Retry",
+    copied: "Copied!",
+    copyLink: "Copy link",
+    goToLogin: "Go to sign in",
+    resetPassword: "Reset",
+    resetPasswordTitle: "Reset Password",
+    resetPasswordHint: "Generate a single-use password reset link. The link expires soon — share it only with the user.",
+    generateResetLink: "Generate link",
+    generateAndEmail: "Generate & email",
+    resetLinkLabel: "Reset link",
+    resetLinkExpires: "Expires",
+    resetEmailSent: "Email sent to the user.",
+    resetPasswordHeading: "Reset Password",
+    resetPasswordSubtitle: "Choose a new password for your account.",
+    resetPasswordButton: "Reset password",
+    resettingPassword: "Resetting...",
+    resetPasswordSuccess: "Your password has been reset.",
+    resetPasswordSuccessMessage: "You can now sign in with your new password.",
+    resetPasswordInvalid: "This reset link is invalid or has expired.",
+    verifyingResetLink: "Verifying link...",
+    newPasswordLabel: "New password",
+    confirmNewPasswordLabel: "Confirm new password",
 
     // Auth
     signInHeading: "Sign In",

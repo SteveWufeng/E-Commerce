@@ -138,10 +138,10 @@ export function BarcodeScanner({ onScan, onClose, open = false }: BarcodeScanner
                   <div className="text-red-400 text-sm text-center px-4">
                     <p className="mb-2">{scanner.error}</p>
                     <button
-                      onClick={() => scanner.startCamera()}
+                      onClick={() => scanner.startScanning()}
                       className="text-blue-400 underline text-xs"
                     >
-                      Retry
+                      {t("retry")}
                     </button>
                   </div>
                 </div>
