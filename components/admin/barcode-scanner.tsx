@@ -31,6 +31,7 @@ export function BarcodeScanner({ onScan, onClose, open = false }: BarcodeScanner
     onScan: handleScan,
     active: open || (showScanner && scanningStarted),
   });
+  const { stopScanning } = scanner;
 
   useEffect(() => {
     if (open) {
@@ -40,10 +41,10 @@ export function BarcodeScanner({ onScan, onClose, open = false }: BarcodeScanner
 
   useEffect(() => {
     if (!showScanner) {
-      scanner.stopScanning();
+      stopScanning();
       setScanningStarted(false);
     }
-  }, [showScanner]);
+  }, [showScanner, stopScanning]);
 
   function handleManualSubmit() {
     const code = manualCode.trim();
@@ -70,7 +71,7 @@ export function BarcodeScanner({ onScan, onClose, open = false }: BarcodeScanner
       </button>
 
       {showScanner && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center">
           <div ref={containerRef} className="bg-gray-900 rounded-lg w-full max-w-sm mx-4 overflow-hidden">
             <div className="flex items-center justify-between p-3 border-b border-gray-700">
               <h3 className="text-white font-semibold text-sm">{t("barcodeScanner")}</h3>
@@ -87,30 +88,19 @@ export function BarcodeScanner({ onScan, onClose, open = false }: BarcodeScanner
             </div>
 
             <div className="relative bg-black aspect-[4/3]">
-              {!scanningStarted ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-white gap-4">
-                  <Camera className="w-12 h-12 text-gray-400" />
-                  <p className="text-sm text-gray-400 px-4 text-center">{t("pointCameraAtBarcode")}</p>
-                  <button
-                    onClick={() => {
-                      setScanningStarted(true);
-                      scanner.startScanning();
-                    }}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-                  >
-                    {t("startScanning")}
-                  </button>
-                </div>
-              ) : (
+              {/* Video/canvas stay mounted whenever the overlay is open so the
+                  refs exist before startScanning() is called. */}
+              <video
+                ref={scanner.videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <canvas ref={scanner.canvasRef} className="hidden" />
+
+              {scanningStarted ? (
                 <>
-                  <video
-                    ref={scanner.videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <canvas ref={scanner.canvasRef} className="hidden" />
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-3/4 h-1/3 border-2 border-blue-400 rounded-lg opacity-70" />
                   </div>
@@ -131,7 +121,22 @@ export function BarcodeScanner({ onScan, onClose, open = false }: BarcodeScanner
                     {t("stopScanning")}
                   </button>
                 </>
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white gap-4">
+                  <Camera className="w-12 h-12 text-gray-400" />
+                  <p className="text-sm text-gray-400 px-4 text-center">{t("pointCameraAtBarcode")}</p>
+                  <button
+                    onClick={() => {
+                      setScanningStarted(true);
+                      scanner.startScanning();
+                    }}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                  >
+                    {t("startScanning")}
+                  </button>
+                </div>
               )}
+
               {flash && <div className="absolute inset-0 bg-green-400/30 animate-pulse pointer-events-none" />}
               {scanner.error && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/60">

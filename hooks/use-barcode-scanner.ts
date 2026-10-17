@@ -43,6 +43,7 @@ export function useBarcodeScanner({ onScan, active = false }: UseBarcodeScannerO
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {});
       }
       setHasCamera(true);
       return stream;
@@ -144,10 +145,16 @@ export function useBarcodeScanner({ onScan, active = false }: UseBarcodeScannerO
     if (!active) {
       stopScanning();
     }
+  }, [active, stopScanning]);
+
+  // Always release the camera when the hook unmounts. Kept separate from the
+  // `active` effect so that toggling `active` true never tears down a scan that
+  // was just started in the same render.
+  useEffect(() => {
     return () => {
       stopScanning();
     };
-  }, [active, stopScanning]);
+  }, [stopScanning]);
 
   return {
     videoRef,
