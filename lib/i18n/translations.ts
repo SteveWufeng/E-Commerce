@@ -194,6 +194,13 @@ export type TranslationKey =
   | "telegramRequiredTitle"
   | "telegramRequiredBody"
   | "linkTelegram"
+  | "messages"
+  | "supportInbox"
+  | "noMessages"
+  | "selectConversation"
+  | "customerNotReachable"
+  | "typeAMessage"
+  | "send"
   | "monday"
   | "tuesday"
   | "wednesday"
@@ -506,6 +513,13 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     telegramRequiredTitle: "Vincula Telegram para continuar",
     telegramRequiredBody: "Debes vincular tu cuenta de Telegram antes de realizar un pedido. Te enviaremos las actualizaciones del pedido allí.",
     linkTelegram: "Vincular Telegram",
+    messages: "Mensajes",
+    supportInbox: "Bandeja de soporte — responde a tus clientes",
+    noMessages: "Aún no hay mensajes.",
+    selectConversation: "Selecciona una conversación para ver los mensajes.",
+    customerNotReachable: "Este cliente no tiene Telegram vinculado; la respuesta se guardará pero no se entregará.",
+    typeAMessage: "Escribe un mensaje…",
+    send: "Enviar",
     // Pickup Hours
     monday: "Lunes",
     tuesday: "Martes",
@@ -819,6 +833,13 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     telegramRequiredTitle: "Link Telegram to continue",
     telegramRequiredBody: "You must link your Telegram account before placing an order. We'll send your order updates there.",
     linkTelegram: "Link Telegram",
+    messages: "Messages",
+    supportInbox: "Support inbox — reply to your customers",
+    noMessages: "No messages yet.",
+    selectConversation: "Select a conversation to view messages.",
+    customerNotReachable: "This customer has no Telegram linked; your reply will be saved but not delivered.",
+    typeAMessage: "Type a message…",
+    send: "Send",
     // Pickup Hours
     monday: "Monday",
     tuesday: "Tuesday",
