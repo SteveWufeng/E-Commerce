@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireStaff } from "@/lib/auth/session";
 import db from "@/lib/db";
 import { z } from "zod";
+import { notifyProofRejected } from "@/lib/telegram";
 
 const verifySchema = z.object({
   status: z.enum(["VERIFIED", "REJECTED"]),
@@ -53,6 +54,33 @@ export async function PUT(
         where: { id: proof.orderId },
         data: { paymentStatus: "COMPLETED" },
       });
+    }
+
+    if (validated.status === "REJECTED") {
+      // Ask the customer to re-upload: email is not proof-specific, so we use
+      // Telegram (the primary customer channel) with a dedicated template.
+      const order = await db.order.findUnique({
+        where: { id: proof.orderId },
+        include: { items: true },
+      });
+      if (order) {
+        notifyProofRejected({
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          total: Number(order.total),
+          paymentMethod: order.paymentMethod,
+          customerFirstName: order.customerFirstName,
+          customerEmail: order.customerEmail,
+          userId: order.userId,
+          rejectionReason: validated.rejectionReason || null,
+          items: order.items.map((item) => ({
+            name: item.productName,
+            quantity: item.quantity,
+            price: Number(item.productPrice),
+          })),
+        }).catch(() => {});
+      }
     }
 
     return NextResponse.json({ success: true, data: updated });

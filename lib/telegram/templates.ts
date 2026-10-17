@@ -35,6 +35,10 @@ export const DEFAULT_ORDER_TEMPLATES: OrderTemplates = {
   REJECTED:
     `❌ <b>Order Rejected</b>\n\n` +
     `Your order <b>{orderNumber}</b> was rejected.{rejectionReasonBlock}`,
+  PAYMENT_PROOF_REJECTED:
+    `⚠️ <b>Payment proof needs attention</b>\n\n` +
+    `We couldn't verify the payment proof for order <b>{orderNumber}</b>.{rejectionReasonBlock}\n\n` +
+    `Please re-upload a clear proof of payment so we can continue processing your order.`,
 };
 
 /** Statuses whose customer message can be customised by the admin. */
@@ -44,6 +48,7 @@ export const ORDER_TEMPLATE_STATUSES = [
   "PICKED_UP",
   "CANCELLED",
   "REJECTED",
+  "PAYMENT_PROOF_REJECTED",
 ] as const;
 
 /** Placeholders the admin can use inside a template. */

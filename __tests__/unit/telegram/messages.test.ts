@@ -69,6 +69,23 @@ describe("buildOrderMessage", () => {
 
     expect(msg).toContain("pending");
   });
+
+  it("builds a PAYMENT_PROOF_REJECTED message asking to re-upload", () => {
+    const msg = buildOrderMessage(
+      {
+        ...baseOrder,
+        status: "PENDING",
+        rejectionReason: "Blurry receipt",
+      },
+      null,
+      "PAYMENT_PROOF_REJECTED"
+    );
+
+    expect(msg).toContain("Payment proof needs attention");
+    expect(msg).toContain("ORD-20260805-0001");
+    expect(msg).toContain("Blurry receipt");
+    expect(msg).toContain("re-upload");
+  });
 });
 
 describe("buildOrderButtons", () => {

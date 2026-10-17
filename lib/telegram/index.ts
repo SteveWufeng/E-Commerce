@@ -233,7 +233,8 @@ export type { OrderTemplates } from "./templates";
  */
 export function buildOrderMessage(
   order: OrderNotificationData,
-  templates?: OrderTemplates | null
+  templates?: OrderTemplates | null,
+  templateKey?: string
 ): string {
   const num = escapeHtml(order.orderNumber);
   const itemsSummary = order.items
@@ -261,7 +262,7 @@ export function buildOrderMessage(
   };
 
   const effective: OrderTemplates = { ...DEFAULT_ORDER_TEMPLATES, ...(templates ?? {}) };
-  const template = effective[order.status];
+  const template = effective[templateKey ?? order.status];
   if (template && template.trim()) {
     return renderTemplate(template, vars);
   }
@@ -474,6 +475,72 @@ export async function notifyOrderStatusChange(
     }
   } catch (error) {
     console.error("[Telegram] notifyOrderStatusChange error:", error);
+  }
+}
+
+/**
+ * Notify a customer that their payment proof was rejected and must be
+ * re-uploaded. Uses the admin-customisable PAYMENT_PROOF_REJECTED template.
+ *
+ * Failures are logged and never throw — proof review must not be disrupted.
+ */
+export async function notifyProofRejected(order: {
+  id: string;
+  orderNumber: string;
+  status: string;
+  total: number | string;
+  paymentMethod: string;
+  customerFirstName: string;
+  customerEmail?: string | null;
+  userId?: string | null;
+  rejectionReason?: string | null;
+  items?: { name: string; quantity: number; price: number | string }[];
+}): Promise<boolean> {
+  try {
+    const config = await getTelegramConfig();
+    if (!config.enabled || !config.botToken) return false;
+
+    const chatId = await resolveChatId(order);
+    if (!chatId) return false;
+
+    const settings = await db.settings.findFirst();
+    const templates = await getOrderTemplates();
+
+    const message = buildOrderMessage(
+      {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        total: `$${Number(order.total).toFixed(2)}`,
+        paymentMethod: order.paymentMethod.replace(/_/g, " "),
+        customerFirstName: order.customerFirstName,
+        items: (order.items ?? []).map((item) => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: `$${Number(item.price).toFixed(2)}`,
+        })),
+        rejectionReason: order.rejectionReason,
+        storeName: settings?.storeName ?? "",
+        storeAddress: settings?.storeAddress ?? "",
+      },
+      templates,
+      "PAYMENT_PROOF_REJECTED"
+    );
+
+    const ok = await sendTelegramMessage({
+      token: config.botToken,
+      chatId,
+      text: message,
+      buttons: buildOrderButtons(order.orderNumber, order.id),
+    });
+
+    if (!ok) {
+      console.warn(`[Telegram] Proof rejection not delivered for order ${order.orderNumber}`);
+    }
+    return ok;
+  } catch (error) {
+    console.error("[Telegram] notifyProofRejected error:", error);
+    return false;
   }
 }
 
