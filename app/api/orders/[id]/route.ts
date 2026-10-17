@@ -11,30 +11,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
-import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { sendEmail, orderConfirmationEmail, orderReadyEmail } from "@/lib/email";
-import { notifyOrderStatusChange } from "@/lib/telegram";
-
-const s3 = new S3Client({
-  region: "auto",
-  endpoint: process.env.R2_ENDPOINT,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  },
-});
-
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || "";
-
-async function deleteFromR2(url: string) {
-  if (!R2_PUBLIC_URL || !url.startsWith(R2_PUBLIC_URL)) return;
-  const key = url.replace(R2_PUBLIC_URL, "").replace(/^\//, "");
-  if (!key) return;
-  await s3.send(new DeleteObjectCommand({
-    Bucket: process.env.R2_BUCKET_NAME!,
-    Key: key,
-  }));
-}
+import { changeOrderStatus } from "@/lib/orders/status";
+import { notifyAdmins, buildAdminCancellationMessage } from "@/lib/telegram";
 
 const updateStatusSchema = z.object({
   status: z.enum(["PENDING", "CONFIRMED", "READY_FOR_PICKUP", "PICKED_UP", "CANCELLED", "REJECTED"]).optional(),
@@ -58,38 +36,32 @@ export async function PUT(
 
     // Admin can do any status change
     if (userRole === "ADMIN") {
+      // Non-status fields are updated directly.
       const updateData: Record<string, unknown> = {};
-
-      if (validated.status) {
-        updateData.status = validated.status;
-      }
-
       if (validated.paymentIntentId !== undefined) {
         updateData.paymentIntentId = validated.paymentIntentId;
       }
-
       if (validated.paymentStatus !== undefined) {
         updateData.paymentStatus = validated.paymentStatus;
       }
-
-      if (validated.status === "REJECTED") {
-        if (!validated.rejectionReason) {
-          return NextResponse.json(
-            { success: false, error: "Rejection reason is required" },
-            { status: 400 }
-          );
-        }
-        updateData.rejectionReason = validated.rejectionReason;
-
-        // Delete the old receipt image from R2
-        const existing = await db.order.findUnique({ where: { id }, select: { receiptImage: true } });
-        if (existing?.receiptImage) {
-          await deleteFromR2(existing.receiptImage).catch(() => {});
-        }
+      if (Object.keys(updateData).length > 0) {
+        await db.order.update({ where: { id }, data: updateData });
       }
 
-      if (validated.status === "CONFIRMED") {
-        updateData.rejectionReason = null;
+      if (validated.status) {
+        const result = await changeOrderStatus({
+          orderId: id,
+          status: validated.status,
+          rejectionReason: validated.rejectionReason,
+          actorType: "ADMIN",
+        });
+        if (!result.ok) {
+          return NextResponse.json(
+            { success: false, error: result.error },
+            { status: result.code ?? 500 }
+          );
+        }
+        return NextResponse.json({ success: true, data: result.order });
       }
 
       if (Object.keys(updateData).length === 0) {
@@ -99,9 +71,8 @@ export async function PUT(
         );
       }
 
-      const order = await db.order.update({
+      const order = await db.order.findUnique({
         where: { id },
-        data: updateData,
         include: {
           items: true,
           paymentProofs: {
@@ -110,81 +81,6 @@ export async function PUT(
           },
         },
       });
-
-      // Send email notifications on status changes
-      if (validated.status === "CONFIRMED" && order.customerEmail) {
-        const emailTpl = orderConfirmationEmail({
-          customerName: order.customerFirstName,
-          orderNumber: order.orderNumber,
-          items: order.items.map((item) => ({
-            name: item.productName,
-            quantity: item.quantity,
-            price: `$${Number(item.productPrice).toFixed(2)}`,
-          })),
-          total: `$${Number(order.total).toFixed(2)}`,
-          paymentMethod: order.paymentMethod.replace(/_/g, " "),
-        });
-        emailTpl.to = order.customerEmail;
-        sendEmail(emailTpl).catch(() => {});
-      }
-
-      if (validated.status === "READY_FOR_PICKUP" && order.customerEmail) {
-        const emailTpl = orderReadyEmail({
-          customerName: order.customerFirstName,
-          orderNumber: order.orderNumber,
-        });
-        emailTpl.to = order.customerEmail;
-        sendEmail(emailTpl).catch(() => {});
-      }
-
-      if (validated.status === "REJECTED" && order.customerEmail) {
-        const emailTpl = orderReadyEmail({
-          customerName: order.customerFirstName,
-          orderNumber: order.orderNumber,
-        });
-        emailTpl.to = order.customerEmail;
-        emailTpl.subject = `Your Order ${order.orderNumber} was Rejected`;
-        emailTpl.html = emailTpl.html.replace(
-          "Ready for Pickup!",
-          "Order Rejected"
-        ).replace(
-          /is ready.*$/,
-          "was rejected."
-        ).replace(
-          /Please bring.*$/,
-          order.rejectionReason
-            ? `Reason: ${order.rejectionReason}`
-            : "Please contact us for more information."
-        );
-        sendEmail(emailTpl).catch(() => {});
-      }
-
-      // Telegram notification on status change
-      if (validated.status && ["CONFIRMED", "READY_FOR_PICKUP", "PICKED_UP", "CANCELLED", "REJECTED"].includes(validated.status)) {
-        const settings = await db.settings.findFirst();
-        await notifyOrderStatusChange(
-          {
-            id: order.id,
-            orderNumber: order.orderNumber,
-            status: order.status,
-            total: Number(order.total),
-            paymentMethod: order.paymentMethod,
-            customerFirstName: order.customerFirstName,
-            customerEmail: order.customerEmail,
-            userId: order.userId,
-            rejectionReason: order.rejectionReason,
-            items: order.items.map((item) => ({
-              name: item.productName,
-              quantity: item.quantity,
-              price: Number(item.productPrice),
-            })),
-          },
-          {
-            storeName: settings?.storeName ?? "",
-            storeAddress: settings?.storeAddress ?? "",
-          }
-        );
-      }
 
       return NextResponse.json({ success: true, data: order });
     }
@@ -210,43 +106,32 @@ export async function PUT(
         );
       }
 
-      const updated = await db.order.update({
-        where: { id },
-        data: { status: "CANCELLED" },
-        include: {
-          items: true,
-          paymentProofs: {
-            include: { paymentMethodDefinition: true },
-            orderBy: { createdAt: "desc" },
-          },
-        },
+      const result = await changeOrderStatus({
+        orderId: id,
+        status: "CANCELLED",
+        actorType: "CUSTOMER",
       });
 
-      const settings = await db.settings.findFirst();
-      await notifyOrderStatusChange(
-        {
-          id: updated.id,
-          orderNumber: updated.orderNumber,
-          status: updated.status,
-          total: Number(updated.total),
-          paymentMethod: updated.paymentMethod,
-          customerFirstName: updated.customerFirstName,
-          customerEmail: updated.customerEmail,
-          userId: updated.userId,
-          rejectionReason: null,
-          items: updated.items.map((item) => ({
-            name: item.productName,
-            quantity: item.quantity,
-            price: Number(item.productPrice),
-          })),
-        },
-        {
-          storeName: settings?.storeName ?? "",
-          storeAddress: settings?.storeAddress ?? "",
-        }
-      );
+      if (!result.ok) {
+        return NextResponse.json(
+          { success: false, error: result.error },
+          { status: result.code ?? 500 }
+        );
+      }
 
-      return NextResponse.json({ success: true, data: updated });
+      // Alert admins that a customer cancelled.
+      notifyAdmins(
+        buildAdminCancellationMessage({
+          orderNumber: order.orderNumber,
+          status: "CANCELLED",
+          paymentStatus: order.paymentStatus,
+          total: Number(order.total),
+          customerFirstName: order.customerFirstName,
+          createdAt: order.createdAt,
+        })
+      ).catch(() => {});
+
+      return NextResponse.json({ success: true, data: result.order });
     }
 
     if (!validated.status && !validated.paymentIntentId && !validated.paymentStatus) {
