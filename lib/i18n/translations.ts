@@ -206,6 +206,22 @@ export type TranslationKey =
   | "customerNotReachable"
   | "typeAMessage"
   | "send"
+  | "alerts"
+  | "conversations"
+  | "newMessage"
+  | "selectRecipient"
+  | "searchRecipients"
+  | "noRecipients"
+  | "markAllRead"
+  | "noAlerts"
+  | "enableBrowserAlerts"
+  | "browserAlertsOn"
+  | "browserAlertsBlocked"
+  | "messageTemplates"
+  | "messageTemplatesHint"
+  | "availablePlaceholders"
+  | "resetToDefault"
+  | "resetAllToDefault"
   | "monday"
   | "tuesday"
   | "wednesday"
@@ -572,6 +588,22 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     customerNotReachable: "Este cliente no tiene Telegram vinculado; la respuesta se guardará pero no se entregará.",
     typeAMessage: "Escribe un mensaje…",
     send: "Enviar",
+    alerts: "Alertas",
+    conversations: "Conversaciones",
+    newMessage: "Nuevo mensaje",
+    selectRecipient: "Elige un destinatario vinculado a Telegram.",
+    searchRecipients: "Buscar destinatarios",
+    noRecipients: "No hay usuarios vinculados a Telegram.",
+    markAllRead: "Marcar todo como leído",
+    noAlerts: "Aún no hay alertas.",
+    enableBrowserAlerts: "Activar alertas del navegador",
+    browserAlertsOn: "Alertas del navegador activadas",
+    browserAlertsBlocked: "El navegador bloquea las notificaciones.",
+    messageTemplates: "Mensajes de estado del pedido",
+    messageTemplatesHint: "Personaliza los mensajes de Telegram que se envían a los clientes cuando cambia el estado de un pedido. Deja un campo en blanco para usar el valor predeterminado.",
+    availablePlaceholders: "Marcadores disponibles",
+    resetToDefault: "Restablecer",
+    resetAllToDefault: "Restablecer todo",
     // Pickup Hours
     monday: "Lunes",
     tuesday: "Martes",
@@ -939,6 +971,22 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     customerNotReachable: "This customer has no Telegram linked; your reply will be saved but not delivered.",
     typeAMessage: "Type a message…",
     send: "Send",
+    alerts: "Alerts",
+    conversations: "Conversations",
+    newMessage: "New message",
+    selectRecipient: "Pick a Telegram-linked recipient to start a conversation.",
+    searchRecipients: "Search recipients",
+    noRecipients: "No Telegram-linked users yet.",
+    markAllRead: "Mark all as read",
+    noAlerts: "No alerts yet.",
+    enableBrowserAlerts: "Enable browser alerts",
+    browserAlertsOn: "Browser alerts enabled",
+    browserAlertsBlocked: "Notifications are blocked by the browser.",
+    messageTemplates: "Order status messages",
+    messageTemplatesHint: "Customise the Telegram messages sent to customers when an order changes status. Leave a field blank to keep the default.",
+    availablePlaceholders: "Available placeholders",
+    resetToDefault: "Reset",
+    resetAllToDefault: "Reset all to default",
     // Pickup Hours
     monday: "Monday",
     tuesday: "Tuesday",

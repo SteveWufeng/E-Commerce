@@ -4,6 +4,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { useLocale } from "@/hooks/use-locale";
+import {
+  DEFAULT_ORDER_TEMPLATES,
+  ORDER_TEMPLATE_STATUSES,
+  ORDER_TEMPLATE_PLACEHOLDERS,
+} from "@/lib/telegram/templates";
 
 interface StoreSettings {
   storeName: string;
@@ -13,6 +18,7 @@ interface StoreSettings {
   conversionRate: number;
   mercantilRedirectEnabled: boolean;
   mercantilCardEnabled: boolean;
+  telegramTemplates?: Record<string, string> | null;
 }
 
 interface TelegramConfig {
@@ -41,6 +47,7 @@ export default function AdminSettingsPage() {
     conversionRate: 1,
     mercantilRedirectEnabled: false,
     mercantilCardEnabled: true,
+    telegramTemplates: {},
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -133,6 +140,30 @@ export default function AdminSettingsPage() {
     } finally {
       setTelegramSaving(false);
     }
+  }
+
+  function templateValue(status: string): string {
+    const override = settings.telegramTemplates?.[status];
+    return override !== undefined ? override : DEFAULT_ORDER_TEMPLATES[status] ?? "";
+  }
+
+  function updateTemplate(status: string, value: string) {
+    setSettings((prev) => ({
+      ...prev,
+      telegramTemplates: { ...(prev.telegramTemplates ?? {}), [status]: value },
+    }));
+  }
+
+  function resetTemplate(status: string) {
+    setSettings((prev) => {
+      const next = { ...(prev.telegramTemplates ?? {}) };
+      delete next[status];
+      return { ...prev, telegramTemplates: next };
+    });
+  }
+
+  function resetAllTemplates() {
+    setSettings((prev) => ({ ...prev, telegramTemplates: {} }));
   }
 
   async function handleSave() {
@@ -375,6 +406,66 @@ export default function AdminSettingsPage() {
                 {telegramSaving ? "Saving..." : "Save Telegram Settings"}
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Order Status Message Templates */}
+        <div className="card md:col-span-2">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                {t("messageTemplates")}
+              </h2>
+              <p className="text-xs text-gray-500 mt-1">
+                {t("messageTemplatesHint")}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={resetAllTemplates}
+              className="btn-secondary text-xs py-1.5 px-3 shrink-0"
+            >
+              {t("resetAllToDefault")}
+            </button>
+          </div>
+
+          <div className="mt-3 rounded-lg bg-gray-50 border border-gray-200 p-3">
+            <p className="text-xs font-medium text-gray-600 mb-1">
+              {t("availablePlaceholders")}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {ORDER_TEMPLATE_PLACEHOLDERS.map((placeholder) => (
+                <code
+                  key={placeholder}
+                  className="text-[11px] bg-white border border-gray-200 rounded px-1.5 py-0.5 text-gray-700"
+                >
+                  {placeholder}
+                </code>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-4 mt-4">
+            {ORDER_TEMPLATE_STATUSES.map((status) => (
+              <div key={status}>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="label mb-0">{status.replace(/_/g, " ")}</label>
+                  <button
+                    type="button"
+                    onClick={() => resetTemplate(status)}
+                    className="text-xs text-primary-600 hover:underline"
+                  >
+                    {t("resetToDefault")}
+                  </button>
+                </div>
+                <textarea
+                  rows={5}
+                  value={templateValue(status)}
+                  onChange={(e) => updateTemplate(status, e.target.value)}
+                  className="input w-full font-mono text-xs resize-y"
+                />
+              </div>
+            ))}
           </div>
         </div>
       </div>

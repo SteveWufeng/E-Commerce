@@ -316,7 +316,14 @@ export async function POST(request: NextRequest) {
         },
         { currencySymbol: currency }
       ),
-      [{ text: "📋 View in dashboard", url: adminOrderUrl(order.orderNumber) }]
+      [{ text: "📋 View in dashboard", url: adminOrderUrl(order.orderNumber) }],
+      {
+        kind: "NEW_ORDER",
+        title: `New order ${order.orderNumber}`,
+        orderId: order.id,
+        userId: order.userId ?? undefined,
+        link: adminOrderUrl(order.orderNumber),
+      }
     ).catch(() => {});
 
     return NextResponse.json(

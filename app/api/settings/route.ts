@@ -22,6 +22,25 @@ async function getOrCreateSettings() {
   return settings;
 }
 
+/**
+ * Sanitise admin-supplied order-status templates into a safe JSON object.
+ * Returns undefined when the caller didn't send the field (leave unchanged).
+ */
+function sanitizeTemplates(input: unknown): Record<string, string> | undefined {
+  if (input === undefined) return undefined;
+  if (input === null) return {};
+  if (typeof input !== "object" || Array.isArray(input)) return undefined;
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    if (typeof key !== "string" || key.length > 40) continue;
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+    out[key] = trimmed.slice(0, 4000);
+  }
+  return out;
+}
+
 export async function GET() {
   try {
     const settings = await getOrCreateSettings();
@@ -44,6 +63,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const current = await getOrCreateSettings();
+    const templates = sanitizeTemplates(body.telegramTemplates);
 
     const updated = await db.settings.update({
       where: { id: current.id },
@@ -55,6 +75,7 @@ export async function POST(request: NextRequest) {
         conversionRate: body.conversionRate ?? current.conversionRate,
         mercantilRedirectEnabled: body.mercantilRedirectEnabled ?? current.mercantilRedirectEnabled,
         mercantilCardEnabled: body.mercantilCardEnabled ?? current.mercantilCardEnabled,
+        ...(templates !== undefined ? { telegramTemplates: templates } : {}),
       },
     });
 

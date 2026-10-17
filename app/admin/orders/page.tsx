@@ -28,7 +28,30 @@ export default function AdminOrdersPage() {
       try {
         const res = await fetch("/api/orders?limit=100");
         const data = await res.json();
-        setOrders(data.data || []);
+        const loaded = data.data || [];
+        setOrders(loaded);
+
+        // Deep link support: /admin/orders?order=<orderNumber|id>
+        if (typeof window !== "undefined") {
+          const params = new URLSearchParams(window.location.search);
+          const target = params.get("order");
+          if (target) {
+            const match = loaded.find(
+              (o: any) => o.orderNumber === target || o.id === target
+            );
+            if (match) {
+              setSelectedOrder(match);
+              setEditTransactionId(match.paymentIntentId || "");
+            }
+            params.delete("order");
+            const query = params.toString();
+            window.history.replaceState(
+              {},
+              "",
+              `${window.location.pathname}${query ? `?${query}` : ""}`
+            );
+          }
+        }
       } catch (error) {
         console.error("Failed to load orders:", error);
       } finally {

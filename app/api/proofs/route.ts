@@ -108,7 +108,14 @@ export async function POST(request: NextRequest) {
         },
         `Customer submitted a payment proof (${method.name}).`
       ),
-      [{ text: "📋 View in dashboard", url: adminOrderUrl(order.orderNumber) }]
+      [{ text: "📋 View in dashboard", url: adminOrderUrl(order.orderNumber) }],
+      {
+        kind: "PAYMENT_UPDATE",
+        title: `Payment proof ${order.orderNumber}`,
+        orderId: order.id,
+        userId: order.userId ?? undefined,
+        link: adminOrderUrl(order.orderNumber),
+      }
     ).catch(() => {});
 
     return NextResponse.json({ success: true, data: { proof, paymentProofs } });

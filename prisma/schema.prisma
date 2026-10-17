@@ -38,6 +38,9 @@ model User {
   // Two-way messaging (customer <-> admin)
   messages        Message[]
 
+  // Admin-bound notifications referencing this user
+  adminNotifications AdminNotification[]
+
   // Admin-generated password reset links
   passwordResetTokens PasswordResetToken[]
 
@@ -252,6 +255,7 @@ model Order {
   items           OrderItem[]
   paymentProofs   PaymentProof[]
   messages        Message[]
+  adminNotifications AdminNotification[]
 
   notes           String?       // customer notes
   adminNotes      String?       // internal admin notes
@@ -353,6 +357,27 @@ enum MessageSender {
 }
 
 // ========================
+// Admin notification history
+// ========================
+
+model AdminNotification {
+  id        String   @id @default(cuid())
+  kind      String // NEW_ORDER, ORDER_CANCELLED, PAYMENT_UPDATE, CUSTOMER_MESSAGE, SYSTEM
+  title     String
+  body      String   @db.Text
+  orderId   String?
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([read])
+  @@index([createdAt(sort: Desc)])
+}
+
+// ========================
 // Notifications
 // ========================
 
@@ -403,6 +428,7 @@ model Settings {
   telegramEnabled     Boolean  @default(false)
   telegramBotToken    String?  // AES-256-GCM encrypted at rest
   telegramBotUsername String?
+  telegramTemplates   Json?    // custom order-status message templates keyed by status
 
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt

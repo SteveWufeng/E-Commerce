@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
       where: { telegramChatId: String(chatId) },
       select: { id: true, role: true, firstName: true },
     });
-    const isAdmin = linkedUser?.role === "ADMIN";
+    const isStaffOrAdmin = linkedUser?.role === "ADMIN" || linkedUser?.role === "STAFF";
 
     const cmd = parseCommand(text);
 
@@ -182,10 +182,10 @@ export async function POST(request: NextRequest) {
       case "start":
         return await handleStart(chatId, cmd.args, botToken, send);
       case "help":
-        await send(buildHelpMessage(settings?.storeName ?? "Store", isAdmin));
+        await send(buildHelpMessage(settings?.storeName ?? "Store", isStaffOrAdmin));
         return NextResponse.json({ ok: true });
       case "orders":
-        return await handleOrders(linkedUser, isAdmin, currency, send);
+        return await handleOrders(linkedUser, isStaffOrAdmin, currency, send);
       case "order":
       case "status":
         return await handleOrder(linkedUser, cmd.args, currency, send);
@@ -300,7 +300,7 @@ async function handleOrder(
     return NextResponse.json({ ok: true });
   }
 
-  const isAdmin = user.role === "ADMIN";
+  const isStaffOrAdmin = user.role === "ADMIN" || user.role === "STAFF";
   const order = await db.order.findFirst({
     where: { orderNumber: { equals: orderNumber, mode: "insensitive" } },
     select: ORDER_CARD_SELECT,
@@ -311,13 +311,13 @@ async function handleOrder(
     return NextResponse.json({ ok: true });
   }
 
-  if (!isAdmin && order.userId !== user.id) {
+  if (!isStaffOrAdmin && order.userId !== user.id) {
     await send("I couldn't find one of your orders with that number.");
     return NextResponse.json({ ok: true });
   }
 
-  const buttons = isAdmin ? buildAdminOrderButtons(order.orderNumber, order.status) : undefined;
-  await send(renderOrderCard(order, currencySymbol, isAdmin), buttons);
+  const buttons = isStaffOrAdmin ? buildAdminOrderButtons(order.orderNumber, order.status) : undefined;
+  await send(renderOrderCard(order, currencySymbol, isStaffOrAdmin), buttons);
   return NextResponse.json({ ok: true });
 }
 
@@ -331,7 +331,7 @@ async function handleCallback(
   const match = /^ord:([a-z]+):(.+)$/.exec(data);
 
   const admin = await db.user.findFirst({
-    where: { telegramChatId: chatId, role: "ADMIN" },
+    where: { telegramChatId: chatId, role: { in: ["ADMIN", "STAFF"] } },
     select: { id: true, firstName: true },
   });
   if (!admin || !match) {
@@ -387,8 +387,8 @@ async function handleAdminStatus(
   currencySymbol: string,
   send: SendFn
 ) {
-  if (user?.role !== "ADMIN") {
-    await send("This command is for store admins only.");
+  if (user?.role !== "ADMIN" && user?.role !== "STAFF") {
+    await send("This command is for store staff and admins only.");
     return NextResponse.json({ ok: true });
   }
 
@@ -444,8 +444,8 @@ async function handleAdminStatus(
 }
 
 async function handleReply(user: LinkedUser | null, args: string, send: SendFn) {
-  if (user?.role !== "ADMIN") {
-    await send("This command is for store admins only.");
+  if (user?.role !== "ADMIN" && user?.role !== "STAFF") {
+    await send("This command is for store staff and admins only.");
     return NextResponse.json({ ok: true });
   }
 
@@ -508,8 +508,8 @@ async function handleCustomerMessage(
     return;
   }
 
-  if (user.role === "ADMIN") {
-    await send("Send /help to see the admin commands.");
+  if (user.role === "ADMIN" || user.role === "STAFF") {
+    await send("Send /help to see the staff commands.");
     return;
   }
 
@@ -528,7 +528,14 @@ async function handleCustomerMessage(
       name,
       text,
       `Reply in the dashboard: ${STORE_BASE_URL}/admin/messages`
-    )
+    ),
+    undefined,
+    {
+      kind: "CUSTOMER_MESSAGE",
+      title: `Message from ${name}`,
+      userId: user.id,
+      link: `${STORE_BASE_URL}/admin/messages`,
+    }
   );
 
   await send("✅ Sent to the store team. They'll reply here.");

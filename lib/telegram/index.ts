@@ -13,6 +13,11 @@
 import crypto from "node:crypto";
 import { db } from "@/lib/db";
 import { encryptSecret, decryptSecret } from "./encryption";
+import {
+  DEFAULT_ORDER_TEMPLATES,
+  renderTemplate,
+  type OrderTemplates,
+} from "./templates";
 
 const TELEGRAM_API = "https://api.telegram.org";
 
@@ -207,9 +212,29 @@ export function escapeHtml(value: unknown): string {
 }
 
 /**
- * Build the notification message for a given order status.
+ * Default, admin-editable order status message templates.
+ *
+ * Placeholders are replaced by `renderTemplate` with escaped values:
+ *   {orderNumber} {customerName} {storeName} {storeAddress} {total}
+ *   {paymentMethod} {items} {status} {rejectionReason} {rejectionReasonBlock}
  */
-export function buildOrderMessage(order: OrderNotificationData): string {
+export {
+  DEFAULT_ORDER_TEMPLATES,
+  ORDER_TEMPLATE_STATUSES,
+  ORDER_TEMPLATE_PLACEHOLDERS,
+  renderTemplate,
+} from "./templates";
+export type { OrderTemplates } from "./templates";
+
+/**
+ * Build the notification message for a given order status.
+ *
+ * Admin-configured `templates` (keyed by status) override the defaults.
+ */
+export function buildOrderMessage(
+  order: OrderNotificationData,
+  templates?: OrderTemplates | null
+): string {
   const num = escapeHtml(order.orderNumber);
   const itemsSummary = order.items
     .slice(0, 5)
@@ -218,53 +243,66 @@ export function buildOrderMessage(order: OrderNotificationData): string {
   const extraItems = order.items.length > 5
     ? `\n…and ${order.items.length - 5} more`
     : "";
+  const items = `${itemsSummary}${extraItems}`;
+  const reason = order.rejectionReason ? escapeHtml(order.rejectionReason) : "";
 
-  switch (order.status) {
-    case "CONFIRMED":
-      return (
-        `🛒 <b>Order Confirmed</b>\n\n` +
-        `Order <b>${num}</b> has been confirmed.\n\n` +
-        `<b>Items:</b>\n${itemsSummary}${extraItems}\n\n` +
-        `<b>Total:</b> ${order.total}\n` +
-        `<b>Payment:</b> ${escapeHtml(order.paymentMethod)}`
-      );
-    case "READY_FOR_PICKUP":
-      return (
-        `📦 <b>Ready for Pickup!</b>\n\n` +
-        `Your order <b>${num}</b> is ready for pickup.\n\n` +
-        `📍 ${escapeHtml(order.storeName)}\n` +
-        `${escapeHtml(order.storeAddress)}\n\n` +
-        `Please bring your order number or a valid ID when you arrive.`
-      );
-    case "PICKED_UP":
-      return (
-        `✅ <b>Order Picked Up</b>\n\n` +
-        `Thank you for shopping with us, ${escapeHtml(order.customerFirstName)}! ` +
-        `Your order <b>${num}</b> has been marked as picked up.`
-      );
-    case "CANCELLED":
-      return (
-        `❌ <b>Order Cancelled</b>\n\n` +
-        `Your order <b>${num}</b> has been cancelled.`
-      );
-    case "REJECTED":
-      return (
-        `❌ <b>Order Rejected</b>\n\n` +
-        `Your order <b>${num}</b> was rejected.` +
-        (order.rejectionReason ? `\n\n<b>Reason:</b> ${escapeHtml(order.rejectionReason)}` : "")
-      );
-    default:
-      return (
-        `ℹ️ Your order <b>${num}</b> is currently: ${order.status.replace(/_/g, " ").toLowerCase()}.`
-      );
+  const vars: Record<string, string> = {
+    orderNumber: num,
+    customerName: escapeHtml(order.customerFirstName),
+    customerFirstName: escapeHtml(order.customerFirstName),
+    storeName: escapeHtml(order.storeName),
+    storeAddress: escapeHtml(order.storeAddress),
+    total: order.total,
+    paymentMethod: escapeHtml(order.paymentMethod),
+    items,
+    status: order.status.replace(/_/g, " ").toLowerCase(),
+    rejectionReason: reason,
+    rejectionReasonBlock: reason ? `\n\n<b>Reason:</b> ${reason}` : "",
+  };
+
+  const effective: OrderTemplates = { ...DEFAULT_ORDER_TEMPLATES, ...(templates ?? {}) };
+  const template = effective[order.status];
+  if (template && template.trim()) {
+    return renderTemplate(template, vars);
   }
+
+  return `ℹ️ Your order <b>${num}</b> is currently: ${order.status
+    .replace(/_/g, " ")
+    .toLowerCase()}.`;
+}
+
+/**
+ * Load admin-configured order templates from Settings.
+ * Returns only the overrides; `buildOrderMessage` merges them with defaults.
+ */
+export async function getOrderTemplates(): Promise<OrderTemplates> {
+  try {
+    const settings = await db.settings.findFirst({ select: { telegramTemplates: true } });
+    const raw = settings?.telegramTemplates;
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      const out: OrderTemplates = {};
+      for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+        if (typeof value === "string" && value.trim()) out[key] = value;
+      }
+      return out;
+    }
+  } catch (error) {
+    console.error("[Telegram] Failed to load order templates:", error);
+  }
+  return {};
 }
 
 /**
  * Build the "View Order" inline button for a message.
+ *
+ * Uses the order's database id in the path (the storefront route is
+ * `/orders/[id]`) and passes the human-readable number as a query param so the
+ * detail page — which reads `?orderNumber=` — resolves it correctly.
  */
-export function buildOrderButtons(orderNumber: string): TelegramButton[] {
-  return [{ text: "View Order Details", url: `${BASE_URL}/orders/${orderNumber}` }];
+export function buildOrderButtons(orderNumber: string, orderId?: string): TelegramButton[] {
+  const path = encodeURIComponent(orderId || orderNumber);
+  const query = encodeURIComponent(orderNumber);
+  return [{ text: "View Order Details", url: `${BASE_URL}/orders/${path}?orderNumber=${query}` }];
 }
 
 /**
@@ -406,24 +444,29 @@ export async function notifyOrderStatusChange(
       price: `$${Number(item.price).toFixed(2)}`,
     }));
 
-    const message = buildOrderMessage({
-      id: order.id,
-      orderNumber: order.orderNumber,
-      status: order.status,
-      total: `$${Number(order.total).toFixed(2)}`,
-      paymentMethod: order.paymentMethod.replace(/_/g, " "),
-      customerFirstName: order.customerFirstName,
-      items,
-      rejectionReason: order.rejectionReason,
-      storeName: settings.storeName,
-      storeAddress: settings.storeAddress,
-    });
+    const templates = await getOrderTemplates();
+
+    const message = buildOrderMessage(
+      {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        total: `$${Number(order.total).toFixed(2)}`,
+        paymentMethod: order.paymentMethod.replace(/_/g, " "),
+        customerFirstName: order.customerFirstName,
+        items,
+        rejectionReason: order.rejectionReason,
+        storeName: settings.storeName,
+        storeAddress: settings.storeAddress,
+      },
+      templates
+    );
 
     const ok = await sendTelegramMessage({
       token: config.botToken,
       chatId,
       text: message,
-      buttons: buildOrderButtons(order.orderNumber),
+      buttons: buildOrderButtons(order.orderNumber, order.id),
     });
 
     if (!ok) {
@@ -547,7 +590,15 @@ export async function sendTelegramToUser(
 }
 
 /** Send a message to every linked, opted-in admin. Returns how many were reached. */
-export async function notifyAdmins(text: string, buttons?: TelegramButton[]): Promise<number> {
+export async function notifyAdmins(
+  text: string,
+  buttons?: TelegramButton[],
+  meta: AdminNotificationMeta = {}
+): Promise<number> {
+  // Always retain a copy in the dashboard, even when Telegram is disabled or no
+  // admin is linked — so staff/admins can still see what was sent.
+  await recordAdminNotification(text, meta);
+
   const config = await getTelegramConfig();
   if (!config.enabled || !config.botToken) return 0;
 
@@ -568,6 +619,57 @@ export async function notifyAdmins(text: string, buttons?: TelegramButton[]): Pr
     if (ok) sent++;
   }
   return sent;
+}
+
+// ========================
+// Admin notification history
+// ========================
+
+export interface AdminNotificationMeta {
+  kind?: string;
+  title?: string;
+  orderId?: string;
+  userId?: string;
+  link?: string;
+}
+
+/** Convert Telegram HTML markup into readable plain text for the dashboard. */
+export function htmlToText(html: string): string {
+  return String(html ?? "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/**
+ * Persist a copy of an admin-bound message so it is visible in the dashboard
+ * notification history. Never throws.
+ */
+export async function recordAdminNotification(
+  text: string,
+  meta: AdminNotificationMeta = {}
+): Promise<void> {
+  try {
+    await db.adminNotification.create({
+      data: {
+        kind: meta.kind ?? "SYSTEM",
+        title: meta.title ?? "Store notification",
+        body: htmlToText(text),
+        orderId: meta.orderId ?? null,
+        userId: meta.userId ?? null,
+        link: meta.link ?? null,
+      },
+    });
+  } catch (error) {
+    console.error("[Telegram] Failed to record admin notification:", error);
+  }
 }
 
 // ========================

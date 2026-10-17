@@ -16,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import { useLocale } from "@/hooks/use-locale";
+import { AdminNotificationBell } from "@/components/admin/admin-notifications";
 
 /**
  * Admin layout wrapper — provides sidebar navigation for admin pages.
@@ -50,11 +51,12 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex">
       {/* Sidebar */}
       <aside className="hidden lg:flex flex-col w-64 bg-gray-900 text-white">
-        <div className="p-6 border-b border-gray-800">
+        <div className="p-6 border-b border-gray-800 flex items-center justify-between">
           <Link href="/admin/dashboard" className="flex items-center gap-2">
             <Store className="w-6 h-6" />
             <span className="font-bold text-lg">{t("adminPanelTitle")}</span>
           </Link>
+          <AdminNotificationBell className="text-gray-300 hover:text-white" />
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
@@ -95,9 +97,12 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             <Store className="w-5 h-5" />
             <span className="font-bold">{t("adminPanelTitle")}</span>
           </Link>
-          <Link href="/" className="text-sm text-gray-400 hover:text-white">
-            {t("viewStorefront")}
-          </Link>
+          <div className="flex items-center gap-4">
+            <AdminNotificationBell className="text-gray-300 hover:text-white" />
+            <Link href="/" className="text-sm text-gray-400 hover:text-white">
+              {t("viewStorefront")}
+            </Link>
+          </div>
         </div>
         <nav className="flex overflow-x-auto px-4 pb-3 gap-1">
           {navItems.map((item) => {

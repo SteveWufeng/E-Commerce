@@ -77,7 +77,14 @@ export async function POST(request: NextRequest) {
             },
             "Payment approved via Mercantil (card redirect)."
           ),
-          [{ text: "📋 View in dashboard", url: adminOrderUrl(order.orderNumber) }]
+          [{ text: "📋 View in dashboard", url: adminOrderUrl(order.orderNumber) }],
+          {
+            kind: "PAYMENT_UPDATE",
+            title: `Payment approved ${order.orderNumber}`,
+            orderId: order.id,
+            userId: order.userId ?? undefined,
+            link: adminOrderUrl(order.orderNumber),
+          }
         ).catch(() => {});
       }
     } else if (status === "rejected" || status === "failed" || status === "cancelled") {
@@ -98,7 +105,14 @@ export async function POST(request: NextRequest) {
           },
           "Payment FAILED via Mercantil (card redirect)."
         ),
-        [{ text: "📋 View in dashboard", url: adminOrderUrl(order.orderNumber) }]
+        [{ text: "📋 View in dashboard", url: adminOrderUrl(order.orderNumber) }],
+        {
+          kind: "PAYMENT_UPDATE",
+          title: `Payment failed ${order.orderNumber}`,
+          orderId: order.id,
+          userId: order.userId ?? undefined,
+          link: adminOrderUrl(order.orderNumber),
+        }
       ).catch(() => {});
     }
 

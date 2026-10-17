@@ -129,7 +129,14 @@ export async function PUT(
           total: Number(order.total),
           customerFirstName: order.customerFirstName,
           createdAt: order.createdAt,
-        })
+        }),
+        undefined,
+        {
+          kind: "ORDER_CANCELLED",
+          title: `Order cancelled ${order.orderNumber}`,
+          orderId: order.id,
+          userId: order.userId ?? undefined,
+        }
       ).catch(() => {});
 
       return NextResponse.json({ success: true, data: result.order });
