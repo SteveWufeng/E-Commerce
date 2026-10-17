@@ -35,6 +35,9 @@ model User {
   telegramOptIn   Boolean   @default(false)
   telegramLinkTokens TelegramLinkToken[]
 
+  // Two-way messaging (customer <-> admin)
+  messages        Message[]
+
   @@index([email])
   @@index([role])
   @@index([telegramChatId])
@@ -232,6 +235,7 @@ model Order {
 
   items           OrderItem[]
   paymentProofs   PaymentProof[]
+  messages        Message[]
 
   notes           String?       // customer notes
   adminNotes      String?       // internal admin notes
@@ -304,6 +308,32 @@ model PickupSlot {
 
   @@index([date])
   @@index([isActive])
+}
+
+// ========================
+// Two-way Messaging (inbox)
+// ========================
+
+model Message {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId     String?
+  order       Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  sender      MessageSender
+  body        String        @db.Text
+  readByAdmin Boolean       @default(false)
+  readByUser  Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+
+  @@index([userId])
+  @@index([readByAdmin])
+  @@index([createdAt(sort: Desc)])
+}
+
+enum MessageSender {
+  CUSTOMER
+  ADMIN
 }
 
 // ========================
