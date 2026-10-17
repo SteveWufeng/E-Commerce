@@ -198,7 +198,7 @@ export default function ProfilePage() {
               View Order History
             </Link>
 
-            {user.role === "ADMIN" && (
+            {(user.role === "ADMIN" || user.role === "STAFF") && (
               <Link
                 href="/admin/dashboard"
                 className="btn-primary w-full"

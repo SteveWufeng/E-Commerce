@@ -269,7 +269,7 @@ export default function AdminProductsPage() {
     <AdminLayout>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-900">{t("products")}</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setScannerMode(!scannerMode)}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -328,7 +328,16 @@ export default function AdminProductsPage() {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   {(["name", "barcode", "category", "sale", "price", "stock", "status"] as const).map((field) => (
-                    <th key={field} className="text-left py-3 px-4">
+                    <th
+                      key={field}
+                      className={`text-left py-3 px-3 sm:px-4 ${
+                        field === "barcode" || field === "sale"
+                          ? "hidden lg:table-cell"
+                          : field === "category"
+                          ? "hidden md:table-cell"
+                          : ""
+                      }`}
+                    >
                       <button
                         onClick={() => handleSort(field)}
                         className="flex items-center gap-1 font-medium text-gray-500 hover:text-gray-700 transition-colors"
@@ -348,8 +357,8 @@ export default function AdminProductsPage() {
               <tbody>
                 {filtered.map((product) => (
                   <tr key={product.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium text-gray-900">{product.name}</td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3 sm:px-4 font-medium text-gray-900">{product.name}</td>
+                    <td className="hidden lg:table-cell py-3 px-3 sm:px-4">
                       {product.barcode ? (
                         <span className="font-mono text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
                           {product.barcode}
@@ -358,15 +367,15 @@ export default function AdminProductsPage() {
                         <span className="text-gray-300">—</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-gray-500">{product.category?.name || "—"}</td>
-                    <td className="py-3 px-4">
+                    <td className="hidden md:table-cell py-3 px-3 sm:px-4 text-gray-500">{product.category?.name || "—"}</td>
+                    <td className="hidden lg:table-cell py-3 px-3 sm:px-4">
                       {product.comparePrice && parseFloat(product.comparePrice) > parseFloat(product.price) ? (
                         <span className="badge badge-warning text-xs">{t("onSale")}</span>
                       ) : (
                         <span className="text-gray-300">{t("notOnSale")}</span>
                       )}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3 sm:px-4">
                       {product.comparePrice && parseFloat(product.comparePrice) > parseFloat(product.price) ? (
                         <span>
                           <span className="text-gray-400 line-through mr-1">{formatCurrency(product.comparePrice)}</span>
@@ -376,7 +385,7 @@ export default function AdminProductsPage() {
                         formatCurrency(product.price)
                       )}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3 sm:px-4">
                       <span
                         className={
                           product.stock <= 0
@@ -389,7 +398,7 @@ export default function AdminProductsPage() {
                         {product.stock}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3 sm:px-4">
                       <span
                         className={`badge ${
                           product.isActive ? "badge-success" : "badge-danger"
@@ -398,8 +407,8 @@ export default function AdminProductsPage() {
                         {product.isActive ? t("active") : t("inactive")}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="py-3 px-3 sm:px-4 text-right">
+                      <div className="flex items-center justify-end gap-1 sm:gap-2">
                         <button
                           onClick={() => handleEditClick(product)}
                           className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
@@ -428,8 +437,8 @@ export default function AdminProductsPage() {
       )}
 
       {editProduct && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">{t("editProduct")}</h2>
               <button
@@ -526,8 +535,8 @@ export default function AdminProductsPage() {
       )}
 
       {addProduct && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">{t("addNewProduct")}</h2>
               <button
@@ -583,7 +592,7 @@ export default function AdminProductsPage() {
                   placeholder={t("description")}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {t("price")} ($) *

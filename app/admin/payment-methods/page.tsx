@@ -211,7 +211,7 @@ export default function AdminPaymentMethodsPage() {
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{t("paymentMethods")}</h1>
           <p className="text-sm text-gray-500 mt-1">{t("paymentMethodsDescription")}</p>
@@ -235,33 +235,33 @@ export default function AdminPaymentMethodsPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("sortOrder")}</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("paymentMethodName")}</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("proofType")}</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("status")}</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-500">{t("actions")}</th>
+                  <th className="hidden sm:table-cell text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("sortOrder")}</th>
+                  <th className="text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("paymentMethodName")}</th>
+                  <th className="hidden lg:table-cell text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("proofType")}</th>
+                  <th className="text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("status")}</th>
+                  <th className="text-right py-3 px-3 sm:px-4 font-medium text-gray-500">{t("actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {methods.map((method) => (
                   <tr key={method.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-gray-500">{method.sortOrder}</td>
-                    <td className="py-3 px-4">
+                    <td className="hidden sm:table-cell py-3 px-3 sm:px-4 text-gray-500">{method.sortOrder}</td>
+                    <td className="py-3 px-3 sm:px-4">
                       <div className="font-medium text-gray-900">{method.name}</div>
-                      <div className="text-xs text-gray-500 truncate max-w-xs">{method.description}</div>
+                      <div className="text-xs text-gray-500 truncate max-w-[10rem] sm:max-w-xs">{method.description}</div>
                     </td>
-                    <td className="py-3 px-4">{proofTypeLabels[method.proofType] || method.proofType}</td>
-                    <td className="py-3 px-4">
+                    <td className="hidden lg:table-cell py-3 px-3 sm:px-4">{proofTypeLabels[method.proofType] || method.proofType}</td>
+                    <td className="py-3 px-3 sm:px-4">
                       <button
                         onClick={() => toggleActive(method)}
-                        className={`badge cursor-pointer ${
+                        className={`badge cursor-pointer whitespace-nowrap ${
                           method.isActive ? "badge-success" : "badge-danger"
                         }`}
                       >
                         {method.isActive ? t("active") : t("inactive")}
                       </button>
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-3 sm:px-4 text-right whitespace-nowrap">
                       <button
                         onClick={() => openEdit(method)}
                         className="text-primary-600 hover:underline text-xs mr-3"
@@ -284,8 +284,8 @@ export default function AdminPaymentMethodsPage() {
       )}
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-semibold mb-4">
               {editingId ? t("editPaymentMethod") : t("addPaymentMethod")}
             </h2>
@@ -311,7 +311,7 @@ export default function AdminPaymentMethodsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="label">{t("paymentMethodIcon")}</label>
                   {form.iconUrl ? (
@@ -429,7 +429,7 @@ export default function AdminPaymentMethodsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="label">{t("proofType")}</label>
                   <select
@@ -519,8 +519,8 @@ export default function AdminPaymentMethodsPage() {
       )}
 
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md">
             <h2 className="text-lg font-semibold mb-2">{t("confirmDeletePaymentMethod")}</h2>
             {deleteError && (
               <p className="text-sm text-red-600 mb-4">{deleteError}</p>

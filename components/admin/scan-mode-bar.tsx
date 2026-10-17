@@ -106,14 +106,14 @@ export function ScanModeBar({ open, onClose, onProductScanned, onModeChange }: S
               </div>
             </div>
 
-            <div className="flex gap-2 mb-3">
+            <div className="flex gap-2 mb-3 overflow-x-auto scrollbar-hide">
               {modes.map((m) => {
                 const Icon = m.icon;
                 return (
                   <button
                     key={m.id}
                     onClick={() => handleModeChange(m.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       mode === m.id
                         ? "bg-blue-600 text-white"
                         : "bg-gray-100 text-gray-600 hover:bg-gray-200"

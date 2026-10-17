@@ -110,16 +110,16 @@ export default function AdminCategoriesPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("categoryName")}</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("slug")}</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("products")}</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-500">{t("actions")}</th>
+                  <th className="text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("categoryName")}</th>
+                  <th className="hidden sm:table-cell text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("slug")}</th>
+                  <th className="text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("products")}</th>
+                  <th className="text-right py-3 px-3 sm:px-4 font-medium text-gray-500">{t("actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {categories.map((cat) => (
                   <tr key={cat.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3 sm:px-4">
                       {editingId === cat.id ? (
                         <div className="flex items-center gap-2">
                           <input
@@ -147,9 +147,9 @@ export default function AdminCategoriesPage() {
                         <span className="font-medium text-gray-900">{cat.name}</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-gray-500">{cat.slug}</td>
-                    <td className="py-3 px-4 text-gray-500">{cat._count?.products ?? "—"}</td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="hidden sm:table-cell py-3 px-3 sm:px-4 text-gray-500">{cat.slug}</td>
+                    <td className="py-3 px-3 sm:px-4 text-gray-500">{cat._count?.products ?? "—"}</td>
+                    <td className="py-3 px-3 sm:px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => {
@@ -178,8 +178,8 @@ export default function AdminCategoriesPage() {
 
       {/* Add Category Modal */}
       {showAdd && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">{t("addCategory")}</h2>
               <button onClick={() => setShowAdd(false)} className="p-1 rounded-lg hover:bg-gray-100">

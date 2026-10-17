@@ -192,7 +192,7 @@ export default function AdminUsersPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("searchUsersPlaceholder")}
-          className="input max-w-xs"
+          className="input w-full sm:max-w-xs"
         />
       </div>
 
@@ -208,12 +208,12 @@ export default function AdminUsersPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("nameLabel")}</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("customerEmail")}</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("role")}</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("verified")}</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("telegram")}</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-500">{t("actions")}</th>
+                  <th className="text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("nameLabel")}</th>
+                  <th className="hidden sm:table-cell text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("customerEmail")}</th>
+                  <th className="text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("role")}</th>
+                  <th className="text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("verified")}</th>
+                  <th className="hidden lg:table-cell text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("telegram")}</th>
+                  <th className="text-right py-3 px-3 sm:px-4 font-medium text-gray-500">{t("actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -221,20 +221,20 @@ export default function AdminUsersPage() {
                   const isSelf = user.id === currentUserId;
                   return (
                     <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-3 sm:px-4">
                         <div className="text-gray-900 font-medium">
                           {user.firstName} {user.lastName}
                           {isSelf && <span className="ml-2 text-xs text-gray-400">(you)</span>}
                         </div>
                         <div className="text-gray-500 text-xs">{formatDateTime(user.createdAt)}</div>
                       </td>
-                      <td className="py-3 px-4 text-gray-700">{user.email}</td>
-                      <td className="py-3 px-4">
+                      <td className="hidden sm:table-cell py-3 px-3 sm:px-4 text-gray-700 break-all">{user.email}</td>
+                      <td className="py-3 px-3 sm:px-4">
                         <select
                           value={user.role}
                           disabled={isSelf || busyId === user.id}
                           onChange={(e) => patchUser(user.id, { role: e.target.value })}
-                          className="input py-1 text-xs max-w-[9rem]"
+                          className="input py-1 text-xs max-w-[8rem]"
                         >
                           {(["CUSTOMER", "STAFF", "ADMIN"] as UserRole[]).map((role) => (
                             <option key={role} value={role}>
@@ -243,53 +243,55 @@ export default function AdminUsersPage() {
                           ))}
                         </select>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-3 sm:px-4">
                         <button
                           onClick={() => patchUser(user.id, { isVerified: !user.isVerified })}
                           disabled={busyId === user.id}
-                          className={`badge ${user.isVerified ? "badge-success" : "badge-warning"} cursor-pointer`}
+                          className={`badge ${user.isVerified ? "badge-success" : "badge-warning"} cursor-pointer whitespace-nowrap`}
                           title={user.isVerified ? t("verified") : t("unverified")}
                         >
                           {user.isVerified ? t("verified") : t("unverified")}
                         </button>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="hidden lg:table-cell py-3 px-3 sm:px-4">
                         {user.telegramChatId ? (
                           <span className="text-xs text-gray-700 font-mono">{user.telegramChatId}</span>
                         ) : (
                           <span className="text-xs text-gray-400">{t("telegramNotBound")}</span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-right whitespace-nowrap">
-                        <button
-                          onClick={() => openEdit(user)}
-                          className="text-xs py-1.5 px-3 text-primary-600 hover:underline"
-                        >
-                          {t("editUser")}
-                        </button>
-                        <button
-                          onClick={() => openReset(user)}
-                          className="ml-1 inline-flex items-center gap-1 text-xs py-1.5 px-3 text-gray-600 hover:text-gray-800"
-                        >
-                          <KeyRound className="w-3.5 h-3.5" />
-                          {t("resetPassword")}
-                        </button>
-                        {user.telegramChatId ? (
+                      <td className="py-3 px-3 sm:px-4 text-right">
+                        <div className="flex flex-wrap items-center justify-end gap-1">
                           <button
-                            onClick={() => handleUnbind(user)}
-                            disabled={busyId === user.id}
-                            className="ml-2 text-xs py-1.5 px-3 text-red-600 hover:text-red-700"
+                            onClick={() => openEdit(user)}
+                            className="text-xs py-1.5 px-2 text-primary-600 hover:underline"
                           >
-                            {t("unbindTelegram")}
+                            {t("editUser")}
                           </button>
-                        ) : (
                           <button
-                            onClick={() => openTelegram(user)}
-                            className="ml-2 text-xs py-1.5 px-3 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg"
+                            onClick={() => openReset(user)}
+                            className="inline-flex items-center gap-1 text-xs py-1.5 px-2 text-gray-600 hover:text-gray-800"
                           >
-                            {t("bindTelegram")}
+                            <KeyRound className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">{t("resetPassword")}</span>
                           </button>
-                        )}
+                          {user.telegramChatId ? (
+                            <button
+                              onClick={() => handleUnbind(user)}
+                              disabled={busyId === user.id}
+                              className="text-xs py-1.5 px-2 text-red-600 hover:text-red-700"
+                            >
+                              {t("unbindTelegram")}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => openTelegram(user)}
+                              className="text-xs py-1.5 px-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg"
+                            >
+                              {t("bindTelegram")}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -305,8 +307,8 @@ export default function AdminUsersPage() {
 
       {/* Edit user modal */}
       {editUser && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md">
             <h2 className="text-lg font-semibold mb-4">{t("editUser")}</h2>
             <div className="space-y-3">
               <div>
@@ -349,8 +351,8 @@ export default function AdminUsersPage() {
 
       {/* Telegram bind modal */}
       {telegramUser && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md">
             <h2 className="text-lg font-semibold mb-1">{t("bindTelegram")}</h2>
             <p className="text-sm text-gray-500 mb-4">
               {telegramUser.firstName} {telegramUser.lastName} · {telegramUser.email}
@@ -384,8 +386,8 @@ export default function AdminUsersPage() {
 
       {/* Password reset modal */}
       {resetUser && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-semibold mb-1">{t("resetPasswordTitle")}</h2>
             <p className="text-sm text-gray-500 mb-4">
               {resetUser.firstName} {resetUser.lastName} · {resetUser.email}

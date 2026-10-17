@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Bell, Plus, Search } from "lucide-react";
+import { Bell, Plus, Search, ArrowLeft } from "lucide-react";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { formatDateTime } from "@/lib/utils";
 import { useLocale } from "@/hooks/use-locale";
@@ -265,7 +265,7 @@ export default function AdminMessagesPage() {
       {tab === "conversations" ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-240px)]">
           {/* Conversation list */}
-          <div className="card p-0 overflow-hidden flex flex-col">
+          <div className={`card p-0 overflow-hidden flex-col ${activeUserId ? "hidden lg:flex" : "flex"}`}>
             <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
               <span className="text-sm font-semibold text-gray-700">{t("conversations")}</span>
               <button
@@ -306,7 +306,7 @@ export default function AdminMessagesPage() {
           </div>
 
           {/* Thread */}
-          <div className="card p-0 lg:col-span-2 overflow-hidden flex flex-col">
+          <div className={`card p-0 lg:col-span-2 overflow-hidden flex-col ${activeUserId ? "flex" : "hidden lg:flex"}`}>
             {!activeUserId ? (
               <div className="flex-1 flex items-center justify-center text-sm text-gray-400 p-4">
                 {t("selectConversation")}
@@ -314,12 +314,21 @@ export default function AdminMessagesPage() {
             ) : (
               <>
                 <div className="px-4 py-3 border-b border-gray-100">
-                  <p className="font-medium text-gray-900">
-                    {threadUser
-                      ? [threadUser.firstName, threadUser.lastName].filter(Boolean).join(" ") ||
-                        threadUser.email
-                      : ""}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setActiveUserId(null)}
+                      className="lg:hidden -ml-1 p-1 rounded-lg text-gray-500 hover:bg-gray-100"
+                      aria-label={t("back")}
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <p className="font-medium text-gray-900">
+                      {threadUser
+                        ? [threadUser.firstName, threadUser.lastName].filter(Boolean).join(" ") ||
+                          threadUser.email
+                        : ""}
+                    </p>
+                  </div>
                   {threadUser && !threadUser.telegramReachable && (
                     <p className="text-xs text-amber-600">{t("customerNotReachable")}</p>
                   )}
@@ -444,8 +453,8 @@ export default function AdminMessagesPage() {
 
       {/* New message picker */}
       {newMessageOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md">
             <div className="flex items-center justify-between mb-1">
               <h2 className="text-lg font-semibold">{t("newMessage")}</h2>
               <button

@@ -91,27 +91,27 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Mobile header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-gray-900 text-white">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-gray-900 text-white safe-top border-b border-gray-800">
         <div className="flex items-center justify-between p-4">
           <Link href="/admin/dashboard" className="flex items-center gap-2">
             <Store className="w-5 h-5" />
             <span className="font-bold">{t("adminPanelTitle")}</span>
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <AdminNotificationBell className="text-gray-300 hover:text-white" />
-            <Link href="/" className="text-sm text-gray-400 hover:text-white">
+            <Link href="/" className="text-sm text-gray-400 hover:text-white whitespace-nowrap">
               {t("viewStorefront")}
             </Link>
           </div>
         </div>
-        <nav className="flex overflow-x-auto px-4 pb-3 gap-1">
+        <nav className="flex overflow-x-auto scrollbar-hide snap-x px-4 pb-3 gap-1.5">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                className={`flex shrink-0 snap-start items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
                   isActive
                     ? "bg-primary-600 text-white"
                     : "bg-gray-800 text-gray-300"
@@ -126,8 +126,8 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-0 mt-0 lg:mt-0">
-        <div className="lg:mt-0 mt-24 p-4 sm:p-6 lg:p-8">{children}</div>
+      <main className="flex-1 min-w-0">
+        <div className="lg:mt-0 mt-24 p-4 sm:p-6 lg:p-8 pb-10 safe-bottom">{children}</div>
       </main>
     </div>
   );

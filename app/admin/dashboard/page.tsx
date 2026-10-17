@@ -151,16 +151,16 @@ export default function AdminDashboardPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">
+                  <th className="text-left py-3 px-3 sm:px-4 font-medium text-gray-500">
                     {t("orderHash")}
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">
+                  <th className="text-left py-3 px-3 sm:px-4 font-medium text-gray-500">
                     {t("totalLabel")}
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">
+                  <th className="text-left py-3 px-3 sm:px-4 font-medium text-gray-500">
                     {t("status")}
                   </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">
+                  <th className="hidden sm:table-cell text-left py-3 px-3 sm:px-4 font-medium text-gray-500">
                     {t("date")}
                   </th>
                 </tr>
@@ -171,16 +171,16 @@ export default function AdminDashboardPage() {
                     key={order.id}
                     className="border-b border-gray-100 hover:bg-gray-50"
                   >
-                    <td className="py-3 px-4 font-medium text-primary-600">
+                    <td className="py-3 px-3 sm:px-4 font-medium text-primary-600">
                       {order.orderNumber}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3 sm:px-4 whitespace-nowrap">
                       {formatCurrency(order.total)}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3 sm:px-4">
                       <OrderStatusBadge status={order.status} />
                     </td>
-                    <td className="py-3 px-4 text-gray-500">
+                    <td className="hidden sm:table-cell py-3 px-3 sm:px-4 text-gray-500 whitespace-nowrap">
                       {new Date(order.createdAt).toLocaleDateString()}
                     </td>
                   </tr>

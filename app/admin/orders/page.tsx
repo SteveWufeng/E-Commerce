@@ -194,12 +194,12 @@ export default function AdminOrdersPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("searchProductsPlaceholder")}
-          className="input max-w-xs"
+          className="input w-full sm:max-w-xs"
         />
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="input max-w-xs"
+          className="input w-full sm:max-w-xs"
         >
           <option value="all">{t("allStatuses")}</option>
           <option value="PENDING">{t("status")}</option>
@@ -223,18 +223,18 @@ export default function AdminOrdersPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("orderHash")}</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("customerName")}</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("totalLabel")}</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("status")}</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t("date")}</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-500">{t("actions")}</th>
+                  <th className="text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("orderHash")}</th>
+                  <th className="text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("customerName")}</th>
+                  <th className="text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("totalLabel")}</th>
+                  <th className="text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("status")}</th>
+                  <th className="hidden md:table-cell text-left py-3 px-3 sm:px-4 font-medium text-gray-500">{t("date")}</th>
+                  <th className="text-right py-3 px-3 sm:px-4 font-medium text-gray-500">{t("actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((order) => (
                   <tr key={order.id} className={`border-b border-gray-100 hover:bg-gray-50 ${order.status === "REJECTED" ? "bg-red-50" : ""}`}>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3 sm:px-4">
                       <button 
                         onClick={() => {
                           setSelectedOrder(order);
@@ -245,25 +245,26 @@ export default function AdminOrdersPage() {
                         {order.orderNumber}
                       </button>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3 sm:px-4">
                       <div className="text-gray-900">
                         {order.customerFirstName} {order.customerLastName}
                       </div>
-                      <div className="text-gray-500 text-xs">{order.customerEmail}</div>
+                      <div className="hidden sm:block text-gray-500 text-xs">{order.customerEmail}</div>
                     </td>
-                    <td className="py-3 px-4 font-medium">{formatCurrency(order.total)}</td>
-                    <td className="py-3 px-4">
-                  <span className={`badge ${statusColors[order.status] || "badge-info"}`}>
+                    <td className="py-3 px-3 sm:px-4 font-medium whitespace-nowrap">{formatCurrency(order.total)}</td>
+                    <td className="py-3 px-3 sm:px-4">
+                  <span className={`badge whitespace-nowrap ${statusColors[order.status] || "badge-info"}`}>
                     {order.status.toLowerCase().replace(/_/g, " ")}
                   </span>
                   {order.receiptImage && (
                     <span className="ml-1 text-xs text-green-600" title="Receipt uploaded">📎</span>
                   )}
                     </td>
-                    <td className="py-3 px-4 text-gray-500">
+                    <td className="hidden md:table-cell py-3 px-3 sm:px-4 text-gray-500 whitespace-nowrap">
                       {formatDateTime(order.createdAt)}
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-3 sm:px-4 text-right">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
                       {order.status === "PENDING" && (
                         <>
                           {(order.paymentProofs?.length ?? 0) > 0 && order.paymentStatus !== "COMPLETED" ? (
@@ -286,7 +287,7 @@ export default function AdminOrdersPage() {
                           )}
                           <button
                             onClick={() => updateStatus(order.id, "CANCELLED")}
-                            className="ml-2 text-xs py-1.5 px-3 text-red-600 hover:text-red-700"
+                            className="text-xs py-1.5 px-3 text-red-600 hover:text-red-700"
                           >
                             {t("cancel")}
                           </button>
@@ -302,13 +303,13 @@ export default function AdminOrdersPage() {
                           </button>
                           <button
                             onClick={() => setRejectOrderId(order.id)}
-                            className="ml-2 text-xs py-1.5 px-3 text-red-600 hover:text-red-700 border border-red-300 rounded-lg"
+                            className="text-xs py-1.5 px-3 text-red-600 hover:text-red-700 border border-red-300 rounded-lg"
                           >
                             {t("reject")}
                           </button>
                           <button
                             onClick={() => updateStatus(order.id, "CANCELLED")}
-                            className="ml-2 text-xs py-1.5 px-3 text-gray-500 hover:text-gray-700"
+                            className="text-xs py-1.5 px-3 text-gray-500 hover:text-gray-700"
                           >
                             {t("cancel")}
                           </button>
@@ -324,7 +325,7 @@ export default function AdminOrdersPage() {
                           </button>
                           <button
                             onClick={() => undoOrder(order.id)}
-                            className="ml-2 text-xs py-1.5 px-3 text-gray-500 hover:text-gray-700"
+                            className="text-xs py-1.5 px-3 text-gray-500 hover:text-gray-700"
                           >
                             {t("restore")}
                           </button>
@@ -348,7 +349,7 @@ export default function AdminOrdersPage() {
                           </button>
                           <button
                             onClick={() => updateStatus(order.id, "CANCELLED")}
-                            className="ml-2 text-xs py-1.5 px-3 text-red-600 hover:text-red-700"
+                            className="text-xs py-1.5 px-3 text-red-600 hover:text-red-700"
                           >
                             {t("cancel")}
                           </button>
@@ -365,11 +366,12 @@ export default function AdminOrdersPage() {
                       {isAdmin && (
                         <button
                           onClick={() => handleDeleteOrder(order.id)}
-                          className="ml-2 text-xs py-1.5 px-3 text-red-600 hover:text-red-700 border border-red-300 rounded-lg"
+                          className="text-xs py-1.5 px-3 text-red-600 hover:text-red-700 border border-red-300 rounded-lg"
                         >
-                          {t("deleteOrder")}
-                        </button>
-                      )}
+                           {t("deleteOrder")}
+                         </button>
+                       )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -384,8 +386,8 @@ export default function AdminOrdersPage() {
 
       {/* Rejection Reason Modal */}
       {rejectOrderId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md">
             <h2 className="text-lg font-semibold mb-2">{t("rejectionReasonLabel")}</h2>
             <p className="text-sm text-gray-500 mb-4">
               {t("reject")}
@@ -418,8 +420,8 @@ export default function AdminOrdersPage() {
 
       {/* Order Detail Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">{t("orderDetail")}</h2>
               <button onClick={() => setSelectedOrder(null)} className="p-1 rounded hover:bg-gray-100">
@@ -428,7 +430,7 @@ export default function AdminOrdersPage() {
             </div>
             
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-gray-500">{t("orderHash")}</p>
                   <p className="font-medium">{selectedOrder.orderNumber}</p>
@@ -639,8 +641,8 @@ export default function AdminOrdersPage() {
 
       {/* Proof Rejection Modal */}
       {proofRejectId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md">
             <h2 className="text-lg font-semibold mb-2">{t("rejectionReasonLabel")}</h2>
             <p className="text-sm text-gray-500 mb-4">
               {t("reject")}

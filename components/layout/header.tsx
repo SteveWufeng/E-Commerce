@@ -77,6 +77,8 @@ export function Header() {
     await signOut({ callbackUrl: "/" });
   }
 
+  const canAccessAdmin = user?.role === "ADMIN" || user?.role === "STAFF";
+
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-200 safe-top">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -101,7 +103,7 @@ export function Header() {
                 {t("myOrders")}
               </Link>
             )}
-            {user?.role === "ADMIN" && (
+            {canAccessAdmin && (
               <Link href="/admin/dashboard" className="text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors">
                 {t("admin")}
               </Link>
@@ -157,7 +159,7 @@ export function Header() {
                         {t("myOrders")}
                       </Link>
 
-                      {user.role === "ADMIN" && (
+                      {canAccessAdmin && (
                         <Link
                           href="/admin/dashboard"
                           className="block px-4 py-2 text-sm text-purple-600 hover:bg-purple-50"
@@ -251,7 +253,7 @@ export function Header() {
                 </>
               )}
 
-              {user?.role === "ADMIN" && (
+              {canAccessAdmin && (
                 <Link
                   href="/admin/dashboard"
                   className="px-4 py-2 rounded-lg text-purple-600 hover:bg-purple-50 font-medium"
