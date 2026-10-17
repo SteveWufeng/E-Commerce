@@ -46,6 +46,7 @@ import {
   buildCustomerMessageNotification,
   buildAdminReplyMessage,
   ORDER_STATUS_ACTIONS,
+  escapeHtml,
   STORE_BASE_URL,
   type TelegramButton,
 } from "@/lib/telegram";
@@ -243,7 +244,7 @@ async function handleStart(
   if (botToken) {
     await send(
       `✅ <b>Telegram linked!</b>\n\n` +
-        `You'll now receive order updates here, ${linkToken.user.firstName}.\n` +
+        `You'll now receive order updates here, ${escapeHtml(linkToken.user.firstName)}.\n` +
         `Try /orders to see your recent orders.`
     );
   }
@@ -295,7 +296,7 @@ async function handleOrder(
 
   const orderNumber = orderNumberArg.trim();
   if (!orderNumber) {
-    await send("Usage: /order <order number>\nFor example: /order ORD-20260805-0001");
+    await send("Usage: /order ORDER_NUMBER\nFor example: /order ORD-20260805-0001");
     return NextResponse.json({ ok: true });
   }
 
@@ -396,12 +397,12 @@ async function handleAdminStatus(
   const reason = rest.join(" ").trim();
 
   if (!orderNumber) {
-    await send(`Usage: /${command} <order number>${command === "reject" ? " <reason>" : ""}`);
+    await send(`Usage: /${command} ORDER_NUMBER${command === "reject" ? " REASON" : ""}`);
     return NextResponse.json({ ok: true });
   }
 
   if (command === "reject" && !reason) {
-    await send("Usage: /reject <order number> <reason>");
+    await send("Usage: /reject ORDER_NUMBER REASON");
     return NextResponse.json({ ok: true });
   }
 
@@ -453,7 +454,7 @@ async function handleReply(user: LinkedUser | null, args: string, send: SendFn) 
   const body = rest.join(" ").trim();
 
   if (!orderNumber || !body) {
-    await send("Usage: /reply <order number> <message>");
+    await send("Usage: /reply ORDER_NUMBER MESSAGE");
     return NextResponse.json({ ok: true });
   }
 

@@ -196,12 +196,24 @@ export async function sendTelegramMessage(params: {
 }
 
 /**
+ * Escape text for Telegram's HTML parse mode so user-controlled content
+ * (names, notes, message bodies) can never break the message or inject tags.
+ */
+export function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/**
  * Build the notification message for a given order status.
  */
 export function buildOrderMessage(order: OrderNotificationData): string {
+  const num = escapeHtml(order.orderNumber);
   const itemsSummary = order.items
     .slice(0, 5)
-    .map((item) => `• ${item.name} ×${item.quantity} — ${item.price}`)
+    .map((item) => `• ${escapeHtml(item.name)} ×${item.quantity} — ${item.price}`)
     .join("\n");
   const extraItems = order.items.length > 5
     ? `\n…and ${order.items.length - 5} more`
@@ -211,39 +223,39 @@ export function buildOrderMessage(order: OrderNotificationData): string {
     case "CONFIRMED":
       return (
         `🛒 <b>Order Confirmed</b>\n\n` +
-        `Order <b>${order.orderNumber}</b> has been confirmed.\n\n` +
+        `Order <b>${num}</b> has been confirmed.\n\n` +
         `<b>Items:</b>\n${itemsSummary}${extraItems}\n\n` +
         `<b>Total:</b> ${order.total}\n` +
-        `<b>Payment:</b> ${order.paymentMethod}`
+        `<b>Payment:</b> ${escapeHtml(order.paymentMethod)}`
       );
     case "READY_FOR_PICKUP":
       return (
         `📦 <b>Ready for Pickup!</b>\n\n` +
-        `Your order <b>${order.orderNumber}</b> is ready for pickup.\n\n` +
-        `📍 ${order.storeName}\n` +
-        `${order.storeAddress}\n\n` +
+        `Your order <b>${num}</b> is ready for pickup.\n\n` +
+        `📍 ${escapeHtml(order.storeName)}\n` +
+        `${escapeHtml(order.storeAddress)}\n\n` +
         `Please bring your order number or a valid ID when you arrive.`
       );
     case "PICKED_UP":
       return (
         `✅ <b>Order Picked Up</b>\n\n` +
-        `Thank you for shopping with us, ${order.customerFirstName}! ` +
-        `Your order <b>${order.orderNumber}</b> has been marked as picked up.`
+        `Thank you for shopping with us, ${escapeHtml(order.customerFirstName)}! ` +
+        `Your order <b>${num}</b> has been marked as picked up.`
       );
     case "CANCELLED":
       return (
         `❌ <b>Order Cancelled</b>\n\n` +
-        `Your order <b>${order.orderNumber}</b> has been cancelled.`
+        `Your order <b>${num}</b> has been cancelled.`
       );
     case "REJECTED":
       return (
         `❌ <b>Order Rejected</b>\n\n` +
-        `Your order <b>${order.orderNumber}</b> was rejected.` +
-        (order.rejectionReason ? `\n\n<b>Reason:</b> ${order.rejectionReason}` : "")
+        `Your order <b>${num}</b> was rejected.` +
+        (order.rejectionReason ? `\n\n<b>Reason:</b> ${escapeHtml(order.rejectionReason)}` : "")
       );
     default:
       return (
-        `ℹ️ Your order <b>${order.orderNumber}</b> is currently: ${order.status.replace(/_/g, " ").toLowerCase()}.`
+        `ℹ️ Your order <b>${num}</b> is currently: ${order.status.replace(/_/g, " ").toLowerCase()}.`
       );
   }
 }
@@ -259,20 +271,21 @@ export function buildOrderButtons(orderNumber: string): TelegramButton[] {
  * Build a help message listing the commands the bot understands.
  */
 export function buildHelpMessage(storeName: string, forAdmin = false): string {
+  const store = escapeHtml(storeName);
   if (forAdmin) {
     return (
-      `🤖 <b>${storeName}</b> — admin bot\n\n` +
+      `🤖 <b>${store}</b> — admin bot\n\n` +
       `<b>Browse</b>\n` +
       `/orders — recent orders across the store\n` +
-      `/order <number> — full status of any order (also /status)\n\n` +
+      `/order ORDER_NUMBER — full status of any order (also /status)\n\n` +
       `<b>Update an order</b>\n` +
-      `/confirm <number> — mark confirmed\n` +
-      `/ready <number> — mark ready for pickup\n` +
-      `/pickedup <number> — mark picked up\n` +
-      `/cancel <number> — cancel the order\n` +
-      `/reject <number> <reason> — reject with a reason\n\n` +
+      `/confirm ORDER_NUMBER — mark confirmed\n` +
+      `/ready ORDER_NUMBER — mark ready for pickup\n` +
+      `/pickedup ORDER_NUMBER — mark picked up\n` +
+      `/cancel ORDER_NUMBER — cancel the order\n` +
+      `/reject ORDER_NUMBER REASON — reject with a reason\n\n` +
       `<b>Message a customer</b>\n` +
-      `/reply <number> <message> — send a message to that order's customer\n\n` +
+      `/reply ORDER_NUMBER MESSAGE — send a message to that order's customer\n\n` +
       `Or just tap the buttons under an order card to change its status.\n` +
       `Manage all conversations from the dashboard: ${BASE_URL}/admin/messages\n\n` +
       `/help — show this message`
@@ -280,10 +293,10 @@ export function buildHelpMessage(storeName: string, forAdmin = false): string {
   }
 
   return (
-    `🤖 <b>${storeName}</b> assistant\n\n` +
+    `🤖 <b>${store}</b> assistant\n\n` +
     `Here's what I can do:\n` +
     `/orders — your recent orders and their status\n` +
-    `/order <number> — status of a specific order\n` +
+    `/order ORDER_NUMBER — status of a specific order\n` +
     `/help — show this message\n\n` +
     `You can also simply <b>send me a message</b> and the store team will reply here.\n\n` +
     `Order updates (confirmed, ready for pickup, and more) are sent here automatically.`
@@ -310,9 +323,9 @@ export function buildOrdersListMessage(
       year: "numeric",
     });
     const status = order.status.replace(/_/g, " ").toLowerCase();
-    return `• <code>${order.orderNumber}</code>\n  ${status} — ${currencySymbol}${Number(order.total).toFixed(2)} · ${date}`;
+    return `• <code>${escapeHtml(order.orderNumber)}</code>\n  ${status} — ${currencySymbol}${Number(order.total).toFixed(2)} · ${date}`;
   });
-  return `📦 <b>${heading}</b>\n\n${lines.join("\n\n")}`;
+  return `📦 <b>${escapeHtml(heading)}</b>\n\n${lines.join("\n\n")}`;
 }
 
 /**
@@ -335,9 +348,9 @@ export function buildOrderStatusMessage(
     new Date(value).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
   const money = (value: number | string | { toString(): string }) => `${currency}${Number(value).toFixed(2)}`;
 
-  const lines = [`📦 <b>${order.orderNumber}</b>`, ""];
+  const lines = [`📦 <b>${escapeHtml(order.orderNumber)}</b>`, ""];
   if (opts.forAdmin && order.customerFirstName) {
-    lines.push(`Customer: ${order.customerFirstName}`);
+    lines.push(`Customer: ${escapeHtml(order.customerFirstName)}`);
   }
   lines.push(`Status: <b>${order.status.replace(/_/g, " ").toLowerCase()}</b>`);
   lines.push(`Payment: ${order.paymentStatus.replace(/_/g, " ").toLowerCase()}`);
@@ -348,7 +361,7 @@ export function buildOrderStatusMessage(
   if (items.length > 0) {
     lines.push("", "<b>Items:</b>");
     for (const item of items.slice(0, 5)) {
-      lines.push(`• ${item.productName} ×${item.quantity} — ${money(item.productPrice)}`);
+      lines.push(`• ${escapeHtml(item.productName)} ×${item.quantity} — ${money(item.productPrice)}`);
     }
     if (items.length > 5) {
       lines.push(`…and ${items.length - 5} more`);
@@ -604,7 +617,7 @@ export function buildOrderSubmittedMessage(
 ): string {
   return (
     `🧾 <b>Order received!</b>\n\n` +
-    `Thanks — we got your order <b>${order.orderNumber}</b>.\n` +
+    `Thanks — we got your order <b>${escapeHtml(order.orderNumber)}</b>.\n` +
     `Total: ${currencySymbol}${Number(order.total).toFixed(2)}\n\n` +
     `We'll message you here as it progresses. Send /orders to check status anytime.`
   );
@@ -624,16 +637,16 @@ export function buildNewOrderAdminMessage(
   });
 
   const lines: string[] = [
-    `🆕 <b>New order</b> <code>${order.orderNumber}</code>`,
+    `🆕 <b>New order</b> <code>${escapeHtml(order.orderNumber)}</code>`,
     "",
   ];
 
   const name = [order.customerFirstName, order.customerLastName].filter(Boolean).join(" ");
-  if (name) lines.push(`👤 ${name}`);
-  if (order.customerEmail) lines.push(`✉️ ${order.customerEmail}`);
-  if (order.customerPhone) lines.push(`📞 ${order.customerPhone}`);
+  if (name) lines.push(`👤 ${escapeHtml(name)}`);
+  if (order.customerEmail) lines.push(`✉️ ${escapeHtml(order.customerEmail)}`);
+  if (order.customerPhone) lines.push(`📞 ${escapeHtml(order.customerPhone)}`);
 
-  const method = order.paymentMethod ? ` · ${order.paymentMethod.replace(/_/g, " ")}` : "";
+  const method = order.paymentMethod ? ` · ${escapeHtml(order.paymentMethod.replace(/_/g, " "))}` : "";
   lines.push(`${statusEmoji(order.status)} ${statusLabel(order.status)}${method}`);
   lines.push(`💵 ${money(order.total)}`);
   lines.push(`🗓 ${date}`);
@@ -642,12 +655,12 @@ export function buildNewOrderAdminMessage(
   if (items.length > 0) {
     lines.push("", "<b>Items:</b>");
     for (const item of items.slice(0, 5)) {
-      lines.push(`• ${item.productName} ×${item.quantity} — ${money(item.productPrice)}`);
+      lines.push(`• ${escapeHtml(item.productName)} ×${item.quantity} — ${money(item.productPrice)}`);
     }
     if (items.length > 5) lines.push(`…and ${items.length - 5} more`);
   }
 
-  if (order.notes) lines.push("", `📝 ${order.notes}`);
+  if (order.notes) lines.push("", `📝 ${escapeHtml(order.notes)}`);
 
   return lines.join("\n");
 }
@@ -655,8 +668,8 @@ export function buildNewOrderAdminMessage(
 /** Alert to ADMINS when a customer cancels an order. */
 export function buildAdminCancellationMessage(order: OrderDetail, currencySymbol = "$"): string {
   return (
-    `❌ <b>Order cancelled</b> <code>${order.orderNumber}</code>\n\n` +
-    `${order.customerFirstName ?? "A customer"} cancelled this order.\n` +
+    `❌ <b>Order cancelled</b> <code>${escapeHtml(order.orderNumber)}</code>\n\n` +
+    `${escapeHtml(order.customerFirstName ?? "A customer")} cancelled this order.\n` +
     `Total: ${currencySymbol}${Number(order.total).toFixed(2)}`
   );
 }
@@ -668,8 +681,8 @@ export function buildAdminPaymentUpdateMessage(
   currencySymbol = "$"
 ): string {
   return (
-    `💳 <b>Payment update</b> <code>${order.orderNumber}</code>\n\n` +
-    `${detail}\n` +
+    `💳 <b>Payment update</b> <code>${escapeHtml(order.orderNumber)}</code>\n\n` +
+    `${escapeHtml(detail)}\n` +
     `Payment: ${statusLabel(order.paymentStatus)} · Total: ${currencySymbol}${Number(order.total).toFixed(2)}`
   );
 }
@@ -681,15 +694,15 @@ export function buildCustomerMessageNotification(
   replyHint: string
 ): string {
   return (
-    `💬 <b>New message</b> from ${customerName}\n\n` +
-    `${body}\n\n` +
+    `💬 <b>New message</b> from ${escapeHtml(customerName)}\n\n` +
+    `${escapeHtml(body)}\n\n` +
     `↩️ ${replyHint}`
   );
 }
 
 /** Message to a CUSTOMER delivering an admin reply. */
 export function buildAdminReplyMessage(adminName: string, body: string): string {
-  return `📨 <b>Message from ${adminName}</b>\n\n${body}`;
+  return `📨 <b>Message from ${escapeHtml(adminName)}</b>\n\n${escapeHtml(body)}`;
 }
 
 // ========================

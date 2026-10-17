@@ -2,7 +2,7 @@
  * Unit tests for the Telegram notification message builder.
  */
 
-import { buildOrderMessage, buildOrderButtons, buildHelpMessage, buildOrdersListMessage, buildOrderStatusMessage, buildNewOrderAdminMessage, buildAdminCancellationMessage, buildAdminPaymentUpdateMessage, buildCustomerMessageNotification, buildAdminReplyMessage, buildAdminOrderButtons, statusEmoji, statusLabel } from "@/lib/telegram";
+import { buildOrderMessage, buildOrderButtons, buildHelpMessage, buildOrdersListMessage, buildOrderStatusMessage, buildNewOrderAdminMessage, buildAdminCancellationMessage, buildAdminPaymentUpdateMessage, buildCustomerMessageNotification, buildAdminReplyMessage, buildAdminOrderButtons, statusEmoji, statusLabel, escapeHtml } from "@/lib/telegram";
 
 const baseOrder = {
   id: "order-1",
@@ -261,5 +261,42 @@ describe("status helpers", () => {
     expect(statusEmoji("CONFIRMED")).toBe("✅");
     expect(statusEmoji("UNKNOWN")).toBe("ℹ️");
     expect(statusLabel("READY_FOR_PICKUP")).toBe("ready for pickup");
+  });
+});
+
+describe("HTML safety", () => {
+  it("escapeHtml neutralises tags and ampersands", () => {
+    expect(escapeHtml("a < b & c > d")).toBe("a &lt; b &amp; c &gt; d");
+    expect(escapeHtml("<number>")).toBe("&lt;number&gt;");
+    expect(escapeHtml(null)).toBe("");
+  });
+
+  it("help messages never contain raw angle-bracket placeholders", () => {
+    expect(buildHelpMessage("Store")).not.toMatch(/<(number|order number|reason|message)>/);
+    expect(buildHelpMessage("Store", true)).not.toMatch(/<(number|order number|reason|message)>/);
+  });
+
+  it("escapes user-controlled content in outbound messages", () => {
+    const notif = buildCustomerMessageNotification(
+      "Ann <script>",
+      "price < 5 & rising",
+      "Reply in the dashboard"
+    );
+    expect(notif).toContain("Ann &lt;script&gt;");
+    expect(notif).toContain("price &lt; 5 &amp; rising");
+    expect(notif).not.toContain("<script>");
+
+    const reply = buildAdminReplyMessage("Bob <admin>", "use <b> tags");
+    expect(reply).toContain("Bob &lt;admin&gt;");
+    expect(reply).toContain("use &lt;b&gt; tags");
+  });
+
+  it("escapes dynamic fields in order messages", () => {
+    const msg = buildOrderMessage({
+      ...baseOrder,
+      items: [{ name: "Coke <2L>", quantity: 1, price: "$3.00" }],
+    });
+    expect(msg).toContain("Coke &lt;2L&gt;");
+    expect(msg).not.toContain("Coke <2L>");
   });
 });
