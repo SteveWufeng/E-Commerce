@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
+import { Price } from "@/components/ui/price";
 import { useLocale } from "@/hooks/use-locale";
 import type { Order } from "@/types";
 
@@ -80,7 +81,7 @@ export default function OrdersPage() {
 
                 <div className="flex items-center gap-4">
                   <span className="font-semibold text-gray-900">
-                    {formatCurrency(order.total)}
+                    <Price amount={order.total} />
                   </span>
                   <span className={`badge ${statusColors[order.status] || "badge-info"}`}>
                     {order.status.toLowerCase().replace(/_/g, " ")}

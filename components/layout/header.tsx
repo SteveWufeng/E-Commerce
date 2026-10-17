@@ -4,26 +4,11 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { ShoppingBag, User, Menu, X } from "lucide-react";
 import { useCartCount } from "@/hooks/use-cart";
-import { useCurrency } from "@/hooks/use-currency";
 import { useSettingsStore } from "@/hooks/use-settings";
 import { signOut } from "next-auth/react";
 import { useLocale } from "@/hooks/use-locale";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
-
-function CurrencyDisplay() {
-  const { symbol, conversionRate } = useCurrency();
-  const settings = useSettingsStore((state) => state.settings);
-  
-  if (!settings) return null;
-  
-  const rate = typeof conversionRate === "number" ? conversionRate : parseFloat(String(conversionRate)) || 1;
-  
-  return (
-    <div className="text-xs text-gray-500 hidden sm:block">
-      {settings.currencyCode}: {settings.currencySymbol}{rate.toFixed(2)}
-    </div>
-  );
-}
+import { CurrencyToggle } from "@/components/layout/currency-toggle";
 
 /**
  * Site header — responsive navigation bar with auth state.
@@ -128,10 +113,8 @@ export function Header() {
             {/* Language Switcher */}
             <LanguageSwitcher />
 
-            {/* Currency display */}
-            <div className="hidden sm:block">
-              <CurrencyDisplay />
-            </div>
+            {/* Currency toggle */}
+            <CurrencyToggle className="hidden sm:inline-flex" />
             {/* User Menu */}
             <div className="relative">
               {isLoading ? (
@@ -237,6 +220,10 @@ export function Header() {
         {mobileMenuOpen && (
           <nav className="md:hidden py-4 border-t border-gray-100 animate-slide-down">
             <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between px-4 py-1">
+                <span className="text-sm text-gray-500">{t("currency")}</span>
+                <CurrencyToggle />
+              </div>
               <Link
                 href="/"
                 className="px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 font-medium"

@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import { Minus, Plus, X } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
 import { useLocale } from "@/hooks/use-locale";
+import { Price } from "@/components/ui/price";
 import type { CartItem } from "@/types";
 
 export function CartItem({
@@ -41,7 +41,7 @@ export function CartItem({
       <div className="flex-1 min-w-0">
         <h3 className="font-medium text-gray-900 truncate">{item.name}</h3>
         <p className="text-sm text-gray-500 mt-1">
-          {formatCurrency(item.price)} {t("each")}
+          <Price amount={item.price} /> {t("each")}
         </p>
 
         <div className="flex items-center justify-between mt-3">
@@ -69,7 +69,7 @@ export function CartItem({
 
           <div className="flex items-center gap-3">
             <span className="font-semibold text-gray-900">
-              {formatCurrency(item.price * item.quantity)}
+              <Price amount={item.price * item.quantity} />
             </span>
             <button
               onClick={() => onRemove(item.productId)}

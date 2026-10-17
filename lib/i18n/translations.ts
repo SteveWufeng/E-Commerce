@@ -26,6 +26,10 @@ export type TranslationKey =
   | "resultsFor"
   | "noProductsFound"
   | "browseAllProducts"
+  | "shopByCategory"
+  | "deals"
+  | "viewAll"
+  | "currency"
 
   // General
   | "loading"
@@ -390,6 +394,10 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     resultsFor: 'Resultados para "{query}"',
     noProductsFound: "No se encontraron productos. Intente con otra búsqueda o categoría.",
     browseAllProducts: "Ver Todos los Productos",
+    shopByCategory: "Comprar por Categoría",
+    deals: "Ofertas",
+    viewAll: "Ver todo",
+    currency: "Moneda",
 
     // Cart
     loading: "Cargando...",
@@ -753,6 +761,10 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     resultsFor: 'Results for "{query}"',
     noProductsFound: "No products found. Try a different search or category.",
     browseAllProducts: "Browse All Products",
+    shopByCategory: "Shop by Category",
+    deals: "Deals",
+    viewAll: "View all",
+    currency: "Currency",
 
     // Cart
     loading: "Loading...",

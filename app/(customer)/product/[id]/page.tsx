@@ -7,7 +7,7 @@ import Image from "next/image";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { useCartStore } from "@/hooks/use-cart";
-import { formatCurrency } from "@/lib/utils";
+import { Price } from "@/components/ui/price";
 import { useToast } from "@/components/ui/toast";
 import type { Product } from "@/types";
 import { Minus, Plus, ShoppingBag } from "lucide-react";
@@ -196,11 +196,11 @@ export default function ProductPage() {
 
             <div className="mt-4 flex items-baseline gap-3">
               <span className="text-3xl font-bold text-gray-900">
-                {formatCurrency(product.price)}
+                <Price amount={product.price} />
               </span>
               {onSale && (
                 <span className="text-lg text-gray-400 line-through">
-                  {formatCurrency(product.comparePrice!)}
+                  <Price amount={product.comparePrice!} />
                 </span>
               )}
             </div>

@@ -9,6 +9,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { OrderSummary } from "@/components/checkout/order-summary";
+import { Price } from "@/components/ui/price";
 import { useLocale } from "@/hooks/use-locale";
 
 type PaymentOption = "MERCANTIL" | "CUSTOM";
@@ -64,7 +65,6 @@ export default function CheckoutPage() {
     email: string;
     phone: string;
   } | null>(null);
-  const [currencySymbol, setCurrencySymbol] = useState("$");
   const [paymentOption, setPaymentOption] = useState<PaymentOption>("MERCANTIL");
   const [mercantilCardEnabled, setMercantilCardEnabled] = useState(true);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethodDefinition | null>(null);
@@ -116,9 +116,6 @@ export default function CheckoutPage() {
 
         const settingsData = await settingsRes.json();
         if (settingsData.data) {
-          if (settingsData.data.currencySymbol) {
-            setCurrencySymbol(settingsData.data.currencySymbol);
-          }
           if (settingsData.data.mercantilCardEnabled === false) {
             setMercantilCardEnabled(false);
             setPaymentOption("CUSTOM");
@@ -431,7 +428,7 @@ export default function CheckoutPage() {
               Card Payment
             </h2>
             <p className="text-sm text-gray-500 mb-4">
-              Total: {currencySymbol}{(checkoutData?.total || total).toFixed(2)}
+              Total: <Price amount={checkoutData?.total || total} />
             </p>
 
             {cardStep === "form" && (
@@ -512,7 +509,7 @@ export default function CheckoutPage() {
                   onClick={handleCardPay}
                   className="btn-primary w-full py-3 text-base"
                 >
-                  Pay {currencySymbol}{(checkoutData?.total || total).toFixed(2)}
+                  Pay <Price amount={checkoutData?.total || total} />
                 </button>
               </div>
             )}

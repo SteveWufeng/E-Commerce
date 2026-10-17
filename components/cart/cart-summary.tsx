@@ -1,7 +1,7 @@
 "use client";
 
-import { formatCurrency } from "@/lib/utils";
 import { useLocale } from "@/hooks/use-locale";
+import { Price } from "@/components/ui/price";
 
 export function CartSummary({
   subtotal,
@@ -23,11 +23,11 @@ export function CartSummary({
       <div className="space-y-3 text-sm">
         <div className="flex justify-between text-gray-600">
           <span>{t("orderSummaryItemCount", { count: itemCount, items: itemCount !== 1 ? t("items") : t("item") })}</span>
-          <span>{formatCurrency(subtotal)}</span>
+          <span><Price amount={subtotal} /></span>
         </div>
         <div className="border-t border-gray-200 pt-3 flex justify-between font-semibold text-gray-900 text-base">
           <span>{t("total")}</span>
-          <span>{formatCurrency(total)}</span>
+          <span><Price amount={total} /></span>
         </div>
       </div>
     </div>

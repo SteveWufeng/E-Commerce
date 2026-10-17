@@ -5,7 +5,6 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { CartItem } from "@/components/cart/cart-item";
 import { CartSummary } from "@/components/cart/cart-summary";
-import { formatCurrency } from "@/lib/utils";
 import { useLocale } from "@/hooks/use-locale";
 import { ShoppingBag } from "lucide-react";
 import Link from "next/link";

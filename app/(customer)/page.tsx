@@ -2,30 +2,30 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { ProductCard } from "@/components/product/product-card";
 import { SearchBar } from "@/components/product/search-bar";
-import { CategoryNav } from "@/components/product/category-nav";
 import { HeroBanner } from "@/components/product/hero-banner";
+import { CurrencyToggle } from "@/components/layout/currency-toggle";
 import { useLocale } from "@/hooks/use-locale";
 import { Product, Category } from "@/types";
 
 /**
  * Customer home page — the main storefront.
  *
- * Features:
- * - Hero banner with promotions
- * - Category navigation
- * - Product grid with search/filter
- * - Featured products section
- * - Responsive layout for all devices
+ * Layout (Walmart-inspired, mobile-first):
+ * - Slim hero banner
+ * - Prominent search + currency toggle
+ * - "Shop by category" grid
+ * - Deals row (products on sale), horizontal scroll on mobile
+ * - All products grid
  */
 export default function HomePage() {
   const { t } = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [featured, setFeatured] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,7 +55,6 @@ export default function HomePage() {
 
         setProducts(productsRes.data || []);
         setCategories(categoriesRes.data || []);
-        setFeatured((productsRes.data || []).filter((p: Product) => p.isFeatured));
       } catch (error) {
         console.error("Failed to load storefront data:", error);
       } finally {
@@ -65,6 +64,10 @@ export default function HomePage() {
 
     loadData();
   }, []);
+
+  const isOnSale = (p: Product) =>
+    p.comparePrice !== null && Number(p.comparePrice) > Number(p.price);
+  const deals = products.filter(isOnSale);
 
   // Filter products based on search and category
   const filteredProducts = products.filter((product) => {
@@ -79,53 +82,111 @@ export default function HomePage() {
     return matchesSearch && matchesCategory;
   });
 
+  const activeCategories = categories.filter((c) => c.isActive);
+  const heading = searchQuery
+    ? t("resultsFor", { query: searchQuery })
+    : selectedCategory
+    ? categories.find((c) => c.slug === selectedCategory)?.name
+    : t("allProducts");
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
 
       <main className="flex-1">
-        {/* Hero Banner */}
         <HeroBanner />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Search Bar */}
-          <div className="mb-6">
-            <SearchBar
-              value={searchQuery}
-              onChange={setSearchQuery}
-            />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          {/* Search + currency toggle */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1">
+              <SearchBar value={searchQuery} onChange={setSearchQuery} />
+            </div>
+            <CurrencyToggle />
           </div>
 
-          {/* Category Navigation */}
-          <CategoryNav
-            categories={categories}
-            selected={selectedCategory}
-            onSelect={setSelectedCategory}
-          />
-
-          {/* Featured Products */}
-          {featured.length > 0 && !searchQuery && !selectedCategory && (
-            <section className="mb-12">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                {t("featuredProducts")}
+          {/* Shop by category */}
+          {!searchQuery && activeCategories.length > 0 && (
+            <section className="mb-8">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
+                {t("shopByCategory")}
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {featured.slice(0, 5).map((product) => (
-                  <ProductCard key={product.id} product={product} />
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                {activeCategories.map((category) => {
+                  const active = selectedCategory === category.slug;
+                  return (
+                    <button
+                      key={category.id}
+                      onClick={() =>
+                        setSelectedCategory(active ? null : category.slug)
+                      }
+                      aria-pressed={active}
+                      className="group text-left"
+                    >
+                      <div
+                        className={`relative aspect-square rounded-xl overflow-hidden bg-gray-100 ring-2 transition ${
+                          active
+                            ? "ring-primary-500"
+                            : "ring-transparent group-hover:ring-primary-200"
+                        }`}
+                      >
+                        {category.image ? (
+                          <Image
+                            src={category.image}
+                            alt={category.name}
+                            fill
+                            sizes="(max-width: 640px) 33vw, 16vw"
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 text-primary-600 text-2xl font-bold">
+                            {category.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent p-2">
+                          <span className="text-white text-xs font-semibold line-clamp-2">
+                            {category.name}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Deals */}
+          {!searchQuery && !selectedCategory && deals.length > 0 && (
+            <section className="mb-8">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
+                {t("deals")}
+              </h2>
+              <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+                {deals.slice(0, 10).map((product) => (
+                  <div key={product.id} className="w-40 sm:w-44 flex-shrink-0">
+                    <ProductCard product={product} />
+                  </div>
                 ))}
               </div>
             </section>
           )}
 
-          {/* All Products */}
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              {searchQuery
-                ? t("resultsFor", { query: searchQuery })
-                : selectedCategory
-                ? categories.find((c) => c.slug === selectedCategory)?.name
-                : t("allProducts")}
-            </h2>
+          {/* All products */}
+          <section id="products" className="scroll-mt-24">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+                {heading}
+              </h2>
+              {selectedCategory && (
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className="text-sm font-medium text-primary-600 hover:underline"
+                >
+                  {t("viewAll")}
+                </button>
+              )}
+            </div>
 
             {isLoading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -144,9 +205,7 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="text-center py-16">
-                <p className="text-gray-500 text-lg">
-                  {t("noProductsFound")}
-                </p>
+                <p className="text-gray-500 text-lg">{t("noProductsFound")}</p>
                 <Link href="/" className="btn-primary mt-4">
                   {t("browseAllProducts")}
                 </Link>

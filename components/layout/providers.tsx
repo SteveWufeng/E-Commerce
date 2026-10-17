@@ -5,6 +5,7 @@ import { SessionProvider } from "next-auth/react";
 import { ToastProvider } from "@/components/ui/toast";
 import { LocaleContext, useLocaleState } from "@/hooks/use-locale";
 import { useSettingsStore } from "@/hooks/use-settings";
+import { useCurrencyStore } from "@/hooks/use-currency";
 
 function LocaleProvider({ children }: { children: ReactNode }) {
   const localeValue = useLocaleState();
@@ -17,10 +18,12 @@ function LocaleProvider({ children }: { children: ReactNode }) {
 
 function SettingsProvider({ children }: { children: ReactNode }) {
   const fetchSettings = useSettingsStore((state) => state.fetchSettings);
+  const hydrateCurrency = useCurrencyStore((state) => state.hydrate);
 
   useEffect(() => {
     fetchSettings();
-  }, [fetchSettings]);
+    hydrateCurrency();
+  }, [fetchSettings, hydrateCurrency]);
 
   return <>{children}</>;
 }

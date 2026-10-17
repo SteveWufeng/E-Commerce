@@ -7,7 +7,8 @@ import Image from "next/image";
 import { X } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
+import { Price } from "@/components/ui/price";
 import { useLocale } from "@/hooks/use-locale";
 import type { Order } from "@/types";
 
@@ -469,7 +470,7 @@ export default function OrderDetailPage() {
                   <p className="font-medium">{item.productName}</p>
                   <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                 </div>
-                <p className="font-medium">{formatCurrency(Number(item.productPrice) * item.quantity)}</p>
+                <p className="font-medium"><Price amount={Number(item.productPrice) * item.quantity} /></p>
               </div>
             ))}
           </div>
@@ -493,15 +494,15 @@ export default function OrderDetailPage() {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-500">Subtotal</span>
-              <span>{formatCurrency(order.subtotal)}</span>
+              <span><Price amount={order.subtotal} /></span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">{t("tax")}</span>
-              <span>{formatCurrency(order.tax)}</span>
+              <span><Price amount={order.tax} /></span>
             </div>
             <div className="flex justify-between pt-2 border-t font-semibold text-lg">
               <span>{t("total")}</span>
-              <span>{formatCurrency(order.total)}</span>
+              <span><Price amount={order.total} /></span>
             </div>
           </div>
         </div>

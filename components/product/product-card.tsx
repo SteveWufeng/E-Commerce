@@ -6,7 +6,7 @@ import type { Product } from "@/types";
 import { useCartStore } from "@/hooks/use-cart";
 import { useToast } from "@/components/ui/toast";
 import { useLocale } from "@/hooks/use-locale";
-import { DualCurrency } from "@/components/ui/dual-currency";
+import { Price } from "@/components/ui/price";
 
 export function ProductCard({ product }: { product: Product }) {
   const { t } = useLocale();
@@ -73,11 +73,11 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="mt-auto pt-2">
           <div className="flex items-baseline gap-2">
             <span className="text-lg font-bold text-gray-900">
-              <DualCurrency usdAmount={product.price} />
+              <Price amount={product.price} />
             </span>
             {onSale && (
               <span className="text-sm text-gray-400 line-through">
-                <DualCurrency usdAmount={product.comparePrice!} />
+                <Price amount={product.comparePrice!} />
               </span>
             )}
           </div>
