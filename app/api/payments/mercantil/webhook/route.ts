@@ -3,7 +3,8 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import crypto from "node:crypto";
-import { notifyOrderStatusChange } from "@/lib/telegram";
+import { notifyAdmins, buildAdminPaymentUpdateMessage, adminOrderUrl } from "@/lib/telegram";
+import { changeOrderStatus } from "@/lib/orders/status";
 
 interface MercantilWebhookPayload {
   transactionId?: string;
@@ -47,39 +48,58 @@ export async function POST(request: NextRequest) {
 
     const status = payload.status?.toLowerCase();
     if (status === "approved" || status === "success" || status === "completed") {
-      const updated = await db.order.update({
+      // Persist payment fields, then apply the CONFIRMED transition (which also
+      // emails and Telegram-notifies the customer) via the shared service.
+      await db.order.update({
         where: { id: order.id },
         data: {
           paymentStatus: "COMPLETED",
-          status: "CONFIRMED",
           paymentIntentId: payload.transactionId || order.paymentIntentId,
         },
       });
 
-      const settings = await db.settings.findFirst();
-      await notifyOrderStatusChange(
-        {
-          id: updated.id,
-          orderNumber: updated.orderNumber,
-          status: updated.status,
-          total: Number(updated.total),
-          paymentMethod: updated.paymentMethod,
-          customerFirstName: updated.customerFirstName,
-          customerEmail: updated.customerEmail,
-          userId: updated.userId,
-          rejectionReason: null,
-          items: [],
-        },
-        {
-          storeName: settings?.storeName ?? "",
-          storeAddress: settings?.storeAddress ?? "",
-        }
-      );
+      const result = await changeOrderStatus({
+        orderId: order.id,
+        status: "CONFIRMED",
+        actorType: "SYSTEM",
+      });
+
+      if (result.ok) {
+        notifyAdmins(
+          buildAdminPaymentUpdateMessage(
+            {
+              orderNumber: order.orderNumber,
+              status: "CONFIRMED",
+              paymentStatus: "COMPLETED",
+              total: Number(order.total),
+              customerFirstName: order.customerFirstName,
+              createdAt: order.createdAt,
+            },
+            "Payment approved via Mercantil (card redirect)."
+          ),
+          [{ text: "📋 View in dashboard", url: adminOrderUrl(order.orderNumber) }]
+        ).catch(() => {});
+      }
     } else if (status === "rejected" || status === "failed" || status === "cancelled") {
       await db.order.update({
         where: { id: order.id },
         data: { paymentStatus: "FAILED" },
       });
+
+      notifyAdmins(
+        buildAdminPaymentUpdateMessage(
+          {
+            orderNumber: order.orderNumber,
+            status: order.status,
+            paymentStatus: "FAILED",
+            total: Number(order.total),
+            customerFirstName: order.customerFirstName,
+            createdAt: order.createdAt,
+          },
+          "Payment FAILED via Mercantil (card redirect)."
+        ),
+        [{ text: "📋 View in dashboard", url: adminOrderUrl(order.orderNumber) }]
+      ).catch(() => {});
     }
 
     return NextResponse.json({ received: true });

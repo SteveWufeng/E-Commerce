@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { notifyAdmins, buildAdminPaymentUpdateMessage, adminOrderUrl } from "@/lib/telegram";
 
 export async function POST(request: NextRequest) {
   try {
@@ -93,6 +94,22 @@ export async function POST(request: NextRequest) {
       where: { orderId },
       include: { paymentMethodDefinition: true },
     });
+
+    // Alert admins that a payment proof was submitted.
+    notifyAdmins(
+      buildAdminPaymentUpdateMessage(
+        {
+          orderNumber: order.orderNumber,
+          status: order.status,
+          paymentStatus: order.paymentStatus,
+          total: Number(order.total),
+          customerFirstName: order.customerFirstName,
+          createdAt: order.createdAt,
+        },
+        `Customer submitted a payment proof (${method.name}).`
+      ),
+      [{ text: "📋 View in dashboard", url: adminOrderUrl(order.orderNumber) }]
+    ).catch(() => {});
 
     return NextResponse.json({ success: true, data: { proof, paymentProofs } });
   } catch (error) {
