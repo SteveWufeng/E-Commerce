@@ -749,6 +749,16 @@ export default function CheckoutPage() {
               subtotal={subtotal}
               total={total}
             />
+
+            {/* Mobile CTA — sits at the very bottom, below the cost breakdown */}
+            <button
+              type="button"
+              onClick={() => document.getElementById("checkout-submit")?.click()}
+              disabled={isProcessing || telegramBlocked}
+              className="btn-primary w-full mt-4 py-3 text-base lg:hidden disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isProcessing ? t("processing") : t("placeOrder")}
+            </button>
           </div>
         </div>
       </main>

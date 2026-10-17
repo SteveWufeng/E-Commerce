@@ -124,30 +124,41 @@ export default function HomePage() {
                       className="group text-left"
                     >
                       <div
-                        className={`relative aspect-square rounded-xl overflow-hidden bg-gray-100 ring-2 transition ${
+                        className={`relative rounded-xl overflow-hidden ring-2 transition ${
+                          category.image
+                            ? "aspect-square bg-gray-100"
+                            : "flex flex-col items-center justify-center gap-1 px-2 py-5 bg-gradient-to-br from-primary-50 to-primary-100"
+                        } ${
                           active
                             ? "ring-primary-500"
                             : "ring-transparent group-hover:ring-primary-200"
                         }`}
                       >
                         {category.image ? (
-                          <Image
-                            src={category.image}
-                            alt={category.name}
-                            fill
-                            sizes="(max-width: 640px) 33vw, 16vw"
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
+                          <>
+                            <Image
+                              src={category.image}
+                              alt={category.name}
+                              fill
+                              sizes="(max-width: 640px) 33vw, 16vw"
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent p-2">
+                              <span className="text-white text-xs font-semibold line-clamp-2">
+                                {category.name}
+                              </span>
+                            </div>
+                          </>
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 text-primary-600 text-2xl font-bold">
-                            {category.name.charAt(0).toUpperCase()}
-                          </div>
+                          <>
+                            <span className="text-primary-600 text-2xl font-bold">
+                              {category.name.charAt(0).toUpperCase()}
+                            </span>
+                            <span className="text-primary-700 text-xs font-semibold text-center leading-tight line-clamp-2">
+                              {category.name}
+                            </span>
+                          </>
                         )}
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent p-2">
-                          <span className="text-white text-xs font-semibold line-clamp-2">
-                            {category.name}
-                          </span>
-                        </div>
                       </div>
                     </button>
                   );

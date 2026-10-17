@@ -160,9 +160,10 @@ export function CheckoutForm({
       </div>
 
       <button
+        id="checkout-submit"
         type="submit"
         disabled={isProcessing || disabled}
-        className="btn-primary w-full mt-6 py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed"
+        className="btn-primary w-full mt-6 py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed max-lg:hidden"
       >
         {isProcessing ? t("processing") : t("placeOrder")}
       </button>
