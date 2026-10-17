@@ -24,7 +24,8 @@ export interface TelegramConfig {
 
 export interface TelegramButton {
   text: string;
-  url: string;
+  url?: string;
+  callbackData?: string;
 }
 
 export interface OrderNotificationData {
@@ -147,7 +148,11 @@ export async function sendTelegramMessage(params: {
       };
       if (buttons && buttons.length > 0) {
         body.reply_markup = {
-          inline_keyboard: buttons.map((b) => [{ text: b.text, url: b.url }]),
+          inline_keyboard: buttons.map((b) =>
+            b.callbackData
+              ? [{ text: b.text, callback_data: b.callbackData }]
+              : [{ text: b.text, url: b.url }]
+          ),
         };
       }
 
@@ -451,3 +456,269 @@ export async function createTelegramLinkToken(userId: string): Promise<{
 
   return { token, expiresAt, deepLink };
 }
+
+// ========================
+// Outbound send helpers
+// ========================
+
+/** Base URL of the deployed storefront/admin. */
+export const STORE_BASE_URL = BASE_URL;
+
+/**
+ * Send a message to a raw chat id (no user lookup, no opt-in check).
+ * Used from the webhook where the chat id is already known.
+ */
+export async function sendTelegramChat(
+  chatId: string,
+  text: string,
+  buttons?: TelegramButton[]
+): Promise<boolean> {
+  const config = await getTelegramConfig();
+  if (!config.enabled || !config.botToken) return false;
+  return sendTelegramMessage({ token: config.botToken, chatId, text, buttons });
+}
+
+/** Acknowledge a callback query so Telegram stops the button's loading spinner. */
+export async function answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void> {
+  const config = await getTelegramConfig();
+  if (!config.botToken) return;
+  try {
+    await fetch(`${TELEGRAM_API}/bot${config.botToken}/answerCallbackQuery`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ callback_query_id: callbackQueryId, ...(text ? { text } : {}) }),
+    });
+  } catch {
+    // best effort
+  }
+}
+
+/** Send a message to a specific user by id, respecting their Telegram opt-in. */
+export async function sendTelegramToUser(
+  userId: string,
+  text: string,
+  buttons?: TelegramButton[]
+): Promise<boolean> {
+  const config = await getTelegramConfig();
+  if (!config.enabled || !config.botToken) return false;
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { telegramChatId: true, telegramOptIn: true },
+  });
+  if (!user?.telegramChatId || !user.telegramOptIn) return false;
+
+  return sendTelegramMessage({
+    token: config.botToken,
+    chatId: user.telegramChatId,
+    text,
+    buttons,
+  });
+}
+
+/** Send a message to every linked, opted-in admin. Returns how many were reached. */
+export async function notifyAdmins(text: string, buttons?: TelegramButton[]): Promise<number> {
+  const config = await getTelegramConfig();
+  if (!config.enabled || !config.botToken) return 0;
+
+  const admins = await db.user.findMany({
+    where: { role: "ADMIN", telegramChatId: { not: null }, telegramOptIn: true },
+    select: { telegramChatId: true },
+  });
+
+  let sent = 0;
+  for (const admin of admins) {
+    if (!admin.telegramChatId) continue;
+    const ok = await sendTelegramMessage({
+      token: config.botToken,
+      chatId: admin.telegramChatId,
+      text,
+      buttons,
+    });
+    if (ok) sent++;
+  }
+  return sent;
+}
+
+// ========================
+// Message builders
+// ========================
+
+export interface OrderDetail {
+  orderNumber: string;
+  status: string;
+  paymentStatus: string;
+  total: number | string | { toString(): string };
+  paymentMethod?: string | null;
+  createdAt: Date | string;
+  customerFirstName?: string | null;
+  customerLastName?: string | null;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  notes?: string | null;
+  items?: {
+    productName: string;
+    productPrice: number | string | { toString(): string };
+    quantity: number;
+  }[];
+}
+
+const STATUS_EMOJI: Record<string, string> = {
+  PENDING: "🕒",
+  CONFIRMED: "✅",
+  READY_FOR_PICKUP: "📦",
+  PICKED_UP: "🤝",
+  CANCELLED: "❌",
+  REJECTED: "🚫",
+};
+
+export function statusEmoji(status: string): string {
+  return STATUS_EMOJI[status] ?? "ℹ️";
+}
+
+export function statusLabel(status: string): string {
+  return status.replace(/_/g, " ").toLowerCase();
+}
+
+/** Message to the CUSTOMER confirming their order was received. */
+export function buildOrderSubmittedMessage(
+  order: Pick<OrderDetail, "orderNumber" | "total">,
+  currencySymbol = "$"
+): string {
+  return (
+    `🧾 <b>Order received!</b>\n\n` +
+    `Thanks — we got your order <b>${order.orderNumber}</b>.\n` +
+    `Total: ${currencySymbol}${Number(order.total).toFixed(2)}\n\n` +
+    `We'll message you here as it progresses. Send /orders to check status anytime.`
+  );
+}
+
+/** Message to ADMINS when a new order is submitted. */
+export function buildNewOrderAdminMessage(
+  order: OrderDetail,
+  opts: { currencySymbol?: string } = {}
+): string {
+  const currency = opts.currencySymbol ?? "$";
+  const money = (v: number | string | { toString(): string }) => `${currency}${Number(v).toFixed(2)}`;
+  const date = new Date(order.createdAt).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+  const lines: string[] = [
+    `🆕 <b>New order</b> <code>${order.orderNumber}</code>`,
+    "",
+  ];
+
+  const name = [order.customerFirstName, order.customerLastName].filter(Boolean).join(" ");
+  if (name) lines.push(`👤 ${name}`);
+  if (order.customerEmail) lines.push(`✉️ ${order.customerEmail}`);
+  if (order.customerPhone) lines.push(`📞 ${order.customerPhone}`);
+
+  const method = order.paymentMethod ? ` · ${order.paymentMethod.replace(/_/g, " ")}` : "";
+  lines.push(`${statusEmoji(order.status)} ${statusLabel(order.status)}${method}`);
+  lines.push(`💵 ${money(order.total)}`);
+  lines.push(`🗓 ${date}`);
+
+  const items = order.items ?? [];
+  if (items.length > 0) {
+    lines.push("", "<b>Items:</b>");
+    for (const item of items.slice(0, 5)) {
+      lines.push(`• ${item.productName} ×${item.quantity} — ${money(item.productPrice)}`);
+    }
+    if (items.length > 5) lines.push(`…and ${items.length - 5} more`);
+  }
+
+  if (order.notes) lines.push("", `📝 ${order.notes}`);
+
+  return lines.join("\n");
+}
+
+/** Alert to ADMINS when a customer cancels an order. */
+export function buildAdminCancellationMessage(order: OrderDetail, currencySymbol = "$"): string {
+  return (
+    `❌ <b>Order cancelled</b> <code>${order.orderNumber}</code>\n\n` +
+    `${order.customerFirstName ?? "A customer"} cancelled this order.\n` +
+    `Total: ${currencySymbol}${Number(order.total).toFixed(2)}`
+  );
+}
+
+/** Alert to ADMINS when an order's payment is updated. */
+export function buildAdminPaymentUpdateMessage(
+  order: OrderDetail,
+  detail: string,
+  currencySymbol = "$"
+): string {
+  return (
+    `💳 <b>Payment update</b> <code>${order.orderNumber}</code>\n\n` +
+    `${detail}\n` +
+    `Payment: ${statusLabel(order.paymentStatus)} · Total: ${currencySymbol}${Number(order.total).toFixed(2)}`
+  );
+}
+
+/** Message to ADMINS when a customer sends an inbox message via Telegram. */
+export function buildCustomerMessageNotification(
+  customerName: string,
+  body: string,
+  replyHint: string
+): string {
+  return (
+    `💬 <b>New message</b> from ${customerName}\n\n` +
+    `${body}\n\n` +
+    `↩️ ${replyHint}`
+  );
+}
+
+/** Message to a CUSTOMER delivering an admin reply. */
+export function buildAdminReplyMessage(adminName: string, body: string): string {
+  return `📨 <b>Message from ${adminName}</b>\n\n${body}`;
+}
+
+// ========================
+// Admin order actions
+// ========================
+
+export interface OrderStatusAction {
+  key: string;
+  label: string;
+  status: string;
+}
+
+export const ORDER_STATUS_ACTIONS: Record<string, OrderStatusAction> = {
+  confirm: { key: "confirm", label: "✅ Confirm", status: "CONFIRMED" },
+  ready: { key: "ready", label: "📦 Ready for pickup", status: "READY_FOR_PICKUP" },
+  pickedup: { key: "pickedup", label: "🤝 Picked up", status: "PICKED_UP" },
+  cancel: { key: "cancel", label: "❌ Cancel", status: "CANCELLED" },
+};
+
+/**
+ * Inline action buttons for an order, based on its current status.
+ * callback_data format: `ord:<actionKey>:<orderNumber>`
+ */
+export function buildAdminOrderButtons(orderNumber: string, currentStatus: string): TelegramButton[] {
+  const keys: string[] = [];
+  switch (currentStatus) {
+    case "PENDING":
+      keys.push("confirm", "cancel");
+      break;
+    case "CONFIRMED":
+      keys.push("ready", "cancel");
+      break;
+    case "READY_FOR_PICKUP":
+      keys.push("pickedup");
+      break;
+    default:
+      return [];
+  }
+  return keys.map((key) => ({
+    text: ORDER_STATUS_ACTIONS[key].label,
+    callbackData: `ord:${key}:${orderNumber}`,
+  }));
+}
+
+/** URL to an order in the admin dashboard. */
+export function adminOrderUrl(orderNumber: string): string {
+  return `${BASE_URL}/admin/orders?order=${encodeURIComponent(orderNumber)}`;
+}
+
