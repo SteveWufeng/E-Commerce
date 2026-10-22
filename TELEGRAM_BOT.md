@@ -18,7 +18,7 @@ machine: the Telegram bot polls the Telegram Bot API, talks to the local OpenCod
 
 ## 0. Current state and handoff
 
-**Status as of 2026-10-22: installed, configured, running — but not yet exercised end-to-end.**
+**Status as of 2026-10-22: installed, configured, running, and exercised end-to-end.**
 
 | Check | Result |
 | --- | --- |
@@ -29,18 +29,18 @@ machine: the Telegram bot polls the Telegram Bot API, talks to the local OpenCod
 | Bot authenticates with Telegram | done — log shows `Bot <bot-username> started!` |
 | OpenCode server up on `127.0.0.1:4096` | done — bot auto-starts it |
 | Health endpoint `127.0.0.1:3100/health` | done — reports `healthy` |
-| **User pressed "Start" in the Telegram chat** | **not done — Telegram blocks bots from messaging users who never opened the chat** |
-| **A real prompt sent and answered end-to-end** | **not done — depends on the previous item** |
+| OpenCode server password-protected | done — unauthenticated requests get `401` (see §2) |
+| User pressed "Start" in the Telegram chat | done |
+| Real prompt sent and answered end-to-end | done — `promptAsync accepted`, session tracked |
+| Bot attached to the `E-Commerce` project | done — resumes the session on restart |
 | Second authorized user | not set up (single-user limitation, see §4) |
 
 Open items for whoever picks this up:
 
-1. Open `<bot-username>` in Telegram, press **Start**, then send a prompt. Confirm a reply arrives
-   and that the OpenCode server shows a new session.
-2. Decide whether the bot's default project should be this repo. Right now the bot starts in the
-   home directory; use `/projects` → `E-Commerce` (already registered with OpenCode) or `/open`.
-3. Decide whether a second authorized user is needed (§4).
-4. Commit this file only if you want it in the repo history — it contains no secrets.
+1. Decide whether a second authorized user is needed (§4).
+2. Add custom commands for recurring chores (§5) — the `local-commands/` directory is empty.
+3. Keep this file in sync: it is the only description of the setup, and the `.env` is the only
+   place the secrets live.
 
 ---
 
@@ -87,7 +87,7 @@ Process environment variables take precedence over the `.env` file.
 | `TELEGRAM_ALLOWED_USER_ID` | Numeric Telegram user ID allowed to use the bot | `<your-telegram-user-id>` |
 | `OPENCODE_SERVER_VERSION` | Server API flavour: `v1` or `v2` | `v1` |
 | `OPENCODE_API_URL` | OpenCode server URL (host:port, no `/api`) | `http://127.0.0.1:4096` |
-| `OPENCODE_SERVER_USERNAME` / `OPENCODE_SERVER_PASSWORD` | Server auth (password is **required** for V2, optional for V1) | `opencode` / empty |
+| `OPENCODE_SERVER_USERNAME` / `OPENCODE_SERVER_PASSWORD` | Basic auth for the server API (optional on V1, **required** on V2) | `opencode` / *(set — 40-char random, `.env` only)* |
 | `OPENCODE_AUTO_RESTART_ENABLED` | Bot starts/restarts the local OpenCode server | `true` |
 | `OPENCODE_MONITOR_INTERVAL_SEC` | Health-check interval in seconds | `300` |
 | `OPENCODE_MODEL_PROVIDER` / `OPENCODE_MODEL_ID` | Default model | `opencode` / `big-pickle` |
@@ -111,6 +111,41 @@ The interactive wizard is also available (needs a TTY):
 ```bash
 ~/.local/node/bin/opencode-telegram config
 ```
+
+### Password-protecting the OpenCode server
+
+The V1 server has no `--password` flag — it reads credentials from the environment:
+
+| Variable | Meaning |
+| --- | --- |
+| `OPENCODE_SERVER_PASSWORD` | If set, the server requires HTTP Basic auth (otherwise it starts unsecured and logs a warning) |
+| `OPENCODE_SERVER_USERNAME` | Username for Basic auth (default `opencode`) |
+
+The bot spawns `opencode serve` as a child process that **inherits the bot's environment**, so
+setting `OPENCODE_SERVER_PASSWORD` in the bot's `.env` protects the server the bot starts — the
+same value is then used by the bot to authenticate against it. One place, no duplication.
+
+A restart is required after any change to the password: the bot reads `.env` only at startup, and
+the already-running server keeps its old (or no) credentials until it is replaced.
+
+```bash
+$EDITOR ~/.config/opencode-telegram-bot/.env      # set OPENCODE_SERVER_PASSWORD=...
+systemctl --user restart opencode-telegram
+```
+
+Verify:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:4096/global/health
+# expect: 401  (unauthenticated request is rejected)
+
+curl -s -u "opencode:$OPENCODE_SERVER_PASSWORD" http://127.0.0.1:4096/global/health
+# expect: {"healthy":true,...}
+```
+
+Note that a **standalone** OpenCode you start from your own shell (`opencode`, `opencode serve` in
+a terminal) does not inherit the bot's environment — it stays unsecured unless you export
+`OPENCODE_SERVER_PASSWORD` in that shell as well.
 
 ---
 
@@ -435,8 +470,13 @@ systemctl --user status opencode-telegram | grep -A3 CGroup
 curl -s http://127.0.0.1:3100/health
 # expect: {"status":"healthy", ... "checks":{"process":{"healthy":true},"opencode":{"healthy":true}}}
 
-# 4. opencode server
-curl -s http://127.0.0.1:4096/global/health          # expect: {"healthy":true,"version":"1.18.31"}
+# 4. opencode server — unauthenticated request must be rejected
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:4096/global/health
+# expect: 401
+
+# 4b. opencode server — with credentials
+curl -s -u "opencode:$OPENCODE_SERVER_PASSWORD" http://127.0.0.1:4096/global/health
+# expect: {"healthy":true,"version":"1.18.31"}
 
 # 5. telegram token is valid
 curl -s "https://api.telegram.org/bot<TOKEN_FROM_ENV_FILE>/getMe"
@@ -462,6 +502,8 @@ press **Start** in the chat and send a prompt.
 | `chat not found` when sending via the Bot API | The user has not started the chat with the bot |
 | Bot version too old | `~/.local/node/bin/npm install -g @grinev/opencode-telegram-bot@latest` then restart the service |
 | Node version error at startup | The bot needs Node ≥ 22.14; use `~/.local/node/bin/node` (the unit's `PATH` handles this) |
+| Server returns `401` to the bot | The password in `.env` does not match the running server — restart the service so both are respawned together |
+| `Warning: OPENCODE_SERVER_PASSWORD is not set; server is unsecured` in the server log | The bot spawned the server before the password was set, or the env var is not in `.env` — restart after adding it |
 
 ---
 
@@ -469,10 +511,15 @@ press **Start** in the chat and send a prompt.
 
 - The bot token lives only in `~/.config/opencode-telegram-bot/.env` (mode `600`). It is **not** in
   this document and must not be committed to git.
+- The OpenCode server password is stored in the same `.env` (mode `600`) and is **not** in this
+  document either.
 - Only the whitelisted Telegram user ID can interact with the bot; all other traffic is dropped.
 - The bot binds its health endpoint to `127.0.0.1` only; no port is exposed externally.
-- The OpenCode server listens on `127.0.0.1:4096` and is unauthenticated on V1 — reachable only
-  from this machine.
+- The OpenCode server listens on `127.0.0.1:4096` and requires HTTP Basic auth
+  (`OPENCODE_SERVER_PASSWORD`); unauthenticated requests get `401`. It is reachable only from this
+  machine.
+- A standalone `opencode` started from your own shell is *not* covered by that password — export
+  `OPENCODE_SERVER_PASSWORD` in that shell if you want it protected too.
 - `local-commands/*.json` are executed with the bot's OS permissions and inherited environment.
   Treat every file in that directory as trusted code.
 - If this repository is ever shared publicly, rotate the bot token with @BotFather (`/revoke`) and
