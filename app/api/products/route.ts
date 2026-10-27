@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { requireStaff } from "@/lib/auth/session";
+import { bundleOptionsSchema, optionToDbData } from "@/lib/pricing";
 
 const productSchema = z.object({
   name: z.string().min(1).max(200),
@@ -30,6 +31,7 @@ const productSchema = z.object({
   images: z.array(z.string()).default([]),
   isFeatured: z.boolean().default(false),
   isActive: z.boolean().default(true),
+  options: bundleOptionsSchema.default([]),
 });
 
 export async function GET(request: NextRequest) {
@@ -70,7 +72,7 @@ export async function GET(request: NextRequest) {
     const [products, total] = await Promise.all([
       db.product.findMany({
         where,
-        include: { category: true },
+        include: { category: true, options: { orderBy: { sortOrder: "asc" } } },
         orderBy: { [sort]: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -126,13 +128,21 @@ export async function POST(request: NextRequest) {
       slug = `${slug}-${counter}`;
     }
 
+    const { options, ...rest } = validated;
+
     const product = await db.product.create({
       data: {
-        ...validated,
+        ...rest,
         slug,
       },
       include: { category: true },
     });
+
+    if (options.length > 0) {
+      await db.productOption.createMany({
+        data: options.map((o, i) => optionToDbData(o, product.id, i)),
+      });
+    }
 
     return NextResponse.json({ success: true, data: product }, { status: 201 });
   } catch (error) {

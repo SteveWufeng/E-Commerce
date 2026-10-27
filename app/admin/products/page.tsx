@@ -10,6 +10,140 @@ import { Plus, Edit, Trash2, X, ChevronUp, ChevronDown, Scan, ScanLine } from "l
 import { useLocale } from "@/hooks/use-locale";
 import { useScannerInput } from "@/hooks/use-scanner-input";
 
+interface OptionDraft {
+  id?: string;
+  quantity: string;
+  label: string;
+  priceMode: "SAME_UNIT_PRICE" | "CUSTOM_TOTAL";
+  totalPrice: string;
+}
+
+function emptyOptionDraft(): OptionDraft {
+  return { quantity: "", label: "", priceMode: "SAME_UNIT_PRICE", totalPrice: "" };
+}
+
+function productOptionsToDrafts(options: any[]): OptionDraft[] {
+  return (options || []).map((o) => ({
+    id: o.id,
+    quantity: String(o.quantity),
+    label: o.label || "",
+    priceMode: o.priceMode,
+    totalPrice: o.totalPrice != null ? String(o.totalPrice) : "",
+  }));
+}
+
+function collectOptions(opts: OptionDraft[]): Array<Record<string, unknown>> | null {
+  const seen = new Set<number>();
+  const options: Array<Record<string, unknown>> = [];
+  for (const o of opts) {
+    const quantity = parseInt(o.quantity);
+    if (!Number.isInteger(quantity) || quantity < 2 || seen.has(quantity)) return null;
+    seen.add(quantity);
+    if (o.priceMode === "CUSTOM_TOTAL") {
+      const totalPrice = parseFloat(o.totalPrice);
+      if (!Number.isFinite(totalPrice) || totalPrice <= 0) return null;
+      options.push({ quantity, label: o.label || null, priceMode: "CUSTOM_TOTAL", totalPrice });
+    } else {
+      options.push({ quantity, label: o.label || null, priceMode: "SAME_UNIT_PRICE", totalPrice: null });
+    }
+  }
+  return options;
+}
+
+function BundleOptionsEditor({
+  options,
+  onChange,
+  unitPrice,
+  error,
+}: {
+  options: OptionDraft[];
+  onChange: (options: OptionDraft[]) => void;
+  unitPrice: number;
+  error: string;
+}) {
+  const { t } = useLocale();
+
+  function update(i: number, patch: Partial<OptionDraft>) {
+    onChange(options.map((o, idx) => (idx === i ? { ...o, ...patch } : o)));
+  }
+
+  function remove(i: number) {
+    onChange(options.filter((_, idx) => idx !== i));
+  }
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {t("bundleOptions")}
+      </label>
+      <p className="text-xs text-gray-400 mb-2">{t("bundleOptionsHint")}</p>
+      {options.map((o, i) => (
+        <div key={o.id || i} className="border border-gray-200 rounded-lg p-3 mb-2 space-y-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min="2"
+              value={o.quantity}
+              onChange={(e) => update(i, { quantity: e.target.value })}
+              className="input flex-1"
+              placeholder={t("packQuantity")}
+            />
+            <button
+              onClick={() => remove(i)}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+              aria-label={t("removeBundleOption")}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+          <input
+            type="text"
+            value={o.label}
+            onChange={(e) => update(i, { label: e.target.value })}
+            className="input w-full"
+            placeholder={t("packLabelPlaceholder")}
+          />
+          <div className="flex items-center gap-2">
+            <select
+              value={o.priceMode}
+              onChange={(e) => update(i, { priceMode: e.target.value as OptionDraft["priceMode"] })}
+              className="input flex-1"
+            >
+              <option value="SAME_UNIT_PRICE">{t("sameUnitPrice")}</option>
+              <option value="CUSTOM_TOTAL">{t("customTotalPrice")}</option>
+            </select>
+            {o.priceMode === "CUSTOM_TOTAL" ? (
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={o.totalPrice}
+                onChange={(e) => update(i, { totalPrice: e.target.value })}
+                className="input flex-1"
+                placeholder={t("packTotalPrice")}
+              />
+            ) : (
+              <span className="text-sm text-gray-500 whitespace-nowrap">
+                {o.quantity && unitPrice > 0
+                  ? formatCurrency((parseInt(o.quantity) || 0) * unitPrice)
+                  : "—"}
+              </span>
+            )}
+          </div>
+        </div>
+      ))}
+      <button
+        onClick={() => onChange([...options, emptyOptionDraft()])}
+        className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+      >
+        <Plus className="w-4 h-4" />
+        {t("addBundleOption")}
+      </button>
+      {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
+    </div>
+  );
+}
+
 export default function AdminProductsPage() {
   const { t } = useLocale();
   const [products, setProducts] = useState<any[]>([]);
@@ -39,6 +173,10 @@ export default function AdminProductsPage() {
     description: "",
     images: [] as string[],
   });
+  const [editOptions, setEditOptions] = useState<OptionDraft[]>([]);
+  const [editOptionsError, setEditOptionsError] = useState("");
+  const [newProductOptions, setNewProductOptions] = useState<OptionDraft[]>([]);
+  const [newProductOptionsError, setNewProductOptionsError] = useState("");
 
   useEffect(() => {
     async function loadProducts() {
@@ -120,10 +258,19 @@ export default function AdminProductsPage() {
     setEditStock(product.stock.toString());
     setEditBarcode(product.barcode || "");
     setEditImages(product.images || []);
+    setEditOptions(productOptionsToDrafts(product.options));
+    setEditOptionsError("");
   }
 
   async function handleSaveEdit() {
     if (!editProduct) return;
+
+    const options = collectOptions(editOptions);
+    if (!options) {
+      setEditOptionsError(t("bundleOptionsInvalid"));
+      return;
+    }
+    setEditOptionsError("");
 
     setIsSaving(true);
     try {
@@ -132,6 +279,7 @@ export default function AdminProductsPage() {
         stock: parseInt(editStock),
         barcode: editBarcode || null,
         images: editImages,
+        options,
       };
       if (editSalePrice) {
         body.comparePrice = parseFloat(editSalePrice);
@@ -150,7 +298,7 @@ export default function AdminProductsPage() {
         setProducts((prev) =>
           prev.map((p) =>
             p.id === editProduct.id
-              ? { ...p, price: parseFloat(editPrice), stock: parseInt(editStock), barcode: editBarcode || null, images: updated.data.images, comparePrice: updated.data.comparePrice }
+              ? { ...p, price: parseFloat(editPrice), stock: parseInt(editStock), barcode: editBarcode || null, images: updated.data.images, comparePrice: updated.data.comparePrice, options: updated.data.options }
               : p
           )
         );
@@ -169,6 +317,13 @@ export default function AdminProductsPage() {
   async function handleAddProduct() {
     if (!newProduct.name || !newProduct.price || !newProduct.categoryId) return;
 
+    const options = collectOptions(newProductOptions);
+    if (!options) {
+      setNewProductOptionsError(t("bundleOptionsInvalid"));
+      return;
+    }
+    setNewProductOptionsError("");
+
     setIsSaving(true);
     try {
       const body: Record<string, unknown> = {
@@ -180,6 +335,7 @@ export default function AdminProductsPage() {
         categoryId: newProduct.categoryId,
         images: newProduct.images,
         isActive: true,
+        options,
       };
       if (newProduct.salePrice) {
         body.comparePrice = parseFloat(newProduct.salePrice);
@@ -196,6 +352,8 @@ export default function AdminProductsPage() {
         setProducts((prev) => [...prev, created.data]);
         setAddProduct(false);
         setNewProduct({ name: "", price: "", salePrice: "", stock: "", barcode: "", categoryId: "", description: "", images: [] });
+        setNewProductOptions([]);
+        setNewProductOptionsError("");
       } else {
         console.error("Failed to create product");
       }
@@ -508,6 +666,15 @@ export default function AdminProductsPage() {
                   className="input w-full"
                 />
               </div>
+              <BundleOptionsEditor
+                options={editOptions}
+                onChange={(opts) => {
+                  setEditOptions(opts);
+                  setEditOptionsError("");
+                }}
+                unitPrice={parseFloat(editPrice) || 0}
+                error={editOptionsError}
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t("receiptImage")}
@@ -635,6 +802,15 @@ export default function AdminProductsPage() {
                   placeholder="0.00"
                 />
               </div>
+              <BundleOptionsEditor
+                options={newProductOptions}
+                onChange={(opts) => {
+                  setNewProductOptions(opts);
+                  setNewProductOptionsError("");
+                }}
+                unitPrice={parseFloat(newProduct.price) || 0}
+                error={newProductOptionsError}
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t("categories")} *

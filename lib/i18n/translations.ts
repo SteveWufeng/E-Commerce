@@ -163,6 +163,18 @@ export type TranslationKey =
   | "price"
   | "stock"
   | "salePrice"
+  | "bundleOptions"
+  | "bundleOptionsHint"
+  | "packQuantity"
+  | "packLabelPlaceholder"
+  | "sameUnitPrice"
+  | "customTotalPrice"
+  | "packTotalPrice"
+  | "addBundleOption"
+  | "removeBundleOption"
+  | "bundleOptionsInvalid"
+  | "yourBestMix"
+  | "packOf"
   | "saveChanges"
   | "creating"
   | "cancel"
@@ -547,6 +559,18 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     price: "Precio",
     stock: "Stock",
     salePrice: "Precio de Oferta ($)",
+    bundleOptions: "Opciones de Paquete",
+    bundleOptionsHint: "El cliente solo elige la cantidad total; el sistema aplica la combinación más barata.",
+    packQuantity: "Tamaño (unidades)",
+    packLabelPlaceholder: "Ej: Pack de 5",
+    sameUnitPrice: "Mismo precio unitario",
+    customTotalPrice: "Precio total personalizado",
+    packTotalPrice: "Precio del pack",
+    addBundleOption: "Añadir opción de paquete",
+    removeBundleOption: "Eliminar",
+    bundleOptionsInvalid: "Opciones de paquete inválidas: mínimo 2 unidades, tamaños únicos y precio positivo.",
+    yourBestMix: "Tu mejor combinación",
+    packOf: "Pack de {n}",
     saveChanges: "Guardar Cambios",
     creating: "Creando...",
     cancel: "Cancelar",
@@ -932,6 +956,18 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     price: "Price",
     stock: "Stock",
     salePrice: "Sale Price ($)",
+    bundleOptions: "Bundle Options",
+    bundleOptionsHint: "Customers just pick a total quantity; the system applies the cheapest mix.",
+    packQuantity: "Size (units)",
+    packLabelPlaceholder: "e.g. Pack of 5",
+    sameUnitPrice: "Same unit price",
+    customTotalPrice: "Custom total price",
+    packTotalPrice: "Pack price",
+    addBundleOption: "Add bundle option",
+    removeBundleOption: "Remove",
+    bundleOptionsInvalid: "Invalid bundle options: min size 2, unique sizes, positive price.",
+    yourBestMix: "Your best mix",
+    packOf: "Pack of {n}",
     saveChanges: "Save Changes",
     creating: "Creating...",
     cancel: "Cancel",

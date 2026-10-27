@@ -596,7 +596,7 @@ export default function AdminOrdersPage() {
                 <p className="text-gray-500 text-sm mb-2">{t("orderItems")}</p>
                 {selectedOrder.items?.map((item: any) => (
                   <div key={item.id} className="flex justify-between py-2 text-sm">
-                    <span>{item.productName} x{item.quantity}</span>
+                    <span>{item.optionLabel ? `${item.productName} (${item.optionLabel})` : item.productName} x{item.quantity}</span>
                     <span className="font-medium">${Number(item.productPrice * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}

@@ -133,6 +133,7 @@ model Product {
   category      Category  @relation(fields: [categoryId], references: [id])
 
   orderItems    OrderItem[]
+  options       ProductOption[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -142,6 +143,31 @@ model Product {
   @@index([isActive])
   @@index([isFeatured])
   @@index([name])
+}
+
+// Bundle/pack option for a product (e.g. "5-pack" for a lower total price)
+model ProductOption {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity   Int // units per pack (>= 2)
+  label      String? // customer-facing label, e.g. "Pack de 5"
+  priceMode  PriceMode
+  totalPrice Decimal? @db.Decimal(10, 2) // required when priceMode = CUSTOM_TOTAL
+  sortOrder  Int      @default(0)
+
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+}
+
+enum PriceMode {
+  SAME_UNIT_PRICE // pack total = quantity * product.price
+  CUSTOM_TOTAL // pack total = totalPrice
 }
 
 // ========================
@@ -166,9 +192,12 @@ model CartItem {
   cartId    String
   cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
   productId String
-  quantity  Int     @default(1)
+  quantity  Int     @default(1) // packs for bundle lines, units for single lines
+  optionId  String? // null = single units; set = bundle pack line
+  option    ProductOption? @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
-  @@unique([cartId, productId])
+  @@index([cartId])
+  @@index([productId])
 }
 
 model PaymentMethodDefinition {
@@ -279,11 +308,18 @@ model OrderItem {
   // Snapshot of product at time of purchase
   productName   String
   productPrice  Decimal @db.Decimal(10, 2)
-  quantity      Int
+  quantity      Int // packs for bundle lines, units for single lines
   productCost   Decimal? @db.Decimal(10, 2) // for profit calc
+
+  // Snapshot of bundle option at time of purchase
+  optionId      String?
+  option        ProductOption? @relation(fields: [optionId], references: [id], onDelete: SetNull)
+  optionLabel   String?
+  unitsPerOption Int   @default(1) // 1 for single lines, pack size for bundle lines
 
   @@index([orderId])
   @@index([productId])
+  @@index([optionId])
 }
 
 enum OrderStatus {

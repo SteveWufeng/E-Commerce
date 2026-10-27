@@ -87,7 +87,7 @@ const ORDER_CARD_SELECT = {
   createdAt: true,
   userId: true,
   customerFirstName: true,
-  items: { select: { productName: true, productPrice: true, quantity: true } },
+  items: { select: { productName: true, optionLabel: true, productPrice: true, quantity: true } },
 } as const;
 
 function parseCommand(
@@ -549,7 +549,7 @@ function renderOrderCard(
     total: unknown;
     createdAt: Date;
     customerFirstName: string | null;
-    items: { productName: string; productPrice: unknown; quantity: number }[];
+    items: { productName: string; optionLabel: string | null; productPrice: unknown; quantity: number }[];
   },
   currencySymbol: string,
   forAdmin: boolean
@@ -562,7 +562,11 @@ function renderOrderCard(
       total: order.total as never,
       createdAt: order.createdAt,
       customerFirstName: order.customerFirstName ?? undefined,
-      items: order.items as never,
+      items: order.items.map((item) => ({
+        productName: item.optionLabel ? `${item.productName} (${item.optionLabel})` : item.productName,
+        productPrice: item.productPrice as string | number,
+        quantity: item.quantity,
+      })),
     },
     { currencySymbol, forAdmin }
   );

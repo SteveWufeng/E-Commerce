@@ -43,7 +43,8 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     const body = await request.json();
-    const items: Array<{ productId: string; quantity: number }> = body.items || [];
+    const items: Array<{ productId: string; quantity: number; optionId?: string | null }> =
+      body.items || [];
 
     let cart;
     let setCookieHeader: string | undefined;
@@ -70,11 +71,16 @@ export async function POST(request: NextRequest) {
       setCookieHeader = `cart_session=${sessionId}; Path=/; HttpOnly; SameSite=Lax${process.env.NODE_ENV === "production" ? '; Secure' : ''}`;
     }
 
-    // Merge items into cart
+    // Merge items into cart (line key = cartId + productId + optionId)
     for (const it of items) {
-      const existing = await db.cartItem.findUnique({
-        where: { cartId_productId: { cartId: cart.id, productId: it.productId } },
-      });
+      const optionId = it.optionId ?? null;
+      const existing = optionId
+        ? await db.cartItem.findFirst({
+            where: { cartId: cart.id, productId: it.productId, optionId },
+          })
+        : await db.cartItem.findFirst({
+            where: { cartId: cart.id, productId: it.productId, optionId: null },
+          });
 
       if (existing) {
         await db.cartItem.update({
@@ -83,7 +89,12 @@ export async function POST(request: NextRequest) {
         });
       } else {
         await db.cartItem.create({
-          data: { cartId: cart.id, productId: it.productId, quantity: it.quantity },
+          data: {
+            cartId: cart.id,
+            productId: it.productId,
+            quantity: it.quantity,
+            optionId,
+          },
         });
       }
     }
@@ -92,19 +103,33 @@ export async function POST(request: NextRequest) {
 
     // Enrich items with product details
     const productIds = (updated?.items || []).map((i) => i.productId);
-    const products = await db.product.findMany({ where: { id: { in: productIds } } });
+    const products = await db.product.findMany({
+      where: { id: { in: productIds } },
+      include: { options: true },
+    });
     const pmap: Record<string, any> = {};
     for (const p of products) pmap[p.id] = p;
 
     const enriched = (updated?.items || []).map((it) => {
       const p = pmap[it.productId];
+      const opt = it.optionId ? p?.options?.find((o: any) => o.id === it.optionId) : null;
+      const unitPrice = opt
+        ? opt.priceMode === "CUSTOM_TOTAL" && opt.totalPrice != null
+          ? Number(opt.totalPrice)
+          : opt.quantity * Number(p?.price || 0)
+        : p
+          ? Number(p.price)
+          : 0;
       return {
         productId: it.productId,
         quantity: it.quantity,
         name: p?.name || "",
-        price: p ? Number(p.price as any) : 0,
+        price: unitPrice,
         image: p?.images?.[0] || "",
-        maxStock: p?.stock || 0,
+        maxStock: opt ? Math.floor((p?.stock || 0) / opt.quantity) : p?.stock || 0,
+        optionId: it.optionId || null,
+        optionLabel: opt?.label || null,
+        unitsPerOption: opt ? opt.quantity : 1,
       };
     });
 

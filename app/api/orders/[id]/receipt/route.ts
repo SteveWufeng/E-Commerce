@@ -114,7 +114,7 @@ export async function POST(
           userId: updated.userId,
           rejectionReason: null,
           items: updated.items.map((item) => ({
-            name: item.productName,
+            name: item.optionLabel ? `${item.productName} (${item.optionLabel})` : item.productName,
             quantity: item.quantity,
             price: Number(item.productPrice),
           })),

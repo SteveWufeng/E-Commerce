@@ -105,7 +105,7 @@ export async function changeOrderStatus(params: {
       customerName: order.customerFirstName,
       orderNumber: order.orderNumber,
       items: order.items.map((item) => ({
-        name: item.productName,
+        name: item.optionLabel ? `${item.productName} (${item.optionLabel})` : item.productName,
         quantity: item.quantity,
         price: `$${Number(item.productPrice).toFixed(2)}`,
       })),
@@ -161,7 +161,7 @@ export async function changeOrderStatus(params: {
         userId: order.userId,
         rejectionReason: order.rejectionReason,
         items: order.items.map((item) => ({
-          name: item.productName,
+          name: item.optionLabel ? `${item.productName} (${item.optionLabel})` : item.productName,
           quantity: item.quantity,
           price: Number(item.productPrice),
         })),

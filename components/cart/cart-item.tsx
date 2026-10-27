@@ -12,8 +12,8 @@ export function CartItem({
   onRemove,
 }: {
   item: CartItem;
-  onUpdateQuantity: (productId: string, quantity: number) => void;
-  onRemove: (productId: string) => void;
+  onUpdateQuantity: (productId: string, quantity: number, optionId?: string | null) => void;
+  onRemove: (productId: string, optionId?: string | null) => void;
 }) {
   const { t } = useLocale();
   return (
@@ -40,6 +40,9 @@ export function CartItem({
       {/* Product Info */}
       <div className="flex-1 min-w-0">
         <h3 className="font-medium text-gray-900 truncate">{item.name}</h3>
+        {item.optionLabel && (
+          <p className="text-sm text-primary-600 mt-0.5">{item.optionLabel}</p>
+        )}
         <p className="text-sm text-gray-500 mt-1">
           <Price amount={item.price} /> {t("each")}
         </p>
@@ -48,7 +51,7 @@ export function CartItem({
           {/* Quantity Controls */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => onUpdateQuantity(item.productId, item.quantity - 1)}
+              onClick={() => onUpdateQuantity(item.productId, item.quantity - 1, item.optionId)}
               className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
               aria-label={t("decreaseQuantity")}
             >
@@ -58,7 +61,7 @@ export function CartItem({
               {item.quantity}
             </span>
             <button
-              onClick={() => onUpdateQuantity(item.productId, item.quantity + 1)}
+              onClick={() => onUpdateQuantity(item.productId, item.quantity + 1, item.optionId)}
               className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-50"
               disabled={item.quantity >= item.maxStock}
               aria-label={t("increaseQuantity")}
@@ -72,7 +75,7 @@ export function CartItem({
               <Price amount={item.price * item.quantity} />
             </span>
             <button
-              onClick={() => onRemove(item.productId)}
+              onClick={() => onRemove(item.productId, item.optionId)}
               className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
               aria-label={t("removeItem")}
             >

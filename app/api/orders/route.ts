@@ -16,20 +16,22 @@ import {
   adminOrderUrl,
 } from "@/lib/telegram";
 import { z } from "zod";
+import { packTotalPrice, round2 } from "@/lib/pricing";
 
 const createOrderSchema = z.object({
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
   email: z.string().email(),
   phone: z.string().optional(),
-  items: z
-    .array(
-      z.object({
-        productId: z.string(),
-        quantity: z.number().int().min(1),
-      })
-    )
-    .min(1),
+    items: z
+      .array(
+        z.object({
+          productId: z.string(),
+          quantity: z.number().int().min(1),
+          optionId: z.string().nullable().optional(),
+        })
+      )
+      .min(1),
   paymentMethod: z.string().min(1),
   paymentMethodDefinitionId: z.string().optional(),
   subtotal: z.number().positive(),
@@ -84,23 +86,73 @@ export async function POST(request: NextRequest) {
     const count = await db.order.count();
     const orderNumber = `ORD-${dateStr}-${String(count + 1).padStart(4, "0")}`;
 
-    const productIds = validated.items.map((item) => item.productId);
+    const productIds = Array.from(new Set(validated.items.map((item) => item.productId)));
     const products = await db.product.findMany({
       where: { id: { in: productIds } },
+      include: { options: true },
     });
     const productMap = new Map(products.map((p) => [p.id, p]));
     const unavailableItems: string[] = [];
 
-    for (const item of validated.items) {
+    // Resolve each line against DB options and compute the true unit price
+    const lines = validated.items.map((item) => {
       const product = productMap.get(item.productId);
-      if (!product || !product.isActive) {
-        unavailableItems.push(`Product "${item.productId}" is no longer available`);
-      } else if (product.stock < item.quantity) {
+      const option = item.optionId
+        ? product?.options.find((o) => o.id === item.optionId)
+        : null;
+      if (item.optionId && (!product || !option)) {
         unavailableItems.push(
-          `"${product.name}" only has ${product.stock} in stock (you requested ${item.quantity})`
+          `The selected option for "${product?.name || item.productId}" is no longer available`
         );
       }
+      const unitPrice =
+        product && option
+          ? packTotalPrice(
+              {
+                id: option.id,
+                quantity: option.quantity,
+                label: option.label,
+                priceMode: option.priceMode,
+                totalPrice: option.totalPrice != null ? Number(option.totalPrice) : null,
+              },
+              Number(product.price)
+            )
+          : product
+            ? Number(product.price)
+            : 0;
+      return {
+        productId: item.productId,
+        quantity: item.quantity,
+        optionId: item.optionId ?? null,
+        optionLabel: option?.label ?? null,
+        unitsPerOption: option ? option.quantity : 1,
+        unitPrice,
+        productName: product?.name || item.productId,
+        productCost: product && product.cost != null ? Number(product.cost) : null,
+        available: !!product && product.isActive,
+      };
+    });
+
+    for (const line of lines) {
+      if (!line.available) {
+        unavailableItems.push(`Product "${line.productId}" is no longer available`);
+      }
     }
+
+    // Total units required per product (single + bundle lines combined)
+    const unitsByProduct = new Map<string, number>();
+    for (const line of lines) {
+      const units = line.quantity * line.unitsPerOption;
+      unitsByProduct.set(line.productId, (unitsByProduct.get(line.productId) ?? 0) + units);
+    }
+    unitsByProduct.forEach((units, productId) => {
+      const product = productMap.get(productId);
+      if (product && product.isActive && product.stock < units) {
+        unavailableItems.push(
+          `"${product.name}" only has ${product.stock} in stock (you requested ${units})`
+        );
+      }
+    });
 
     if (unavailableItems.length > 0) {
       return NextResponse.json(
@@ -111,6 +163,13 @@ export async function POST(request: NextRequest) {
         { status: 409 }
       );
     }
+
+    // Recompute prices server-side — never trust the client
+    const serverSubtotal = round2(
+      lines.reduce((sum, l) => sum + round2(l.unitPrice * l.quantity), 0)
+    );
+    validated.subtotal = serverSubtotal;
+    validated.total = round2(serverSubtotal + validated.tax);
 
     const hasPaymentMethodDefinition = !!validated.paymentMethodDefinitionId;
     const isDeferredPayment = hasPaymentMethodDefinition || validated.paymentMethod === "MERCANTIL";
@@ -180,30 +239,40 @@ export async function POST(request: NextRequest) {
     }
 
     const order = await db.$transaction(async (tx) => {
-      const itemsData = await Promise.all(
-        validated.items.map(async (item) => {
-          const product = await tx.product.findUnique({
-            where: { id: item.productId },
-          });
-          if (!product) throw new Error(`Product ${item.productId} not found`);
-          if (product.stock < item.quantity) {
-            throw new Error(`Insufficient stock for ${product.name}`);
-          }
+      // Re-validate and decrement stock per unique product (by total units)
+      const stockErrors: string[] = [];
+      for (const productId of Array.from(unitsByProduct.keys())) {
+        const units = unitsByProduct.get(productId) || 0;
+        const product = await tx.product.findUnique({
+          where: { id: productId },
+        });
+        if (!product || !product.isActive) {
+          throw new Error(`Product ${productId} not found`);
+        }
+        if (product.stock < units) {
+          stockErrors.push(`Insufficient stock for ${product.name}`);
+        }
+      }
+      if (stockErrors.length > 0) {
+        throw new Error(stockErrors.join("; "));
+      }
+      for (const productId of Array.from(unitsByProduct.keys())) {
+        await tx.product.update({
+          where: { id: productId },
+          data: { stock: { decrement: unitsByProduct.get(productId) || 0 } },
+        });
+      }
 
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stock: { decrement: item.quantity } },
-          });
-
-          return {
-            productId: item.productId,
-            productName: product.name,
-            productPrice: product.price,
-            productCost: product.cost,
-            quantity: item.quantity,
-          };
-        })
-      );
+      const itemsData = lines.map((line) => ({
+        productId: line.productId,
+        productName: line.productName,
+        productPrice: line.unitPrice,
+        productCost: line.productCost,
+        quantity: line.quantity,
+        optionId: line.optionId,
+        optionLabel: line.optionLabel,
+        unitsPerOption: line.unitsPerOption,
+      }));
 
       const proofData = hasPaymentMethodDefinition && validated.paymentMethodDefinitionId
         ? {
@@ -256,7 +325,7 @@ export async function POST(request: NextRequest) {
       customerName: validated.firstName,
       orderNumber,
       items: order.items.map((item: (typeof order.items)[number]) => ({
-        name: item.productName,
+        name: item.optionLabel ? `${item.productName} (${item.optionLabel})` : item.productName,
         quantity: item.quantity,
         price: `$${Number(item.productPrice).toFixed(2)}`,
       })),
@@ -309,7 +378,9 @@ export async function POST(request: NextRequest) {
           customerPhone: order.customerPhone,
           notes: order.notes,
           items: order.items.map((item) => ({
-            productName: item.productName,
+            productName: item.optionLabel
+              ? `${item.productName} (${item.optionLabel})`
+              : item.productName,
             productPrice: Number(item.productPrice),
             quantity: item.quantity,
           })),

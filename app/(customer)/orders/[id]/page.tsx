@@ -467,7 +467,7 @@ export default function OrderDetailPage() {
             {order.items.map((item) => (
               <div key={item.id} className="flex justify-between items-center py-2 border-b last:border-0">
                 <div>
-                  <p className="font-medium">{item.productName}</p>
+                  <p className="font-medium">{item.optionLabel ? `${item.productName} (${item.optionLabel})` : item.productName}</p>
                   <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                 </div>
                 <p className="font-medium"><Price amount={Number(item.productPrice) * item.quantity} /></p>

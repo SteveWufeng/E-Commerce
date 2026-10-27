@@ -26,7 +26,22 @@ export interface Product {
   isFeatured: boolean;
   isActive: boolean;
   weight: number | null;
+  options?: ProductOption[];
   category: Category | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type PriceMode = "SAME_UNIT_PRICE" | "CUSTOM_TOTAL";
+
+export interface ProductOption {
+  id: string;
+  productId: string;
+  quantity: number; // units per pack (>= 2)
+  label: string | null;
+  priceMode: PriceMode;
+  totalPrice: number | null; // required when priceMode = CUSTOM_TOTAL
+  sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,10 +62,13 @@ export interface Category {
 export interface CartItem {
   productId: string;
   name: string;
-  price: number;
+  price: number; // per line unit: per single unit, or per pack for bundle lines
   image: string;
-  quantity: number;
-  maxStock: number;
+  quantity: number; // packs for bundle lines, units for single lines
+  maxStock: number; // max line quantity: units for single, max packs for bundle
+  optionId?: string | null; // null = single units
+  optionLabel?: string | null;
+  unitsPerOption?: number; // 1 for single lines, pack size for bundle lines
 }
 
 export interface Cart {
@@ -115,7 +133,11 @@ export interface OrderItem {
   productId: string;
   productName: string;
   productPrice: number;
-  quantity: number;
+  quantity: number; // packs for bundle lines, units for single lines
+  optionId?: string | null;
+  optionLabel?: string | null;
+  unitsPerOption?: number; // 1 for single lines, pack size for bundle lines
+  productCost?: number | null;
 }
 
 // ========================

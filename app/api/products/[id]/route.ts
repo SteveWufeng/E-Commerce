@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { requireStaff } from "@/lib/auth/session";
+import { bundleOptionsSchema, optionToDbData } from "@/lib/pricing";
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 const R2 = new S3Client({
@@ -51,6 +52,7 @@ const updateProductSchema = z.object({
   images: z.array(z.string()).optional(),
   isFeatured: z.boolean().optional(),
   isActive: z.boolean().optional(),
+  options: bundleOptionsSchema.optional(),
 });
 
 export async function GET(
@@ -63,7 +65,7 @@ export async function GET(
       where: {
         OR: [{ id }, { slug: id }],
       },
-      include: { category: true },
+      include: { category: true, options: { orderBy: { sortOrder: "asc" } } },
     });
 
     if (!product) {
@@ -100,10 +102,11 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     const validated = updateProductSchema.parse(body);
+    const { options, ...rest } = validated;
 
     // Filter out undefined values
     const updateData: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(validated)) {
+    for (const [key, value] of Object.entries(rest)) {
       if (value !== undefined) {
         updateData[key] = value;
       }
@@ -139,11 +142,30 @@ export async function PUT(
       }
     }
 
-    const product = await db.product.update({
-      where: { id },
-      data: updateData,
-      include: { category: true },
-    });
+    let product;
+    if (options !== undefined) {
+      product = await db.$transaction(async (tx) => {
+        if (Object.keys(updateData).length > 0) {
+          await tx.product.update({ where: { id }, data: updateData });
+        }
+        await tx.productOption.deleteMany({ where: { productId: id } });
+        if (options.length > 0) {
+          await tx.productOption.createMany({
+            data: options.map((o, i) => optionToDbData(o, id, i)),
+          });
+        }
+        return tx.product.findUniqueOrThrow({
+          where: { id },
+          include: { category: true, options: { orderBy: { sortOrder: "asc" } } },
+        });
+      });
+    } else {
+      product = await db.product.update({
+        where: { id },
+        data: updateData,
+        include: { category: true, options: { orderBy: { sortOrder: "asc" } } },
+      });
+    }
 
     return NextResponse.json({ success: true, data: product });
   } catch (error) {

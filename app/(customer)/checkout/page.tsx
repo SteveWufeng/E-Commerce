@@ -212,6 +212,7 @@ export default function CheckoutPage() {
             items: items.map((item) => ({
               productId: item.productId,
               quantity: item.quantity,
+              optionId: item.optionId ?? null,
             })),
             paymentMethod: selectedMethod.name,
             paymentMethodDefinitionId: selectedMethod.id,
@@ -289,6 +290,7 @@ export default function CheckoutPage() {
         items: items.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
+          optionId: item.optionId ?? null,
         })),
         paymentMethod: "MERCANTIL",
         subtotal: checkoutData.subtotal,

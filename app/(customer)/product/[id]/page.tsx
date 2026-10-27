@@ -7,8 +7,10 @@ import Image from "next/image";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { useCartStore } from "@/hooks/use-cart";
+import { resolveBundleMix, mixTotal } from "@/lib/pricing";
 import { Price } from "@/components/ui/price";
 import { useToast } from "@/components/ui/toast";
+import { useLocale } from "@/hooks/use-locale";
 import type { Product } from "@/types";
 import { Minus, Plus, ShoppingBag } from "lucide-react";
 
@@ -27,6 +29,7 @@ import { Minus, Plus, ShoppingBag } from "lucide-react";
 export default function ProductPage() {
   const params = useParams();
   const slug = params?.id as string;
+  const { t } = useLocale();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -52,13 +55,23 @@ export default function ProductPage() {
 
   const handleAddToCart = () => {
     if (!product) return;
-    addItem({
-      productId: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.images?.[0] || "",
-      quantity,
-      maxStock: product.stock,
+    const lines = resolveBundleMix(product.price, product.options || [], quantity);
+    lines.forEach((line) => {
+      addItem({
+        productId: product.id,
+        name: product.name,
+        price: line.unitPrice,
+        optionId: line.optionId,
+        optionLabel: line.optionId
+          ? line.optionLabel || t("packOf").replace("{n}", String(line.unitsPerOption))
+          : null,
+        image: product.images?.[0] || "",
+        quantity: line.quantity,
+        maxStock: line.optionId
+          ? Math.floor(product.stock / line.unitsPerOption)
+          : product.stock,
+        unitsPerOption: line.unitsPerOption,
+      });
     });
     showToast(`${product.name} added to cart!`, "success");
   };
@@ -109,6 +122,9 @@ export default function ProductPage() {
   const isLowStock = product.stock > 0 && product.stock <= 5;
   const onSale = product.comparePrice && product.comparePrice > product.price;
   const images = product.images || [];
+  const hasOptions = (product.options || []).length > 0;
+  const mixLines = !isOutOfStock ? resolveBundleMix(product.price, product.options || [], quantity) : [];
+  const mixTotalPrice = mixTotal(mixLines);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -252,6 +268,40 @@ export default function ProductPage() {
                   <ShoppingBag className="w-5 h-5 mr-2" />
                   Add to Cart
                 </button>
+              </div>
+            )}
+
+            {/* Best Mix Breakdown */}
+            {hasOptions && !isOutOfStock && (
+              <div className="mt-6 border border-gray-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-gray-900 mb-2">{t("yourBestMix")}</p>
+                <ul className="space-y-1">
+                  {mixLines.map((line) => (
+                    <li key={line.optionId ?? "single"} className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">
+                        {line.optionId ? (
+                          <>
+                            {line.optionLabel || t("packOf").replace("{n}", String(line.unitsPerOption))}
+                            {line.quantity > 1 && (
+                              <span className="text-gray-400"> × {line.quantity}</span>
+                            )}
+                          </>
+                        ) : (
+                          `${line.quantity} ${line.quantity === 1 ? "unit" : "units"}`
+                        )}
+                      </span>
+                      <span className="text-gray-900">
+                        <Price amount={line.total} />
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                  <span className="text-sm font-medium text-gray-900">Total</span>
+                  <span className="font-semibold text-gray-900">
+                    <Price amount={mixTotalPrice} />
+                  </span>
+                </div>
               </div>
             )}
 

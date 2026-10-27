@@ -23,9 +23,10 @@ export function OrderSummary({
 
       <div className="space-y-3 mb-4">
         {items.map((item) => (
-          <div key={item.productId} className="flex justify-between text-sm">
+          <div key={item.productId + (item.optionId ?? "")} className="flex justify-between text-sm">
             <span className="text-gray-700">
-              {item.name}{" "}
+              {item.name}
+              {item.optionLabel && <span className="text-primary-600"> ({item.optionLabel})</span>}{" "}
               <span className="text-gray-400">x{item.quantity}</span>
             </span>
             <span className="font-medium">
