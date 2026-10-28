@@ -61,9 +61,9 @@ export function round2(n: number): number {
 
 export function packTotalPrice(option: BundleOption, unitPrice: number): number {
   if (option.priceMode === "CUSTOM_TOTAL" && option.totalPrice != null) {
-    return round2(option.totalPrice);
+    return round2(Number(option.totalPrice));
   }
-  return round2(option.quantity * unitPrice);
+  return round2(Number(option.quantity) * (Number(unitPrice) || 0));
 }
 
 export function mixTotal(lines: MixLine[]): number {
@@ -82,10 +82,14 @@ export function resolveBundleMix(
 ): MixLine[] {
   if (totalUnits <= 0) return [];
 
-  const price = round2(unitPrice);
-  const packs = options.filter(
-    (o) => Number.isInteger(o.quantity) && o.quantity >= 2
-  );
+  const price = round2(Number(unitPrice) || 0);
+  const packs = options
+    .map((o) => ({
+      ...o,
+      quantity: Number(o.quantity),
+      totalPrice: o.totalPrice == null ? null : Number(o.totalPrice),
+    }))
+    .filter((o) => Number.isInteger(o.quantity) && o.quantity >= 2);
 
   if (packs.length === 0) {
     return [
@@ -101,8 +105,11 @@ export function resolveBundleMix(
   }
 
   const items: { key: string | null; qty: number; cost: number }[] = [
+    ...packs
+      .slice()
+      .sort((a, b) => b.quantity - a.quantity)
+      .map((o) => ({ key: o.id, qty: o.quantity, cost: packTotalPrice(o, unitPrice) })),
     { key: null, qty: 1, cost: price },
-    ...packs.map((o) => ({ key: o.id, qty: o.quantity, cost: packTotalPrice(o, unitPrice) })),
   ];
 
   const dp: number[] = new Array(totalUnits + 1).fill(Infinity);
@@ -157,4 +164,23 @@ export function resolveBundleMix(
   // Sort: largest packs first, singles last
   lines.sort((a, b) => b.unitsPerOption - a.unitsPerOption);
   return lines;
+}
+
+export function toNumber(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function normalizeProduct<T extends Record<string, any>>(product: T): T {
+  return {
+    ...product,
+    price: toNumber(product.price) ?? 0,
+    comparePrice: toNumber(product.comparePrice),
+    cost: toNumber(product.cost),
+    options: (product.options ?? []).map((o: Record<string, any>) => ({
+      ...o,
+      totalPrice: toNumber(o.totalPrice),
+    })),
+  } as T;
 }

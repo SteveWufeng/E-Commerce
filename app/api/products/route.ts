@@ -15,7 +15,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { requireStaff } from "@/lib/auth/session";
-import { bundleOptionsSchema, optionToDbData } from "@/lib/pricing";
+import { bundleOptionsSchema, optionToDbData, normalizeProduct } from "@/lib/pricing";
 
 const productSchema = z.object({
   name: z.string().min(1).max(200),
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: products,
+      data: products.map(normalizeProduct),
       pagination: {
         page,
         pageSize,
@@ -144,7 +144,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ success: true, data: product }, { status: 201 });
+    const created = await db.product.findUniqueOrThrow({
+      where: { id: product.id },
+      include: { category: true, options: { orderBy: { sortOrder: "asc" } } },
+    });
+
+    return NextResponse.json({ success: true, data: normalizeProduct(created) }, { status: 201 });
   } catch (error) {
     console.error("Product create error:", error);
     if (error instanceof z.ZodError) {

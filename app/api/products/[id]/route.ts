@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { requireStaff } from "@/lib/auth/session";
-import { bundleOptionsSchema, optionToDbData } from "@/lib/pricing";
+import { bundleOptionsSchema, optionToDbData, normalizeProduct } from "@/lib/pricing";
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 const R2 = new S3Client({
@@ -75,7 +75,7 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ success: true, data: product });
+    return NextResponse.json({ success: true, data: normalizeProduct(product) });
   } catch (error) {
     console.error("Product GET error:", error);
     return NextResponse.json(
@@ -167,7 +167,7 @@ export async function PUT(
       });
     }
 
-    return NextResponse.json({ success: true, data: product });
+    return NextResponse.json({ success: true, data: normalizeProduct(product) });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
