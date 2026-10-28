@@ -706,7 +706,11 @@ export default function AdminProductsPage() {
                   setEditOptions(opts);
                   setEditOptionsError("");
                 }}
-                unitPrice={parseFloat(editPrice) || 0}
+                unitPrice={(() => {
+                  const rate = toNum(settings?.conversionRate ?? 1) || 1;
+                  const p = parseFloat(editPrice) || 0;
+                  return priceCurrency === "VES" && rate > 0 ? p / rate : p;
+                })()}
                 error={editOptionsError}
               />
               <div>
@@ -796,17 +800,30 @@ export default function AdminProductsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t("price")} ($) *
+                    {t("price")} ({newPriceCurrency === "VES" ? (settings?.currencySymbol || "Bs.") : "$"}) *
                   </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={newProduct.price}
-                    onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-                    className="input w-full"
-                    placeholder="0.00"
-                  />
+                  <div className="flex gap-2">
+                    <select
+                      value={newPriceCurrency}
+                      onChange={(e) => setNewPriceCurrency(e.target.value as "USD" | "VES")}
+                      className="input w-24"
+                    >
+                      <option value="USD">USD</option>
+                      <option value="VES">{settings?.currencySymbol || "Bs."}</option>
+                    </select>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={newProduct.price}
+                      onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                      className="input flex-1"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  {newPriceCurrency === "VES" && settings?.conversionRate && Number(settings.conversionRate) > 0 && newProduct.price ? (
+                    <p className="text-xs text-gray-400 mt-1">≈ ${(Number(newProduct.price) / Number(settings.conversionRate)).toFixed(2)} USD</p>
+                  ) : null}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -824,7 +841,7 @@ export default function AdminProductsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t("salePrice")} <span className="text-gray-400 font-normal">— optional, marks product as on sale</span>
+                  {t("salePrice")} ({newPriceCurrency === "VES" ? (settings?.currencySymbol || "Bs.") : "$"}) <span className="text-gray-400 font-normal">— optional, marks product as on sale</span>
                 </label>
                 <input
                   type="number"
@@ -835,6 +852,9 @@ export default function AdminProductsPage() {
                   className="input w-full"
                   placeholder="0.00"
                 />
+                {newPriceCurrency === "VES" && settings?.conversionRate && Number(settings.conversionRate) > 0 && newProduct.salePrice ? (
+                  <p className="text-xs text-gray-400 mt-1">≈ ${(Number(newProduct.salePrice) / Number(settings.conversionRate)).toFixed(2)} USD</p>
+                ) : null}
               </div>
               <BundleOptionsEditor
                 options={newProductOptions}
@@ -842,7 +862,11 @@ export default function AdminProductsPage() {
                   setNewProductOptions(opts);
                   setNewProductOptionsError("");
                 }}
-                unitPrice={parseFloat(newProduct.price) || 0}
+                unitPrice={(() => {
+                  const rate = toNum(settings?.conversionRate ?? 1) || 1;
+                  const p = parseFloat(newProduct.price) || 0;
+                  return newPriceCurrency === "VES" && rate > 0 ? p / rate : p;
+                })()}
                 error={newProductOptionsError}
               />
               <div>
