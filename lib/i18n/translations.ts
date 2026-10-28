@@ -173,8 +173,11 @@ export type TranslationKey =
   | "addBundleOption"
   | "removeBundleOption"
   | "bundleOptionsInvalid"
-  | "yourBestMix"
-  | "packOf"
+    | "yourBestMix"
+    | "packOf"
+    | "selectOption"
+    | "singleUnit"
+    | "includesUnits"
   | "saveChanges"
   | "creating"
   | "cancel"
@@ -560,7 +563,7 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     stock: "Stock",
     salePrice: "Precio de Oferta ($)",
     bundleOptions: "Opciones de Paquete",
-    bundleOptionsHint: "El cliente solo elige la cantidad total; el sistema aplica la combinación más barata.",
+    bundleOptionsHint: "El cliente puede comprar unidades sueltas o elegir cualquier paquete disponible.",
     packQuantity: "Tamaño (unidades)",
     packLabelPlaceholder: "Ej: Pack de 5",
     sameUnitPrice: "Mismo precio unitario",
@@ -571,6 +574,9 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     bundleOptionsInvalid: "Opciones de paquete inválidas: mínimo 2 unidades, tamaños únicos y precio positivo.",
     yourBestMix: "Tu mejor combinación",
     packOf: "Pack de {n}",
+    selectOption: "Elige una opción",
+    singleUnit: "Unidad suelta",
+    includesUnits: "Incluye {n} unidades",
     saveChanges: "Guardar Cambios",
     creating: "Creando...",
     cancel: "Cancelar",
@@ -957,7 +963,7 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     stock: "Stock",
     salePrice: "Sale Price ($)",
     bundleOptions: "Bundle Options",
-    bundleOptionsHint: "Customers just pick a total quantity; the system applies the cheapest mix.",
+    bundleOptionsHint: "Customers can buy single units or choose any available bundle option.",
     packQuantity: "Size (units)",
     packLabelPlaceholder: "e.g. Pack of 5",
     sameUnitPrice: "Same unit price",
@@ -968,6 +974,9 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     bundleOptionsInvalid: "Invalid bundle options: min size 2, unique sizes, positive price.",
     yourBestMix: "Your best mix",
     packOf: "Pack of {n}",
+    selectOption: "Choose an option",
+    singleUnit: "Single unit",
+    includesUnits: "Includes {n} units",
     saveChanges: "Save Changes",
     creating: "Creating...",
     cancel: "Cancel",

@@ -7,7 +7,7 @@ import Image from "next/image";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { useCartStore } from "@/hooks/use-cart";
-import { resolveBundleMix, mixTotal } from "@/lib/pricing";
+import { packTotalPrice } from "@/lib/pricing";
 import { Price } from "@/components/ui/price";
 import { DualPrice } from "@/components/ui/dual-price";
 import { useToast } from "@/components/ui/toast";
@@ -34,6 +34,7 @@ export default function ProductPage() {
 
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const addItem = useCartStore((state) => state.addItem);
@@ -45,6 +46,8 @@ export default function ProductPage() {
         const res = await fetch(`/api/products/${slug}`);
         const data = await res.json();
         setProduct(data.data || null);
+        setQuantity(1);
+        setSelectedOptionId(null);
       } catch (error) {
         console.error("Failed to load product:", error);
       } finally {
@@ -54,25 +57,42 @@ export default function ProductPage() {
     loadProduct();
   }, [slug]);
 
+  const availableOptions = (product?.options || [])
+    .filter(
+      (option) =>
+        option.quantity >= 2 &&
+        Math.floor((product?.stock || 0) / option.quantity) > 0
+    )
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const selectedOption = selectedOptionId
+    ? availableOptions.find((option) => option.id === selectedOptionId) ?? null
+    : null;
+
+  const selectedUnitPrice = selectedOption
+    ? packTotalPrice(selectedOption, product?.price || 0)
+    : product?.price || 0;
+
+  const maxQuantity = selectedOption
+    ? Math.floor((product?.stock || 0) / selectedOption.quantity)
+    : product?.stock || 0;
+
   const handleAddToCart = () => {
     if (!product) return;
-    const lines = resolveBundleMix(product.price, product.options || [], quantity);
-    lines.forEach((line) => {
-      addItem({
-        productId: product.id,
-        name: product.name,
-        price: line.unitPrice,
-        optionId: line.optionId,
-        optionLabel: line.optionId
-          ? line.optionLabel || t("packOf").replace("{n}", String(line.unitsPerOption))
-          : null,
-        image: product.images?.[0] || "",
-        quantity: line.quantity,
-        maxStock: line.optionId
-          ? Math.floor(product.stock / line.unitsPerOption)
-          : product.stock,
-        unitsPerOption: line.unitsPerOption,
-      });
+    const unitsPerOption = selectedOption?.quantity ?? 1;
+
+    addItem({
+      productId: product.id,
+      name: product.name,
+      price: selectedUnitPrice,
+      optionId: selectedOption?.id ?? null,
+      optionLabel: selectedOption
+        ? selectedOption.label || t("packOf").replace("{n}", String(unitsPerOption))
+        : null,
+      image: product.images?.[0] || "",
+      quantity,
+      maxStock: Math.floor(product.stock / unitsPerOption),
+      unitsPerOption,
     });
     showToast(`${product.name} added to cart!`, "success");
   };
@@ -123,9 +143,7 @@ export default function ProductPage() {
   const isLowStock = product.stock > 0 && product.stock <= 5;
   const onSale = product.comparePrice && product.comparePrice > product.price;
   const images = product.images || [];
-  const hasOptions = (product.options || []).length > 0;
-  const mixLines = !isOutOfStock ? resolveBundleMix(product.price, product.options || [], quantity) : [];
-  const mixTotalPrice = mixTotal(mixLines);
+  const hasOptions = availableOptions.length > 0;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -212,8 +230,8 @@ export default function ProductPage() {
             </h1>
 
             <div className="mt-4">
-              <DualPrice amount={product.price} primaryClassName="text-3xl font-bold text-gray-900" secondaryClassName="text-base text-gray-500" />
-              {onSale && (
+              <DualPrice amount={selectedUnitPrice} primaryClassName="text-3xl font-bold text-gray-900" secondaryClassName="text-base text-gray-500" />
+              {onSale && !selectedOption && (
                 <DualPrice
                   amount={product.comparePrice!}
                   className="items-baseline gap-2"
@@ -242,66 +260,106 @@ export default function ProductPage() {
               )}
             </div>
 
-            {/* Quantity & Add to Cart */}
-            {!isOutOfStock && (
-              <div className="mt-6 flex items-center gap-4">
-                <div className="flex items-center border border-gray-300 rounded-lg">
+            {/* Bundle Options */}
+            {hasOptions && !isOutOfStock && (
+              <div className="mt-6">
+                <p className="text-sm font-medium text-gray-900 mb-2">{t("selectOption")}</p>
+                <div className="space-y-2" role="radiogroup" aria-label={t("selectOption")}>
                   <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="p-3 hover:bg-gray-50 transition-colors"
-                    aria-label="Decrease quantity"
+                    type="button"
+                    role="radio"
+                    aria-checked={!selectedOption}
+                    onClick={() => {
+                      setSelectedOptionId(null);
+                      setQuantity(1);
+                    }}
+                    className={`w-full flex items-center justify-between gap-3 p-3 border rounded-lg text-left transition ${
+                      !selectedOption
+                        ? "border-primary-500 ring-2 ring-primary-100 bg-primary-50"
+                        : "border-gray-200 hover:border-gray-400"
+                    }`}
                   >
-                    <Minus className="w-4 h-4" />
+                    <div>
+                      <p className="font-medium text-gray-900">{t("singleUnit")}</p>
+                      <p className="text-xs text-gray-500">{t("includesUnits").replace("{n}", "1")}</p>
+                    </div>
+                    <Price amount={product.price} />
                   </button>
-                  <span className="w-12 text-center font-medium">{quantity}</span>
-                  <button
-                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                    className="p-3 hover:bg-gray-50 transition-colors"
-                    aria-label="Increase quantity"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
 
-                <button
-                  onClick={handleAddToCart}
-                  className="btn-primary flex-1 py-3 text-base"
-                >
-                  <ShoppingBag className="w-5 h-5 mr-2" />
-                  Add to Cart
-                </button>
+                  {availableOptions.map((option) => {
+                    const optionPrice = packTotalPrice(option, product.price);
+                    const isSelected = selectedOption?.id === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => {
+                          setSelectedOptionId(option.id);
+                          setQuantity(1);
+                        }}
+                        className={`w-full flex items-center justify-between gap-3 p-3 border rounded-lg text-left transition ${
+                          isSelected
+                            ? "border-primary-500 ring-2 ring-primary-100 bg-primary-50"
+                            : "border-gray-200 hover:border-gray-400"
+                        }`}
+                      >
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {option.label || t("packOf").replace("{n}", String(option.quantity))}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {t("includesUnits").replace("{n}", String(option.quantity))}
+                          </p>
+                        </div>
+                        <Price amount={optionPrice} />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
-            {/* Best Mix Breakdown */}
-            {hasOptions && !isOutOfStock && (
-              <div className="mt-6 border border-gray-200 rounded-lg p-4">
-                <p className="text-sm font-medium text-gray-900 mb-2">{t("yourBestMix")}</p>
-                <ul className="space-y-1">
-                  {mixLines.map((line) => (
-                    <li key={line.optionId ?? "single"} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">
-                        {line.optionId ? (
-                          <>
-                            {line.optionLabel || t("packOf").replace("{n}", String(line.unitsPerOption))}
-                            {line.quantity > 1 && (
-                              <span className="text-gray-400"> × {line.quantity}</span>
-                            )}
-                          </>
-                        ) : (
-                          `${line.quantity} ${line.quantity === 1 ? "unit" : "units"}`
-                        )}
-                      </span>
-                      <span className="text-gray-900">
-                        <Price amount={line.total} />
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                  <span className="text-sm font-medium text-gray-900">Total</span>
+            {/* Quantity & Add to Cart */}
+            {!isOutOfStock && (
+              <div className="mt-6 space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center border border-gray-300 rounded-lg">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="p-3 hover:bg-gray-50 transition-colors"
+                      aria-label="Decrease quantity"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <span className="w-12 text-center font-medium">{quantity}</span>
+                    <button
+                      onClick={() => setQuantity(Math.min(maxQuantity, quantity + 1))}
+                      className="p-3 hover:bg-gray-50 transition-colors"
+                      aria-label="Increase quantity"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={handleAddToCart}
+                    className="btn-primary flex-1 py-3 text-base"
+                  >
+                    <ShoppingBag className="w-5 h-5 mr-2" />
+                    Add to Cart
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">
+                    {quantity} × {selectedOption
+                      ? selectedOption.label || t("packOf").replace("{n}", String(selectedOption.quantity))
+                      : t("singleUnit")}
+                  </span>
                   <span className="font-semibold text-gray-900">
-                    <Price amount={mixTotalPrice} />
+                    <Price amount={selectedUnitPrice * quantity} />
                   </span>
                 </div>
               </div>
