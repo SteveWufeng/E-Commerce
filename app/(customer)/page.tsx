@@ -49,7 +49,7 @@ export default function HomePage() {
     async function loadData() {
       try {
         const [productsRes, categoriesRes] = await Promise.all([
-          fetchJson("/api/products"),
+          fetchJson("/api/products?limit=1000"),
           fetchJson("/api/products/categories"),
         ]);
 
