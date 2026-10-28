@@ -9,6 +9,7 @@ import { Footer } from "@/components/layout/footer";
 import { useCartStore } from "@/hooks/use-cart";
 import { resolveBundleMix, mixTotal } from "@/lib/pricing";
 import { Price } from "@/components/ui/price";
+import { DualPrice } from "@/components/ui/dual-price";
 import { useToast } from "@/components/ui/toast";
 import { useLocale } from "@/hooks/use-locale";
 import type { Product } from "@/types";
@@ -210,14 +211,15 @@ export default function ProductPage() {
               {product.name}
             </h1>
 
-            <div className="mt-4 flex items-baseline gap-3">
-              <span className="text-3xl font-bold text-gray-900">
-                <Price amount={product.price} />
-              </span>
+            <div className="mt-4">
+              <DualPrice amount={product.price} primaryClassName="text-3xl font-bold text-gray-900" secondaryClassName="text-base text-gray-500" />
               {onSale && (
-                <span className="text-lg text-gray-400 line-through">
-                  <Price amount={product.comparePrice!} />
-                </span>
+                <DualPrice
+                  amount={product.comparePrice!}
+                  className="items-baseline gap-2"
+                  primaryClassName="text-lg text-gray-400 line-through"
+                  secondaryClassName="text-sm text-gray-300 line-through"
+                />
               )}
             </div>
 

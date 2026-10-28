@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Header } from "@/components/layout/header";
@@ -29,6 +29,10 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   // Load initial data (explicitly request JSON and handle non-JSON responses)
   useEffect(() => {
@@ -49,12 +53,21 @@ export default function HomePage() {
     async function loadData() {
       try {
         const [productsRes, categoriesRes] = await Promise.all([
-          fetchJson("/api/products?limit=1000"),
+          fetchJson("/api/products?limit=50&page=1"),
           fetchJson("/api/products/categories"),
         ]);
 
         setProducts(productsRes.data || []);
         setCategories(categoriesRes.data || []);
+        const pagination = productsRes.pagination;
+        if (pagination) {
+          setHasMore(pagination.page < pagination.totalPages);
+        } else if ((productsRes.data || []).length < 50) {
+          setHasMore(false);
+        } else {
+          setHasMore(true);
+        }
+        setPage(1);
       } catch (error) {
         console.error("Failed to load storefront data:", error);
       } finally {
@@ -64,6 +77,56 @@ export default function HomePage() {
 
     loadData();
   }, []);
+
+  const loadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore || searchQuery || selectedCategory) return;
+    setIsLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const res = await fetch(`/api/products?limit=50&page=${nextPage}`, {
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) throw new Error("Failed to load more");
+      const data = await res.json();
+      const newProducts = data.data || [];
+      setProducts((prev) => [...prev, ...newProducts]);
+      const pagination = data.pagination;
+      if (pagination) {
+        setHasMore(pagination.page < pagination.totalPages);
+      } else if (newProducts.length < 50) {
+        setHasMore(false);
+      }
+      setPage(nextPage);
+    } catch (error) {
+      console.error("Failed to load more products:", error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, hasMore, searchQuery, selectedCategory, page]);
+
+  useEffect(() => {
+    if (searchQuery || selectedCategory) {
+      setHasMore(false);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    const current = loadMoreRef.current;
+    if (current) {
+      observer.observe(current);
+    }
+    return () => {
+      if (current) {
+        observer.unobserve(current);
+      }
+    };
+  }, [loadMore, searchQuery, selectedCategory]);
 
   const isOnSale = (p: Product) =>
     p.comparePrice !== null && Number(p.comparePrice) > Number(p.price);
@@ -209,11 +272,22 @@ export default function HomePage() {
                 ))}
               </div>
             ) : filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {filteredProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {filteredProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+                {!searchQuery && !selectedCategory && hasMore && (
+                  <div ref={loadMoreRef} className="py-8 flex justify-center">
+                    {isLoadingMore ? (
+                      <div className="animate-pulse text-gray-400 text-sm">Loading...</div>
+                    ) : (
+                      <div className="text-gray-400 text-sm">&nbsp;</div>
+                    )}
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-16">
                 <p className="text-gray-500 text-lg">{t("noProductsFound")}</p>

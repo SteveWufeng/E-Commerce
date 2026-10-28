@@ -9,6 +9,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Plus, Edit, Trash2, X, ChevronUp, ChevronDown, Scan, ScanLine } from "lucide-react";
 import { useLocale } from "@/hooks/use-locale";
 import { useScannerInput } from "@/hooks/use-scanner-input";
+import { useSettingsStore } from "@/hooks/use-settings";
 
 interface OptionDraft {
   id?: string;
@@ -30,6 +31,12 @@ function productOptionsToDrafts(options: any[]): OptionDraft[] {
     priceMode: o.priceMode,
     totalPrice: o.totalPrice != null ? String(o.totalPrice) : "",
   }));
+}
+
+function toNum(val: unknown): number {
+  if (typeof val === "number") return val;
+  const n = parseFloat(String(val));
+  return Number.isNaN(n) ? 0 : n;
 }
 
 function collectOptions(opts: OptionDraft[]): Array<Record<string, unknown>> | null {
@@ -177,6 +184,14 @@ export default function AdminProductsPage() {
   const [editOptionsError, setEditOptionsError] = useState("");
   const [newProductOptions, setNewProductOptions] = useState<OptionDraft[]>([]);
   const [newProductOptionsError, setNewProductOptionsError] = useState("");
+  const [priceCurrency, setPriceCurrency] = useState<"USD" | "VES">("USD");
+  const [newPriceCurrency, setNewPriceCurrency] = useState<"USD" | "VES">("USD");
+  const settings = useSettingsStore((state) => state.settings);
+  const fetchSettings = useSettingsStore((state) => state.fetchSettings);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   useEffect(() => {
     async function loadProducts() {
@@ -260,6 +275,7 @@ export default function AdminProductsPage() {
     setEditImages(product.images || []);
     setEditOptions(productOptionsToDrafts(product.options));
     setEditOptionsError("");
+    setPriceCurrency("USD");
   }
 
   async function handleSaveEdit() {
@@ -274,15 +290,24 @@ export default function AdminProductsPage() {
 
     setIsSaving(true);
     try {
+      const rate = toNum(settings?.conversionRate ?? 1) || 1;
+      let priceUsd = parseFloat(editPrice);
+      if (priceCurrency === "VES" && rate > 0) {
+        priceUsd = priceUsd / rate;
+      }
       const body: Record<string, unknown> = {
-        price: parseFloat(editPrice),
+        price: priceUsd,
         stock: parseInt(editStock),
         barcode: editBarcode || null,
         images: editImages,
         options,
       };
       if (editSalePrice) {
-        body.comparePrice = parseFloat(editSalePrice);
+        let saleUsd = parseFloat(editSalePrice);
+        if (priceCurrency === "VES" && rate > 0) {
+          saleUsd = saleUsd / rate;
+        }
+        body.comparePrice = saleUsd;
       } else {
         body.comparePrice = null;
       }
@@ -298,7 +323,7 @@ export default function AdminProductsPage() {
         setProducts((prev) =>
           prev.map((p) =>
             p.id === editProduct.id
-              ? { ...p, price: parseFloat(editPrice), stock: parseInt(editStock), barcode: editBarcode || null, images: updated.data.images, comparePrice: updated.data.comparePrice, options: updated.data.options }
+              ? { ...p, price: priceUsd, stock: parseInt(editStock), barcode: editBarcode || null, images: updated.data.images, comparePrice: updated.data.comparePrice, options: updated.data.options }
               : p
           )
         );
@@ -326,10 +351,15 @@ export default function AdminProductsPage() {
 
     setIsSaving(true);
     try {
+      const rate = toNum(settings?.conversionRate ?? 1) || 1;
+      let priceUsd = parseFloat(newProduct.price);
+      if (newPriceCurrency === "VES" && rate > 0) {
+        priceUsd = priceUsd / rate;
+      }
       const body: Record<string, unknown> = {
         name: newProduct.name,
         description: newProduct.description,
-        price: parseFloat(newProduct.price),
+        price: priceUsd,
         stock: parseInt(newProduct.stock) || 0,
         barcode: newProduct.barcode || undefined,
         categoryId: newProduct.categoryId,
@@ -338,7 +368,11 @@ export default function AdminProductsPage() {
         options,
       };
       if (newProduct.salePrice) {
-        body.comparePrice = parseFloat(newProduct.salePrice);
+        let saleUsd = parseFloat(newProduct.salePrice);
+        if (newPriceCurrency === "VES" && rate > 0) {
+          saleUsd = saleUsd / rate;
+        }
+        body.comparePrice = saleUsd;
       }
 
       const res = await fetch("/api/products", {
@@ -450,7 +484,7 @@ export default function AdminProductsPage() {
             <Scan className="w-4 h-4" />
             {t("bulkOperations")}
           </button>
-          <button onClick={() => setAddProduct(true)} className="btn-primary">
+          <button onClick={() => { setAddProduct(true); setNewPriceCurrency("USD"); setNewProductOptions([]); setNewProductOptionsError(""); }} className="btn-primary">
             <Plus className="w-4 h-4 mr-2" />
             {t("addProduct")}
           </button>

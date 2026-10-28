@@ -6,7 +6,7 @@ import type { Product } from "@/types";
 import { useCartStore } from "@/hooks/use-cart";
 import { useToast } from "@/components/ui/toast";
 import { useLocale } from "@/hooks/use-locale";
-import { Price } from "@/components/ui/price";
+import { DualPrice } from "@/components/ui/dual-price";
 
 export function ProductCard({ product }: { product: Product }) {
   const { t } = useLocale();
@@ -71,14 +71,19 @@ export function ProductCard({ product }: { product: Product }) {
         </Link>
 
         <div className="mt-auto pt-2">
-          <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold text-gray-900">
-              <Price amount={product.price} />
-            </span>
+          <div>
+            <DualPrice amount={product.price} />
             {onSale && (
-              <span className="text-sm text-gray-400 line-through">
-                <Price amount={product.comparePrice!} />
-              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-sm text-gray-400 line-through">
+                  <DualPrice
+                    amount={product.comparePrice!}
+                    className="items-baseline gap-2"
+                    primaryClassName="text-sm text-gray-400 line-through"
+                    secondaryClassName="text-xs text-gray-300 line-through"
+                  />
+                </span>
+              </div>
             )}
           </div>
 
