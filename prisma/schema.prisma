@@ -457,6 +457,8 @@ model Settings {
   currencyCode        String   @default("USD")
   currencySymbol      String   @default("$")
   conversionRate      Float    @default(1)
+  usdtSymbol          String   @default("USDT")
+  usdtRate            Float    @default(1)
   mercantilRedirectEnabled Boolean  @default(false)
   mercantilCardEnabled Boolean  @default(true)
 

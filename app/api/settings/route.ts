@@ -65,6 +65,8 @@ export async function POST(request: NextRequest) {
     const current = await getOrCreateSettings();
     const templates = sanitizeTemplates(body.telegramTemplates);
 
+    const usdtRate = body.usdtRate === undefined ? current.usdtRate : Number(body.usdtRate) || 1;
+
     const updated = await db.settings.update({
       where: { id: current.id },
       data: {
@@ -73,6 +75,8 @@ export async function POST(request: NextRequest) {
         currencyCode: body.currencyCode ?? current.currencyCode,
         currencySymbol: body.currencySymbol ?? current.currencySymbol,
         conversionRate: body.conversionRate ?? current.conversionRate,
+        usdtSymbol: body.usdtSymbol ?? current.usdtSymbol,
+        usdtRate,
         mercantilRedirectEnabled: body.mercantilRedirectEnabled ?? current.mercantilRedirectEnabled,
         mercantilCardEnabled: body.mercantilCardEnabled ?? current.mercantilCardEnabled,
         ...(templates !== undefined ? { telegramTemplates: templates } : {}),

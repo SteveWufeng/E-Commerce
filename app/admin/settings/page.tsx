@@ -16,6 +16,8 @@ interface StoreSettings {
   currencyCode: string;
   currencySymbol: string;
   conversionRate: number;
+  usdtSymbol?: string;
+  usdtRate?: number;
   mercantilRedirectEnabled: boolean;
   mercantilCardEnabled: boolean;
   telegramTemplates?: Record<string, string> | null;
@@ -45,6 +47,8 @@ export default function AdminSettingsPage() {
     currencyCode: "USD",
     currencySymbol: "$",
     conversionRate: 1,
+    usdtSymbol: "USDT",
+    usdtRate: 1,
     mercantilRedirectEnabled: false,
     mercantilCardEnabled: true,
     telegramTemplates: {},
@@ -248,7 +252,7 @@ export default function AdminSettingsPage() {
               </div>
             </div>
             <div>
-              <label className="label">Conversion Rate (1 USD = ?)</label>
+              <label className="label">Conversion Rate (1 USD = local)</label>
               <input
                 type="number"
                 className="input"
@@ -258,8 +262,33 @@ export default function AdminSettingsPage() {
                 min={0.01}
               />
               <p className="text-xs text-gray-500 mt-1">
-                Example: If you set 1 USD = 150 JPY, enter 150
+                Example: If you set 1 USD = 150 Bs., enter 150
               </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="label">USDT Symbol</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={settings.usdtSymbol || "USDT"}
+                  onChange={(e) => setSettings({ ...settings, usdtSymbol: e.target.value })}
+                  placeholder="USDT"
+                  maxLength={10}
+                />
+              </div>
+              <div>
+                <label className="label">USDT Rate (1 USD = ? USDT)</label>
+                <input
+                  type="number"
+                  className="input"
+                  value={settings.usdtRate ?? 1}
+                  onChange={(e) => setSettings({ ...settings, usdtRate: parseFloat(e.target.value) || 1 })}
+                  step={0.01}
+                  min={0.01}
+                />
+                <p className="text-xs text-gray-500 mt-1">Usually 1.00</p>
+              </div>
             </div>
           </div>
         </div>

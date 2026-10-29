@@ -3,7 +3,7 @@
 import { useCurrency, type CurrencyPref } from "@/hooks/use-currency";
 
 /**
- * Two-state currency toggle: USD | Bs.
+ * Currency toggle: USD | Bs. | USDT
  * Persists the choice (see useCurrency) so it carries across pages.
  */
 export function CurrencyToggle({ className = "" }: { className?: string }) {
@@ -12,6 +12,7 @@ export function CurrencyToggle({ className = "" }: { className?: string }) {
   const options: { value: CurrencyPref; label: string }[] = [
     { value: "USD", label: "USD" },
     { value: "VES", label: "Bs." },
+    { value: "USDT", label: "USDT" },
   ];
 
   return (

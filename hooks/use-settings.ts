@@ -6,6 +6,8 @@ interface Settings {
   currencyCode: string;
   currencySymbol: string;
   conversionRate: number;
+  usdtSymbol: string;
+  usdtRate: number;
   bankTransferEnabled: boolean;
 }
 

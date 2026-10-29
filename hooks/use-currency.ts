@@ -8,13 +8,14 @@ import { useSettingsStore } from "./use-settings";
  *
  * Product prices are stored in USD. The "local" currency is derived as
  * `USD * Settings.conversionRate` (admin labels it "1 USD = ?"). Customers
- * choose to see prices as either USD ($) or Bs. (the configured local rate),
+ * choose to see prices as either USD ($), local (Bs.), or USDT,
  * and the choice is persisted in localStorage and shared across the app.
  */
-export type CurrencyPref = "USD" | "VES";
+export type CurrencyPref = "USD" | "VES" | "USDT";
 
 export const CURRENCY_STORAGE_KEY = "ecom_currency_pref";
 export const LOCAL_CURRENCY_SYMBOL = "Bs.";
+export const USDT_CURRENCY_SYMBOL = "USDT";
 
 function toNum(val: unknown): number {
   if (typeof val === "number") return val;
@@ -41,12 +42,17 @@ export const useCurrencyStore = create<CurrencyStoreState>((set, get) => ({
     set({ pref, hydrated: true });
   },
 
-  togglePref: () => get().setPref(get().pref === "USD" ? "VES" : "USD"),
+  togglePref: () => {
+    const current = get().pref;
+    if (current === "USD") return get().setPref("VES");
+    if (current === "VES") return get().setPref("USDT");
+    return get().setPref("USD");
+  },
 
   hydrate: () => {
     try {
       const stored = window.localStorage.getItem(CURRENCY_STORAGE_KEY);
-      if (stored === "USD" || stored === "VES") {
+      if (stored === "USD" || stored === "VES" || stored === "USDT") {
         set({ pref: stored, hydrated: true });
         return;
       }
@@ -63,13 +69,19 @@ export function useCurrency() {
 
   const settings = useSettingsStore((state) => state.settings);
   const rate = toNum(settings?.conversionRate ?? 1) || 1;
+  const usdtRate = toNum(settings?.usdtRate ?? 1) || 1;
+  const usdtSymbol = typeof settings?.usdtSymbol === "string" && settings.usdtSymbol.trim() ? settings.usdtSymbol.trim() : USDT_CURRENCY_SYMBOL;
 
   const isVES = pref === "VES";
-  const symbol = isVES ? LOCAL_CURRENCY_SYMBOL : "$";
+  const isUSDT = pref === "USDT";
+  const isUSD = pref === "USD";
+  const symbol = isVES ? LOCAL_CURRENCY_SYMBOL : isUSDT ? usdtSymbol : "$";
 
   const convert = (usdAmount: number | string): number => {
     const num = toNum(usdAmount);
-    return isVES ? num * rate : num;
+    if (isVES) return num * rate;
+    if (isUSDT) return num * usdtRate;
+    return num;
   };
 
   const format = (usdAmount: number | string): string => {
@@ -78,16 +90,19 @@ export function useCurrency() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
-    return `${symbol}${formatted}`;
+    return `${symbol} ${formatted}`;
   };
 
   return {
     pref,
     hydrated,
-    isUSD: !isVES,
+    isUSD,
     isVES,
+    isUSDT,
     symbol,
     rate,
+    usdtRate,
+    usdtSymbol,
     convert,
     format,
     setPref,
