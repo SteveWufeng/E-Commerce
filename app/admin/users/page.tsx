@@ -52,11 +52,16 @@ export default function AdminUsersPage() {
   const [telegramChatId, setTelegramChatId] = useState("");
 
   const [resetUser, setResetUser] = useState<UserRow | null>(null);
+  const [resetConfirmUser, setResetConfirmUser] = useState<UserRow | null>(null);
+  const [resetConfirmInput, setResetConfirmInput] = useState("");
   const [resetLink, setResetLink] = useState("");
   const [resetExpiresAt, setResetExpiresAt] = useState("");
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [resetBusy, setResetBusy] = useState(false);
   const [resetCopied, setResetCopied] = useState(false);
+
+  const [unbindUser, setUnbindUser] = useState<UserRow | null>(null);
+  const [unbindInput, setUnbindInput] = useState("");
 
   const loadUsers = useCallback(async (query: string) => {
     try {
@@ -133,8 +138,15 @@ export default function AdminUsersPage() {
     if (updated) setTelegramUser(null);
   }
 
-  async function handleUnbind(user: UserRow) {
-    await patchUser(user.id, { telegramChatId: null });
+  function openUnbind(user: UserRow) {
+    setUnbindUser(user);
+    setUnbindInput("");
+  }
+
+  async function handleUnbind() {
+    if (!unbindUser) return;
+    const updated = await patchUser(unbindUser.id, { telegramChatId: null });
+    if (updated) setUnbindUser(null);
   }
 
   function openReset(user: UserRow) {
@@ -143,6 +155,11 @@ export default function AdminUsersPage() {
     setResetExpiresAt("");
     setResetEmailSent(false);
     setResetCopied(false);
+  }
+
+  function openResetConfirm(user: UserRow) {
+    setResetConfirmUser(user);
+    setResetConfirmInput("");
   }
 
   async function generateResetLink(sendEmail: boolean) {
@@ -269,17 +286,19 @@ export default function AdminUsersPage() {
                             {t("editUser")}
                           </button>
                           <button
-                            onClick={() => openReset(user)}
+                            onClick={() => openResetConfirm(user)}
                             className="inline-flex items-center gap-1 text-xs py-1.5 px-2 text-gray-600 hover:text-gray-800"
+                            title={t("resetPasswordAdminHint")}
                           >
                             <KeyRound className="w-3.5 h-3.5" />
                             <span className="hidden sm:inline">{t("resetPassword")}</span>
                           </button>
                           {user.telegramChatId ? (
                             <button
-                              onClick={() => handleUnbind(user)}
+                              onClick={() => openUnbind(user)}
                               disabled={busyId === user.id}
                               className="text-xs py-1.5 px-2 text-red-600 hover:text-red-700"
+                              title={t("unbindTelegramHint")}
                             >
                               {t("unbindTelegram")}
                             </button>
@@ -384,6 +403,54 @@ export default function AdminUsersPage() {
         </div>
       )}
 
+      {/* Password reset confirmation modal */}
+      {resetConfirmUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md">
+            <h2 className="text-lg font-semibold mb-1">{t("resetPasswordConfirmTitle")}</h2>
+            <p className="text-sm text-gray-500 mb-2">
+              {resetConfirmUser.firstName} {resetConfirmUser.lastName} · {resetConfirmUser.email}
+            </p>
+            <p className="text-sm text-gray-600 mb-4">{t("resetPasswordConfirmHint")}</p>
+            <label className="block text-sm text-gray-500 mb-1">
+              {t("typeEmailToConfirm").replace("{value}", resetConfirmUser.email)}
+            </label>
+            <input
+              type="text"
+              value={resetConfirmInput}
+              onChange={(e) => setResetConfirmInput(e.target.value)}
+              className="input w-full"
+            />
+            <div className="flex justify-end gap-3 mt-5">
+              <button
+                onClick={() => {
+                  setResetConfirmUser(null);
+                  setResetConfirmInput("");
+                }}
+                className="btn-secondary text-sm py-2 px-4"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={() => {
+                  setResetUser(resetConfirmUser);
+                  setResetConfirmUser(null);
+                  setResetConfirmInput("");
+                  setResetLink("");
+                  setResetExpiresAt("");
+                  setResetEmailSent(false);
+                  setResetCopied(false);
+                }}
+                disabled={resetConfirmInput.trim() !== resetConfirmUser.email}
+                className="btn-primary text-sm py-2 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t("confirmReset")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Password reset modal */}
       {resetUser && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -453,6 +520,47 @@ export default function AdminUsersPage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Unbind Telegram modal */}
+      {unbindUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 w-full max-w-md">
+            <h2 className="text-lg font-semibold mb-1">{t("unbindTelegramTitle")}</h2>
+            <p className="text-sm text-gray-500 mb-2">
+              {unbindUser.firstName} {unbindUser.lastName} · {unbindUser.email}
+            </p>
+            <p className="text-sm text-gray-600 mb-2">{t("unbindTelegramHint")}</p>
+            <p className="text-sm text-red-600 mb-4">{t("unbindTelegramWarning")}</p>
+            <label className="block text-sm text-gray-500 mb-1">
+              {t("typeToConfirm").replace("{value}", unbindUser.email)}
+            </label>
+            <input
+              type="text"
+              value={unbindInput}
+              onChange={(e) => setUnbindInput(e.target.value)}
+              className="input w-full"
+            />
+            <div className="flex justify-end gap-3 mt-5">
+              <button
+                onClick={() => {
+                  setUnbindUser(null);
+                  setUnbindInput("");
+                }}
+                className="btn-secondary text-sm py-2 px-4"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={handleUnbind}
+                disabled={unbindInput.trim() !== unbindUser.email || busyId === unbindUser.id}
+                className="btn-primary text-sm py-2 px-4 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t("confirmUnbind")}
+              </button>
+            </div>
           </div>
         </div>
       )}

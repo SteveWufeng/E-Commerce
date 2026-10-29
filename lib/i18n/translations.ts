@@ -261,6 +261,11 @@ export type TranslationKey =
   | "telegramNotBound"
   | "bindTelegram"
   | "unbindTelegram"
+  | "unbindTelegramTitle"
+  | "unbindTelegramHint"
+  | "unbindTelegramWarning"
+  | "typeToConfirm"
+  | "confirmUnbind"
   | "telegramChatIdLabel"
   | "editUser"
   | "nameLabel"
@@ -274,6 +279,11 @@ export type TranslationKey =
   | "resetPassword"
   | "resetPasswordTitle"
   | "resetPasswordHint"
+  | "resetPasswordAdminHint"
+  | "resetPasswordConfirmTitle"
+  | "resetPasswordConfirmHint"
+  | "typeEmailToConfirm"
+  | "confirmReset"
   | "generateResetLink"
   | "generateAndEmail"
   | "resetLinkLabel"
@@ -661,6 +671,11 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     telegramNotBound: "Sin vincular",
     bindTelegram: "Vincular",
     unbindTelegram: "Desvincular",
+    unbindTelegramTitle: "Desvincular Telegram",
+    unbindTelegramHint: "Esto eliminará la conexión entre este usuario y Telegram. Las notificaciones ya no llegarán.",
+    unbindTelegramWarning: "Esta acción no se puede deshacer.",
+    typeToConfirm: "Escribe {value} para confirmar",
+    confirmUnbind: "Desvincular (confirmación)",
     telegramChatIdLabel: "ID de chat de Telegram",
     editUser: "Editar Usuario",
     nameLabel: "Nombre",
@@ -674,6 +689,11 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     resetPassword: "Restablecer",
     resetPasswordTitle: "Restablecer Contraseña",
     resetPasswordHint: "Genera un enlace de restablecimiento de un solo uso. El enlace caduca pronto; compártelo únicamente con el usuario.",
+    resetPasswordAdminHint: "Esto enviará o generará un enlace para restablecer la contraseña de este usuario.",
+    resetPasswordConfirmTitle: "Confirmar restablecimiento de contraseña",
+    resetPasswordConfirmHint: "Para prevenir clics accidentales, escribe el correo del usuario para confirmar.",
+    typeEmailToConfirm: "Escribe {value} para confirmar",
+    confirmReset: "Confirmar restablecimiento",
     generateResetLink: "Generar enlace",
     generateAndEmail: "Generar y enviar por correo",
     resetLinkLabel: "Enlace de restablecimiento",
@@ -1061,6 +1081,11 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     telegramNotBound: "Not bound",
     bindTelegram: "Bind",
     unbindTelegram: "Unbind",
+    unbindTelegramTitle: "Unbind Telegram",
+    unbindTelegramHint: "This will remove the connection between this user and Telegram. Notifications will no longer be delivered.",
+    unbindTelegramWarning: "This action cannot be undone.",
+    typeToConfirm: "Type {value} to confirm",
+    confirmUnbind: "Unbind (confirm)",
     telegramChatIdLabel: "Telegram chat ID",
     editUser: "Edit User",
     nameLabel: "Name",
@@ -1074,6 +1099,11 @@ export const translations: Record<Locale, Record<TranslationKey, string>> = {
     resetPassword: "Reset",
     resetPasswordTitle: "Reset Password",
     resetPasswordHint: "Generate a single-use password reset link. The link expires soon — share it only with the user.",
+    resetPasswordAdminHint: "This will generate or email a password reset link for this user.",
+    resetPasswordConfirmTitle: "Confirm password reset",
+    resetPasswordConfirmHint: "To prevent accidental clicks, type the user’s email to confirm.",
+    typeEmailToConfirm: "Type {value} to confirm",
+    confirmReset: "Confirm reset",
     generateResetLink: "Generate link",
     generateAndEmail: "Generate & email",
     resetLinkLabel: "Reset link",
