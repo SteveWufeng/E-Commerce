@@ -44,9 +44,7 @@ export const useCurrencyStore = create<CurrencyStoreState>((set, get) => ({
 
   togglePref: () => {
     const current = get().pref;
-    if (current === "USD") return get().setPref("VES");
-    if (current === "VES") return get().setPref("USDT");
-    return get().setPref("USD");
+    return get().setPref(current === "USDT" ? "USD" : "USDT");
   },
 
   hydrate: () => {
@@ -90,7 +88,8 @@ export function useCurrency() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
-    return `${symbol} ${formatted}`;
+    const separator = isUSDT && /^[a-z0-9]+$/i.test(symbol) ? " " : "";
+    return `${symbol}${separator}${formatted}`;
   };
 
   return {

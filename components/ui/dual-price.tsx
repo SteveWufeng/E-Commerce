@@ -10,7 +10,7 @@ function toNum(val: unknown): number {
 }
 
 /**
- * Shows price in both USD and local currency (e.g., Bs.)
+ * Shows price as USD + local currency (e.g., Bs.) or USDT only.
  */
 export function DualPrice({
   amount,
@@ -23,11 +23,12 @@ export function DualPrice({
   primaryClassName?: string;
   secondaryClassName?: string;
 }) {
-  const { pref, rate } = useCurrency();
+  const { pref, rate, usdtRate, usdtSymbol } = useCurrency();
   const settings = useSettingsStore((state) => state.settings);
   const num = toNum(amount);
   const localSymbol = settings?.currencySymbol || "Bs.";
   const localValue = num * rate;
+  const usdtValue = num * usdtRate;
   const usdValue = num;
 
   const format = (value: number) =>
@@ -35,6 +36,8 @@ export function DualPrice({
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
+
+  const usdtSeparator = /^[a-z0-9]+$/i.test(usdtSymbol) ? " " : "";
 
   if (pref === "VES") {
     return (
@@ -45,6 +48,18 @@ export function DualPrice({
         </span>
         <span className={secondaryClassName || "text-xs text-gray-500"}>
           ${format(usdValue)}
+        </span>
+      </div>
+    );
+  }
+
+  if (pref === "USDT") {
+    return (
+      <div className={`flex items-baseline gap-2 ${className || ""}`}>
+        <span className={primaryClassName || "text-lg font-bold text-gray-900"}>
+          {usdtSymbol}
+          {usdtSeparator}
+          {format(usdtValue)}
         </span>
       </div>
     );

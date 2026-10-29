@@ -3,16 +3,15 @@
 import { useCurrency, type CurrencyPref } from "@/hooks/use-currency";
 
 /**
- * Currency toggle: USD | Bs. | USDT
+ * Currency toggle: USD/Bs | USDT
  * Persists the choice (see useCurrency) so it carries across pages.
  */
 export function CurrencyToggle({ className = "" }: { className?: string }) {
   const { pref, setPref } = useCurrency();
 
-  const options: { value: CurrencyPref; label: string }[] = [
-    { value: "USD", label: "USD" },
-    { value: "VES", label: "Bs." },
-    { value: "USDT", label: "USDT" },
+  const options: { value: CurrencyPref; label: string; match: CurrencyPref[] }[] = [
+    { value: "USD", label: "USD/Bs", match: ["USD", "VES"] },
+    { value: "USDT", label: "USDT", match: ["USDT"] },
   ];
 
   return (
@@ -22,7 +21,7 @@ export function CurrencyToggle({ className = "" }: { className?: string }) {
       aria-label="Currency"
     >
       {options.map((option) => {
-        const active = pref === option.value;
+        const active = option.match.includes(pref);
         return (
           <button
             key={option.value}
