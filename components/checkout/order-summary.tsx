@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale } from "@/hooks/use-locale";
-import { Price } from "@/components/ui/price";
+import { DualPrice } from "@/components/ui/dual-price";
 import type { CartItem } from "@/types";
 
 export function OrderSummary({
@@ -30,7 +30,11 @@ export function OrderSummary({
               <span className="text-gray-400">x{item.quantity}</span>
             </span>
             <span className="font-medium">
-              <Price amount={item.price * item.quantity} />
+              <DualPrice
+                amount={item.price * item.quantity}
+                primaryClassName="font-medium text-sm text-gray-900"
+                secondaryClassName="text-xs text-gray-500"
+              />
             </span>
           </div>
         ))}
@@ -39,11 +43,11 @@ export function OrderSummary({
       <div className="border-t border-gray-200 pt-3 space-y-2 text-sm">
         <div className="flex justify-between text-gray-600">
           <span>{t("subtotal")}</span>
-          <span><Price amount={subtotal} /></span>
+          <span><DualPrice amount={subtotal} primaryClassName="text-sm text-gray-600" secondaryClassName="text-xs text-gray-500" /></span>
         </div>
         <div className="border-t border-gray-200 pt-2 flex justify-between font-semibold text-gray-900 text-base">
           <span>{t("total")}</span>
-          <span><Price amount={total} /></span>
+          <span><DualPrice amount={total} primaryClassName="text-base font-semibold text-gray-900" secondaryClassName="text-xs text-gray-500" /></span>
         </div>
       </div>
     </div>

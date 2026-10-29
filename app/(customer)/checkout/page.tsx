@@ -9,7 +9,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { OrderSummary } from "@/components/checkout/order-summary";
-import { Price } from "@/components/ui/price";
+import { DualPrice } from "@/components/ui/dual-price";
 import { useLocale } from "@/hooks/use-locale";
 
 type PaymentOption = "MERCANTIL" | "CUSTOM";
@@ -430,7 +430,7 @@ export default function CheckoutPage() {
               Card Payment
             </h2>
             <p className="text-sm text-gray-500 mb-4">
-              Total: <Price amount={checkoutData?.total || total} />
+              Total: <DualPrice amount={checkoutData?.total || total} primaryClassName="text-sm text-gray-900" secondaryClassName="text-xs text-gray-500" />
             </p>
 
             {cardStep === "form" && (
@@ -511,7 +511,7 @@ export default function CheckoutPage() {
                   onClick={handleCardPay}
                   className="btn-primary w-full py-3 text-base"
                 >
-                  Pay <Price amount={checkoutData?.total || total} />
+                  Pay <DualPrice amount={checkoutData?.total || total} className="inline-flex" primaryClassName="text-base" secondaryClassName="text-sm text-white/80" />
                 </button>
               </div>
             )}
