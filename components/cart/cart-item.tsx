@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Minus, Plus, X } from "lucide-react";
 import { useLocale } from "@/hooks/use-locale";
-import { Price } from "@/components/ui/price";
+import { DualPrice } from "@/components/ui/dual-price";
 import type { CartItem } from "@/types";
 
 export function CartItem({
@@ -44,7 +44,7 @@ export function CartItem({
           <p className="text-sm text-primary-600 mt-0.5">{item.optionLabel}</p>
         )}
         <p className="text-sm text-gray-500 mt-1">
-          <Price amount={item.price} /> {t("each")}
+          <DualPrice amount={item.price} className="inline-flex" primaryClassName="text-sm text-gray-500" secondaryClassName="text-xs text-gray-400" /> {t("each")}
         </p>
 
         <div className="flex items-center justify-between mt-3">
@@ -71,9 +71,12 @@ export function CartItem({
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="font-semibold text-gray-900">
-              <Price amount={item.price * item.quantity} />
-            </span>
+            <DualPrice
+              amount={item.price * item.quantity}
+              className="justify-end"
+              primaryClassName="text-sm font-semibold text-gray-900"
+              secondaryClassName="text-xs text-gray-500"
+            />
             <button
               onClick={() => onRemove(item.productId, item.optionId)}
               className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
