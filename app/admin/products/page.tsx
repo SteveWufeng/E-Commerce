@@ -157,6 +157,7 @@ export default function AdminProductsPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [editProduct, setEditProduct] = useState<any>(null);
   const [editPrice, setEditPrice] = useState("");
   const [editSalePrice, setEditSalePrice] = useState("");
@@ -194,68 +195,105 @@ export default function AdminProductsPage() {
   }, [fetchSettings]);
 
   useEffect(() => {
-    async function loadProducts() {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCategories() {
       try {
-        const [productsRes, categoriesRes] = await Promise.all([
-          fetch("/api/products?limit=100"),
-          fetch("/api/products/categories"),
-        ]);
-        const productsData = await productsRes.json();
-        const categoriesData = await categoriesRes.json();
-        setProducts(productsData.data || []);
-        setCategories(categoriesData.data || []);
+        const res = await fetch("/api/products/categories");
+        const data = await res.json();
+        if (!cancelled) setCategories(data.data || []);
+      } catch (error) {
+        console.error("Failed to load categories:", error);
+      }
+    }
+    loadCategories();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadProducts() {
+      setIsLoading(true);
+      try {
+        let allProducts: any[] = [];
+        let pageNum = 1;
+        let hasMore = true;
+
+        while (hasMore && !cancelled) {
+          const params = new URLSearchParams({
+            limit: "1000",
+            page: String(pageNum),
+            includeInactive: "true",
+          });
+          if (debouncedSearch) {
+            if (/^\d{8,14}$/.test(debouncedSearch)) {
+              params.set("barcode", debouncedSearch);
+            } else {
+              params.set("q", debouncedSearch);
+            }
+          }
+
+          const productsRes = await fetch(`/api/products?${params.toString()}`);
+          const productsData = await productsRes.json();
+          const pageProducts = productsData.data || [];
+          allProducts = [...allProducts, ...pageProducts];
+
+          const pagination = productsData.pagination;
+          hasMore = pagination
+            ? pageNum < pagination.totalPages
+            : pageProducts.length === 1000;
+          pageNum += 1;
+        }
+
+        if (!cancelled) setProducts(allProducts);
       } catch (error) {
         console.error("Failed to load products:", error);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
     loadProducts();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch]);
 
-  const isBarcodeSearch = /^\d{8,14}$/.test(search);
-
-  const filtered = products
-    .filter((p) => {
-      if (!search) return true;
-      const q = search.toLowerCase();
-      if (isBarcodeSearch) {
-        return p.barcode && p.barcode.includes(search);
-      }
-      return (
-        p.name.toLowerCase().includes(q) ||
-        (p.barcode && p.barcode.toLowerCase().includes(q)) ||
-        (p.sku && p.sku.toLowerCase().includes(q))
-      );
-    })
-    .sort((a, b) => {
-      let cmp = 0;
-      const dir = sortDir === "asc" ? 1 : -1;
-      switch (sortField) {
-        case "name":
-          cmp = a.name.localeCompare(b.name);
-          break;
-        case "category":
-          cmp = (a.category?.name || "").localeCompare(b.category?.name || "");
-          break;
-        case "barcode":
-          cmp = (a.barcode || "").localeCompare(b.barcode || "");
-          break;
-        case "sale":
-          cmp = ((a.comparePrice || 0) - (b.comparePrice || 0));
-          break;
-        case "price":
-          cmp = (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0);
-          break;
-        case "stock":
-          cmp = (a.stock || 0) - (b.stock || 0);
-          break;
-        case "status":
-          cmp = (a.isActive ? 0 : 1) - (b.isActive ? 0 : 1);
-          break;
-      }
-      return cmp * dir;
-    });
+  const sortedProducts = [...products].sort((a, b) => {
+    let cmp = 0;
+    const dir = sortDir === "asc" ? 1 : -1;
+    switch (sortField) {
+      case "name":
+        cmp = a.name.localeCompare(b.name);
+        break;
+      case "category":
+        cmp = (a.category?.name || "").localeCompare(b.category?.name || "");
+        break;
+      case "barcode":
+        cmp = (a.barcode || "").localeCompare(b.barcode || "");
+        break;
+      case "sale":
+        cmp = ((a.comparePrice || 0) - (b.comparePrice || 0));
+        break;
+      case "price":
+        cmp = (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0);
+        break;
+      case "stock":
+        cmp = (a.stock || 0) - (b.stock || 0);
+        break;
+      case "status":
+        cmp = (a.isActive ? 0 : 1) - (b.isActive ? 0 : 1);
+        break;
+    }
+    return cmp * dir;
+  });
 
   function handleSort(field: string) {
     if (sortField === field) {
@@ -547,7 +585,7 @@ export default function AdminProductsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((product) => (
+                {sortedProducts.map((product) => (
                   <tr key={product.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-3 sm:px-4 font-medium text-gray-900">{product.name}</td>
                     <td className="hidden lg:table-cell py-3 px-3 sm:px-4">
@@ -620,9 +658,9 @@ export default function AdminProductsPage() {
               </tbody>
             </table>
           </div>
-          {filtered.length === 0 && (
+          {sortedProducts.length === 0 && (
             <div className="text-center py-12 text-gray-500">
-              {search ? t("noProductsMatch") : t("noProductsYetAdd")}
+              {debouncedSearch ? t("noProductsMatch") : t("noProductsYetAdd")}
             </div>
           )}
         </div>

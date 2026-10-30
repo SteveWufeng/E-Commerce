@@ -26,6 +26,7 @@ export default function HomePage() {
   const { t } = useLocale();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,82 +34,94 @@ export default function HomePage() {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const requestIdRef = useRef(0);
 
-  // Load initial data (explicitly request JSON and handle non-JSON responses)
   useEffect(() => {
-    async function fetchJson(path: string) {
-      const res = await fetch(path, { headers: { Accept: "application/json" } });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`Request failed ${path}: ${res.status} ${res.statusText} - ${txt.slice(0, 200)}`);
-      }
-      const ct = res.headers.get("content-type") || "";
-      if (!ct.includes("application/json")) {
-        const txt = await res.text();
-        throw new Error(`Invalid JSON response from ${path}: ${txt.slice(0, 200)}`);
-      }
-      return res.json();
-    }
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput.trim());
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
-    async function loadData() {
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCategories() {
       try {
-        const [productsRes, categoriesRes] = await Promise.all([
-          fetchJson("/api/products?limit=50&page=1"),
-          fetchJson("/api/products/categories"),
-        ]);
-
-        setProducts(productsRes.data || []);
-        setCategories(categoriesRes.data || []);
-        const pagination = productsRes.pagination;
-        if (pagination) {
-          setHasMore(pagination.page < pagination.totalPages);
-        } else if ((productsRes.data || []).length < 50) {
-          setHasMore(false);
-        } else {
-          setHasMore(true);
-        }
-        setPage(1);
+        const res = await fetch("/api/products/categories", {
+          headers: { Accept: "application/json" },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setCategories(data.data || []);
       } catch (error) {
-        console.error("Failed to load storefront data:", error);
-      } finally {
-        setIsLoading(false);
+        console.error("Failed to load categories:", error);
       }
     }
-
-    loadData();
+    loadCategories();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const loadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore || searchQuery || selectedCategory) return;
-    setIsLoadingMore(true);
-    try {
-      const nextPage = page + 1;
-      const res = await fetch(`/api/products?limit=50&page=${nextPage}`, {
-        headers: { Accept: "application/json" },
-      });
-      if (!res.ok) throw new Error("Failed to load more");
-      const data = await res.json();
-      const newProducts = data.data || [];
-      setProducts((prev) => [...prev, ...newProducts]);
-      const pagination = data.pagination;
-      if (pagination) {
-        setHasMore(pagination.page < pagination.totalPages);
-      } else if (newProducts.length < 50) {
+  const fetchProducts = useCallback(
+    async (pageNum: number, append: boolean, signal?: AbortSignal) => {
+      const requestId = ++requestIdRef.current;
+      const params = new URLSearchParams();
+      params.set("limit", "50");
+      params.set("page", String(pageNum));
+      if (searchQuery) params.set("q", searchQuery);
+      if (selectedCategory) params.set("category", selectedCategory);
+
+      if (!append) {
+        setIsLoading(true);
         setHasMore(false);
+      } else {
+        setIsLoadingMore(true);
       }
-      setPage(nextPage);
-    } catch (error) {
-      console.error("Failed to load more products:", error);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [isLoadingMore, hasMore, searchQuery, selectedCategory, page]);
+
+      try {
+        const res = await fetch(`/api/products?${params.toString()}`, {
+          headers: { Accept: "application/json" },
+          signal,
+        });
+        if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+        const data = await res.json();
+        const nextProducts = data.data || [];
+        if (requestId !== requestIdRef.current) return;
+        setProducts(append ? (prev) => [...prev, ...nextProducts] : nextProducts);
+        setPage(pageNum);
+        const pagination = data.pagination;
+        setHasMore(
+          pagination
+            ? pagination.page < pagination.totalPages
+            : nextProducts.length >= 50
+        );
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") {
+          console.error("Failed to load products:", error);
+        }
+      } finally {
+        if (requestId === requestIdRef.current) {
+          if (!append) setIsLoading(false);
+          else setIsLoadingMore(false);
+        }
+      }
+    },
+    [searchQuery, selectedCategory]
+  );
 
   useEffect(() => {
-    if (searchQuery || selectedCategory) {
-      setHasMore(false);
-      return;
-    }
+    const controller = new AbortController();
+    fetchProducts(1, false, controller.signal);
+    return () => controller.abort();
+  }, [fetchProducts]);
+
+  const loadMore = useCallback(async () => {
+    if (isLoading || isLoadingMore || !hasMore) return;
+    await fetchProducts(page + 1, true);
+  }, [fetchProducts, isLoading, isLoadingMore, hasMore, page]);
+
+  useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
@@ -126,24 +139,11 @@ export default function HomePage() {
         observer.unobserve(current);
       }
     };
-  }, [loadMore, searchQuery, selectedCategory]);
+  }, [loadMore]);
 
   const isOnSale = (p: Product) =>
     p.comparePrice !== null && Number(p.comparePrice) > Number(p.price);
   const deals = products.filter(isOnSale);
-
-  // Filter products based on search and category
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch =
-      !searchQuery ||
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.tags.some((tag) =>
-        tag.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    const matchesCategory =
-      !selectedCategory || product.category?.slug === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
 
   const activeCategories = categories.filter((c) => c.isActive);
   const heading = searchQuery
@@ -163,7 +163,7 @@ export default function HomePage() {
           {/* Search + currency toggle */}
           <div className="flex items-center gap-3 mb-6">
             <div className="flex-1">
-              <SearchBar value={searchQuery} onChange={setSearchQuery} />
+              <SearchBar value={searchInput} onChange={setSearchInput} />
             </div>
             <CurrencyToggle />
           </div>
@@ -271,14 +271,15 @@ export default function HomePage() {
                   />
                 ))}
               </div>
-            ) : filteredProducts.length > 0 ? (
+            ) : products.length > 0 ? (
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                  {filteredProducts.map((product) => (
+                  {products.map((product) => (
                     <ProductCard key={product.id} product={product} />
                   ))}
                 </div>
-                {!searchQuery && !selectedCategory && hasMore && (
+
+                {hasMore && (
                   <div ref={loadMoreRef} className="py-8 flex justify-center">
                     {isLoadingMore ? (
                       <div className="animate-pulse text-gray-400 text-sm">Loading...</div>

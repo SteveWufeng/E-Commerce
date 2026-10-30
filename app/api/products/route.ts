@@ -44,8 +44,16 @@ export async function GET(request: NextRequest) {
     const sort = searchParams.get("sort") || "createdAt";
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("limit") || "20");
+    const includeInactive = searchParams.get("includeInactive") === "true";
 
-    const where: Record<string, unknown> = { isActive: true };
+    const where: Record<string, unknown> = {};
+
+    if (includeInactive) {
+      const staff = await requireStaff();
+      if (!staff) where.isActive = true;
+    } else {
+      where.isActive = true;
+    }
 
     if (barcode) {
       where.barcode = barcode;
@@ -58,6 +66,7 @@ export async function GET(request: NextRequest) {
         { tags: { has: query } },
         { description: { contains: query, mode: "insensitive" } },
         { barcode: { contains: query, mode: "insensitive" } },
+        { sku: { contains: query, mode: "insensitive" } },
       ];
     }
 
